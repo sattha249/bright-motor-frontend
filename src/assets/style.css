@@ -1,0 +1,34 @@
+/*
+ * style.css - โค้ด CSS ทั่วไปของโปรเจกต์
+ */
+:root {
+  --primary-color: #4caf50; /* สีเขียวหลัก */
+  --secondary-color: #f4f4f4; /* สีพื้นหลังรอง */
+  --text-color: #333;
+  --white-color: #fff;
+  --border-color: #ddd;
+  --card-bg: #fff;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+}
+
+.container {
+  display: flex;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 30px;
+}
+.header

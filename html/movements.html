@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>การเคลื่อนไหวสต็อก - ระบบจัดการสต็อก</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <div id="sidebar-placeholder"></div>
+
+        <main class="main-content">
+            <div id="header-placeholder"></div>
+            
+            <div class="product-table-container">
+                <h2>ประวัติการเคลื่อนไหวสต็อก</h2>
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>วันที่</th>
+                            <th>รหัสสินค้า</th>
+                            <th>ชื่อสินค้า</th>
+                            <th>ประเภท</th>
+                            <th>จำนวน</th>
+                            <th>หมายเหตุ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>2025-08-01</td>
+                            <td>SKU-001</td>
+                            <td>ผ้าเบรกโกสต์ไรเดอร์	</td>
+                            <td><span class="movement-in">รับเข้า</span></td>
+                            <td>+50</td>
+                            <td>รับจากซัพพลายเออร์ A</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+    <script>
+        $(function(){
+          $("#sidebar-placeholder").load("components/sidebar.html");
+          $("#header-placeholder").load("components/header.html");
+        });
+    </script>
+</body>
+</html>

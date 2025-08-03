@@ -1,0 +1,31 @@
+<aside class="sidebar">
+    <div class="logo">
+        <h2>ระบบจัดการสต็อก</h2>
+    </div>
+    <nav class="sidebar-nav">
+        <ul>
+            <li><a href="index.html"><i class="fas fa-home"></i> หน้าหลัก</a></li>
+            <li><a href="products.html"><i class="fas fa-box-open"></i> สินค้า</a></li>
+            <li><a href="movements.html"><i class="fas fa-exchange-alt"></i> การเคลื่อนไหว</a></li>
+            <li><a href="#" class="disabled"><i class="fas fa-chart-bar"></i> รายงาน</a></li>
+            <li><a href="settings.html"><i class="fas fa-cog"></i> ตั้งค่า</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<script>
+    $(document).ready(function() {
+        var currentUrl = window.location.pathname.split("/").pop();
+        if (currentUrl == "") {
+            currentUrl = "index.html"; // กรณีอยู่หน้าแรกสุด
+        }
+        
+        $('.sidebar-nav ul li a').each(function() {
+            var href = $(this).attr('href');
+            if (href === currentUrl) {
+                $('.sidebar-nav ul li a').removeClass('active');
+                $(this).addClass('active');
+            }
+        });
+    });
+</script>

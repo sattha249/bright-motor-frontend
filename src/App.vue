@@ -1,11 +1,18 @@
-<script setup lang="ts"></script>
-
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <div class="container">
+    <Sidebar />
+    <main class="main-content">
+      <Header />
+      <router-view></router-view>
+    </main>
+  </div>
 </template>
 
-<style scoped></style>
+<script setup>
+import Sidebar from './components/Sidebar.vue';
+import Header from './components/Header.vue';
+</script>
+
+<style>
+/* คัดลอกโค้ด CSS ทั่วไปเช่น .container, .main-content จากไฟล์ style.css มาวางที่นี่ */
+</style>

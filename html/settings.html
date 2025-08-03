@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งค่า - ระบบจัดการสต็อก</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <div id="sidebar-placeholder"></div>
+
+        <main class="main-content">
+            <div id="header-placeholder"></div>
+            
+            <div class="form-container">
+                <h2>ตั้งค่าควยไรล่ะเฟสแรกยังไม่ทำ</h2>
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <h3>ข้อมูลส่วนตัว</h3>
+                        <p>จัดการโปรไฟล์และรหัสผ่านของคุณ</p>
+                        <button class="settings-btn">แก้ไข</button>
+                    </div>
+                    <div class="setting-card">
+                        <h3>การตั้งค่าบริษัท</h3>
+                        <p>ข้อมูลชื่อบริษัท, ที่อยู่, และโลโก้</p>
+                        <button class="settings-btn">แก้ไข</button>
+                    </div>
+                    <div class="setting-card">
+                        <h3>การแจ้งเตือน</h3>
+                        <p>ตั้งค่าการแจ้งเตือนสินค้าใกล้หมด</p>
+                        <button class="settings-btn">ตั้งค่า</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        $(function(){
+          $("#sidebar-placeholder").load("components/sidebar.html");
+          $("#header-placeholder").load("components/header.html");
+        });
+    </script>
+</body>
+</html>

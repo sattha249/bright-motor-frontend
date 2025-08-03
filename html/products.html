@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายการสินค้า - ระบบจัดการสต็อก</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <div id="sidebar-placeholder"></div>
+
+        <main class="main-content">
+            <div id="header-placeholder"></div>
+            
+            <div class="product-table-container">
+                <h2>รายการสินค้าทั้งหมด</h2>
+                <a href="add-product.html" class="add-product-btn">
+                    <i class="fas fa-plus"></i> เพิ่มสินค้าใหม่
+                </a>
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>รูป</th>
+                            <th>รหัสสินค้า</th>
+                            <th>ชื่อสินค้า</th>
+                            <th>หมวดหมู่</th>
+                            <th>จำนวน</th>
+                            <th>ราคา</th>
+                            <th>สถานะ</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><img src="https://via.placeholder.com/50" alt="Product Image"></td>
+                            <td>SKU-001</td>
+                            <td>ผ้าเบรกโกสต์ไรเดอร์	</td>
+                            <td>อิเล็กทรอนิกส์</td>
+                            <td>150</td>
+                            <td>12,500 บาท</td>
+                            <td><span class="status-in-stock">ในสต็อก</span></td>
+                            <td>
+                                <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                                <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
+                            </td>
+                            <tr>
+                            <td><img src="https://via.placeholder.com/50" alt="Product Image"></td>
+                            <td>SKU-002</td>
+                            <td>ยาบ้า</td>
+                            <td>ของงแซ่บ</td>
+                            <td>25</td>
+                            <td>1,200 บาท</td>
+                            <td><span class="status-low-stock">ใกล้หมด</span></td>
+                            <td>
+                                <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                                <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><img src="https://via.placeholder.com/50" alt="Product Image"></td>
+                            <td>ทดสอบ</td>
+                            <td>mock เพื่อโชว์ UI brightmotor</td>
+                            <td>mockup</td>
+                            <td>5</td>
+                            <td>350 บาท</td>
+                            <td><span class="status-out-stock">หมดสต็อก</span></td>
+                            <td>
+                                <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                                <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+    <script>
+        $(function(){
+          $("#sidebar-placeholder").load("components/sidebar.html");
+          $("#header-placeholder").load("components/header.html");
+        });
+    </script>
+</body>
+</html>

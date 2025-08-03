@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เพิ่มสินค้าใหม่ - ระบบจัดการสต็อก</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <div id="sidebar-placeholder"></div>
+
+        <main class="main-content">
+            <div id="header-placeholder"></div>
+
+            <div class="form-container">
+                <h2>เพิ่มสินค้าใหม่</h2>
+                <form class="product-form">
+                    <div class="form-group">
+                        <label for="product-name">ชื่อสินค้า</label>
+                        <input type="text" id="product-name" name="product-name" placeholder="ป้อนชื่อสินค้า" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-sku">รหัสสินค้า (SKU)</label>
+                        <input type="text" id="product-sku" name="product-sku" placeholder="ป้อนรหัสสินค้า">
+                    </div>
+                    <div class="form-group">
+                        <label for="category">หมวดหมู่</label>
+                        <select id="category" name="category">
+                            <option value="">เลือกหมวดหมู่</option>
+                            <option value="electronics">อิเล็กทรอนิกส์</option>
+                            <option value="apparel">เสื้อผ้า</option>
+                            <option value="home">ของใช้ในบ้าน</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity">จำนวน</label>
+                        <input type="number" id="quantity" name="quantity" placeholder="ป้อนจำนวนสินค้า" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">ราคาต่อหน่วย (บาท)</label>
+                        <input type="number" id="price" name="price" placeholder="ป้อนราคา" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-image">รูปภาพสินค้า</label>
+                        <input type="file" id="product-image" name="product-image">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="save-btn">บันทึก</button>
+                        <a href="products.html" class="cancel-btn">ยกเลิก</a>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+    <script>
+        $(function(){
+          $("#sidebar-placeholder").load("components/sidebar.html");
+          $("#header-placeholder").load("components/header.html");
+        });
+    </script>
+</body>
+</html>
