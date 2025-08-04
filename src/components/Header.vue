@@ -1,8 +1,6 @@
 <template>
     <header class="header">
         <div class="search-box">
-            <input type="text" placeholder="ค้นหาสินค้า..." />
-            <i class="fas fa-search"></i>
         </div>
         <div class="user-info">
             <span>สวัสดี, {{ userData.fullname }}</span>

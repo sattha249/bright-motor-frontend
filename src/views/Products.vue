@@ -25,7 +25,7 @@ const fetchProducts = async () => {
         })
 
         products.value = res.data.data
-        totalPages.value = res.data.meta?.lastPage || 1
+        totalPages.value = res.data.meta?.last_page || 1
     } catch (err) {
         error.value = 'โหลดข้อมูลไม่สำเร็จ'
         console.error(err)
@@ -62,11 +62,14 @@ onMounted(() => {
 <template>
     <div class="product-table-container">
         <h2>รายการสินค้าทั้งหมด</h2>
+        <div class="search-box">
+            <input type="text" placeholder="ค้นหาสินค้า..." />
+            <i class="fas fa-search"></i>
 
-        <router-link to="/products/add" class="add-product-btn">
-            <i class="fas fa-plus"></i> เพิ่มสินค้าใหม่
-        </router-link>
-
+            <router-link to="/products/add" class="add-product-btn">
+                <i class="fas fa-plus"></i> เพิ่มสินค้าใหม่
+            </router-link>
+        </div>
         <div v-if="loading">กำลังโหลดข้อมูล...</div>
         <div v-else-if="error">{{ error }}</div>
         <div v-else>
@@ -91,11 +94,11 @@ onMounted(() => {
                         <td>{{ parseFloat(product.sell_price).toFixed(2) }} บาท</td>
                         <td>{{ product.unit }}</td>
                         <td>
-                            <router-link :to="`/products/edit/${product.id}`" class="action-btn edit-btn">
-                                <i class="fas fa-edit"></i>
+                            <router-link :to="`/products/edit/${product.id}`" class="action-btn edit-btn" title="แก้ไข">
+                                <i class="fas fa-pen-to-square"></i> <!-- ไอคอนแก้ไขแบบดินสอ -->
                             </router-link>
-                            <button class="action-btn delete-btn" @click="deleteProduct(product.id)">
-                                <i class="fas fa-trash"></i>
+                            <button class="action-btn delete-btn" @click="deleteProduct(product.id)" title="ลบ">
+                                <i class="fas fa-trash-can"></i> <!-- ถังขยะดูชัดเจนกว่าตัวเก่า -->
                             </button>
                         </td>
                     </tr>
@@ -119,6 +122,34 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* search */
+.search-box {
+    padding-top: 1rem;
+    position: relative;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-box input {
+    width: 300px;
+    padding: 10px 15px;
+    padding-left: 40px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+.search-box i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+}
+
+/* table */
 .product-table-container {
     padding: 1.5rem;
 }

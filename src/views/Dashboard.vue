@@ -2,58 +2,190 @@
     <div class="dashboard-widgets">
         <div class="widget">
             <h3>จำนวนสินค้าทั้งหมด</h3>
-            <p class="value">1,234</p>
+            <p class="value">{{ totalProducts }}</p>
         </div>
         <div class="widget">
-            <h3>สินค้าใกล้หมด</h3>
-            <p class="value">56</p>
+            <h3>สินค้าที่มีในคลัง</h3>
+            <p class="value">{{ totalProductsInStock }}</p>
         </div>
         <div class="widget">
-            <h3>มูลค่าสต็อก</h3>
-            <p class="value">1,500,000 บาท</p>
+            <h3>ยอดขายเดือนนี้</h3>
+            <p class="value">{{ formatCurrency(totalSales) }} บาท</p>
         </div>
     </div>
 
-    <div class="product-table-container">
-        <h2>รายการสินค้า</h2>
-        <router-link to="/products" class="add-product-btn">
-            <i class="fas fa-plus"></i> เพิ่มสินค้าใหม่
-        </router-link>
+    <div class="sell-logs-container">
+        <h2>รายการขายล่าสุด</h2>
         <table class="product-table">
             <thead>
                 <tr>
-                    <th>รูป</th>
-                    <th>รหัสสินค้า</th>
-                    <th>ชื่อสินค้า</th>
-                    <th>จำนวน</th>
-                    <th>ราคา</th>
-                    <th>สถานะ</th>
-                    <th>การจัดการ</th>
+                    <th>เลขที่บิล</th>
+                    <th>ลูกค้า</th>
+                    <th>ทะเบียนรถ</th>
+                    <th>ยอดรวม</th>
+                    <th>วันที่ขาย</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td><img src="https://via.placeholder.com/50" alt="Product Image"></td>
-                    <td>SKU-001</td>
-                    <td>สมาร์ทโฟน X Pro</td>
-                    <td>150</td>
-                    <td>12,500 บาท</td>
-                    <td><span class="status-in-stock">ในสต็อก</span></td>
-                    <td>
-                        <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
-                        <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
-                    </td>
+
+                <tr v-for="log in sellLogs" :key="log.id" @click="openModal(log)" style="cursor: pointer">
+                    <td>{{ log.bill_no }}</td>
+                    <td>{{ log.customer.name }}</td>
+                    <td>{{ log.truck.plate_number }}</td>
+                    <td>{{ formatCurrency(log.total_price) }}</td>
+                    <td>{{ formatDate(log.created_at) }}</td>
                 </tr>
             </tbody>
+
+            <!-- Modal แสดงรายละเอียดสินค้าในแต่ละบิล -->
+            <div v-if="selectedLog" class="modal-overlay" @click.self="closeModal">
+                <div class="modal">
+                    <h3>รายละเอียดบิล {{ selectedLog.bill_no }}</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>สินค้า ID</th>
+                                <th>จำนวน</th>
+                                <th>ราคาต่อหน่วย</th>
+                                <th>ราคารวม</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in selectedLog.items" :key="item.id">
+                                <td>{{ item.product_id }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ formatCurrency(item.price) }}</td>
+                                <td>{{ formatCurrency(item.total_price) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <!-- show detail in .customer -->
+                    <div class="customer-detail" style="padding-left: 5%;margin-bottom: 20px;">
+                        <h4>ข้อมูลลูกค้า</h4>
+                        <ul>
+                            <li><strong>ชื่อ:</strong> {{ selectedLog.customer.name }}</li>
+                            <li><strong>ที่อยู่:</strong> {{ selectedLog.customer.address }}</li>
+                            <li><strong>อำเภอ:</strong> {{ selectedLog.customer.district }}</li>
+                            <li><strong>จังหวัด:</strong> {{ selectedLog.customer.provice }}</li>
+                            <li><strong>โทร:</strong> {{ selectedLog.customer.tel }}</li>
+                            <li><strong>Email:</strong> {{ selectedLog.customer.email }}</li>
+                        </ul>
+                    </div>
+
+                    <button @click="closeModal" class="close-btn">ปิด</button>
+                </div>
+            </div>
+
         </table>
     </div>
 </template>
 
 <script setup>
-// ไม่ต้องมีโค้ด JavaScript ที่นี่
+import { ref, onMounted } from 'vue'
+import axios from '@/lib/axios'
+
+const sellLogs = ref([])
+const totalSales = ref(0)
+const totalProducts = ref(0)
+const totalProductsInStock = ref(0)
+
+onMounted(async () => {
+    try {
+        await fetchSellLogs()
+        await fetchSummary()
+    } catch (err) {
+        console.error('Error fetching sell-logs:', err)
+    }
+})
+
+async function fetchSummary() {
+    const { data } = await axios.get('/sell-logs/summary')
+    totalSales.value = data.totalSales
+    totalProducts.value = data.totalProduct
+    totalProductsInStock.value = data.totalProductInStock
+}
+async function fetchSellLogs() {
+    const res = await axios.get('/sell-logs')
+    sellLogs.value = res.data.data
+}
+const selectedLog = ref(null)
+
+function openModal(log) {
+    selectedLog.value = log
+}
+
+function closeModal() {
+    selectedLog.value = null
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('th-TH', {
+        style: 'currency',
+        currency: 'THB',
+        minimumFractionDigits: 2
+    }).format(amount)
+}
+
+function formatDate(dateStr) {
+    const d = new Date(dateStr)
+    return d.toLocaleString('th-TH', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+    })
+}
 </script>
 
 <style scoped>
+/* modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.modal {
+    background: white;
+    padding: 20px;
+    width: 600px;
+    max-width: 90%;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal h3 {
+    margin-bottom: 1rem;
+}
+
+.modal table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.modal th,
+.modal td {
+    border: 1px solid #ccc;
+    padding: 8px 10px;
+    text-align: left;
+}
+
+.close-btn {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* dashboard */
 .dashboard-widgets {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));

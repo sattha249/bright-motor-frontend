@@ -24,17 +24,13 @@
             </tbody>
         </table>
 
-        <div class="pagination mt-4">
-            <button :disabled="page <= 1" @click="page--"
-                class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
-                Previous
+        <div class="pagination">
+            <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">
+                ก่อนหน้า
             </button>
-
-            <span>Page {{ page }} of {{ meta?.last_page || '?' }}</span>
-
-            <button :disabled="!meta?.next_page_url" @click="page++"
-                class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
-                Next
+            <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
+            <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">
+                ถัดไป
             </button>
         </div>
     </div>
@@ -49,6 +45,8 @@ const warehouseStock = ref([])
 const meta = ref(null)
 const isLoading = ref(false)
 const page = ref(1)
+const currentPage = ref(1)
+const totalPages = ref(1)
 const perPage = 10;
 
 const fetchWarehouseStock = async () => {
@@ -61,6 +59,12 @@ const fetchWarehouseStock = async () => {
         console.error('Error fetching warehouse stock:', error)
     } finally {
         isLoading.value = false
+    }
+}
+
+const goToPage = (newPage) => {
+    if (newPage >= 1 && newPage <= meta.value.last_page) {
+        page.value = newPage
     }
 }
 

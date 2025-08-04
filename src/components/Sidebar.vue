@@ -21,9 +21,11 @@
                     </router-link>
                 </li>
                 <li>
-                    <router-link to="/movements" active-class="active">
-                        <i class="fas fa-exchange-alt"></i> การเคลื่อนไหว
-                    </router-link>
+                    <a href="#" class="disabled">
+                        <!-- <router-link to="/movements" active-class="active"> -->
+                        <i class="fas fa-chart-bar"></i> การเคลื่อนไหว
+                        <!-- </router-link> -->
+                    </a>
                 </li>
                 <li>
                     <a href="#" class="disabled">
