@@ -12,7 +12,12 @@
                 </li>
                 <li>
                     <router-link to="/products" active-class="active">
-                        <i class="fas fa-box-open"></i> สินค้า
+                        <i class="fas fa-box-open"></i> สินค้าในระบบ
+                    </router-link>
+                </li>
+                <li>
+                    <router-link to="/warehouse" active-class="active">
+                        <i class="fas fa-box-open"></i> สินค้าในโกดัง
                     </router-link>
                 </li>
                 <li>

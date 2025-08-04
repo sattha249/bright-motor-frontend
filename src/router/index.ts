@@ -5,6 +5,7 @@ import Settings from '../views/Settings.vue';
 import AddProduct from '@/views/AddProduct.vue';
 import Qrcode from '@/views/settings/Qrcode.vue';
 import Login from '@/views/Login.vue';
+import Warehouse from '@/views/Warehouse.vue';
 import { isAuthenticated } from '@/services/auth';
 
 const router = createRouter({
@@ -15,6 +16,7 @@ const router = createRouter({
     { path: '/settings', name: 'settings', component: Settings, meta: { requiresAuth: true } },
     { path: '/products/add', name: 'add-product', component: AddProduct, meta: { requiresAuth: true } },
     { path: '/qrcode', name: 'qrcode', component: Qrcode, meta: { requiresAuth: true } },
+    { path: '/warehouse', name: 'warehouse', component: Warehouse, meta: { requiresAuth: true } },
     {
       path: '/login',
       name: 'login',

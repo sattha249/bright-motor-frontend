@@ -20,5 +20,6 @@ export const useUserStore = defineStore('user', () => {
         userData.value = data;
     }
 
+
     return { token, userData, setToken, setUserData };
 });

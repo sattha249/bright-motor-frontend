@@ -5,7 +5,7 @@
             <i class="fas fa-search"></i>
         </div>
         <div class="user-info">
-            <span>สวัสดี, แอดมิน</span>
+            <span>สวัสดี, {{ userData.fullname }}</span>
             <i class="fas fa-user-circle"></i>
             <button @click="handleLogout" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
@@ -17,9 +17,12 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { logoutUser } from '@/services/auth';
+import { useUserStore } from '@/stores/user';
+import { onMounted } from 'vue';
+import { ref } from 'vue';
 
 const router = useRouter();
-
+let userData = ref({})
 const handleLogout = () => {
     // เรียกฟังก์ชัน logoutUser() เพื่อลบ Token
     logoutUser();
@@ -27,6 +30,10 @@ const handleLogout = () => {
     // ย้ายผู้ใช้กลับไปยังหน้า login
     router.push('/login');
 };
+onMounted(() => {
+    let userStore = useUserStore();
+    userData.value = userStore.userData
+})
 </script>
 
 <style scoped>

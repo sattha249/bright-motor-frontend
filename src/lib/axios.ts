@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useUserStore } from '@/stores/user'; // นำเข้า Pinia Store
+import { useUserStore } from '@/stores/user';
 
 const apiClient = axios.create({
     baseURL: `/api`,
