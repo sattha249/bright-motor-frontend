@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useUserStore } from '@/stores/user'; // นำเข้า Pinia Store
 
 const apiClient = axios.create({
-    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
+    baseURL: `/api`,
     withCredentials: false,
 });
 
