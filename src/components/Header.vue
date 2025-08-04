@@ -7,12 +7,26 @@
         <div class="user-info">
             <span>สวัสดี, แอดมิน</span>
             <i class="fas fa-user-circle"></i>
+            <button @click="handleLogout" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+            </button>
         </div>
     </header>
 </template>
 
 <script setup>
-// ไม่ต้องมีโค้ด JavaScript ที่นี่
+import { useRouter } from 'vue-router';
+import { logoutUser } from '@/services/auth';
+
+const router = useRouter();
+
+const handleLogout = () => {
+    // เรียกฟังก์ชัน logoutUser() เพื่อลบ Token
+    logoutUser();
+
+    // ย้ายผู้ใช้กลับไปยังหน้า login
+    router.push('/login');
+};
 </script>
 
 <style scoped>
@@ -62,5 +76,30 @@
 .user-info i {
     font-size: 24px;
     color: var(--primary-color);
+}
+
+.logout-btn {
+    background: none;
+    border: none;
+    color: #f44336;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 20px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.logout-btn:hover {
+    background-color: #f44336;
+    color: var(--white-color);
+}
+
+.logout-btn i {
+    margin-right: 8px;
+    font-size: 14px;
+    color: inherit;
+    /* ให้ไอคอนใช้สีเดียวกับปุ่ม */
 }
 </style>
