@@ -27,8 +27,7 @@
                 </tr>
             </thead>
             <tbody>
-
-                <tr v-for="log in sellLogs" :key="log.id" @click="openModal(log)" style="cursor: pointer">
+                <tr v-for="log in paginatedLogs" :key="log.id" @click="openModal(log)" style="cursor: pointer">
                     <td>{{ log.bill_no }}</td>
                     <td>{{ log.customer.name }}</td>
                     <td>{{ log.truck.plate_number }}</td>
@@ -36,58 +35,80 @@
                     <td>{{ formatDate(log.created_at) }}</td>
                 </tr>
             </tbody>
-
-            <!-- Modal แสดงรายละเอียดสินค้าในแต่ละบิล -->
-            <div v-if="selectedLog" class="modal-overlay" @click.self="closeModal">
-                <div class="modal">
-                    <h3>รายละเอียดบิล {{ selectedLog.bill_no }}</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>สินค้า ID</th>
-                                <th>จำนวน</th>
-                                <th>ราคาต่อหน่วย</th>
-                                <th>ราคารวม</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="item in selectedLog.items" :key="item.id">
-                                <td>{{ item.product_id }}</td>
-                                <td>{{ item.quantity }}</td>
-                                <td>{{ formatCurrency(item.price) }}</td>
-                                <td>{{ formatCurrency(item.total_price) }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <!-- show detail in .customer -->
-                    <div class="customer-detail" style="padding-left: 5%;margin-bottom: 20px;">
-                        <h4>ข้อมูลลูกค้า</h4>
-                        <ul>
-                            <li><strong>ชื่อ:</strong> {{ selectedLog.customer.name }}</li>
-                            <li><strong>ที่อยู่:</strong> {{ selectedLog.customer.address }}</li>
-                            <li><strong>อำเภอ:</strong> {{ selectedLog.customer.district }}</li>
-                            <li><strong>จังหวัด:</strong> {{ selectedLog.customer.provice }}</li>
-                            <li><strong>โทร:</strong> {{ selectedLog.customer.tel }}</li>
-                            <li><strong>Email:</strong> {{ selectedLog.customer.email }}</li>
-                        </ul>
-                    </div>
-
-                    <button @click="closeModal" class="close-btn">ปิด</button>
-                </div>
-            </div>
-
         </table>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">
+                ก่อนหน้า
+            </button>
+            <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
+            <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">
+                ถัดไป
+            </button>
+        </div>
+
+        <!-- Modal -->
+        <div v-if="selectedLog" class="modal-overlay" @click.self="closeModal">
+            <div class="modal">
+                <h3>รายละเอียดบิล {{ selectedLog.bill_no }}</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>สินค้า ID</th>
+                            <th>จำนวน</th>
+                            <th>ราคาต่อหน่วย</th>
+                            <th>ราคารวม</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="item in selectedLog.items" :key="item.id">
+                            <td>{{ item.product_id }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ formatCurrency(item.price) }}</td>
+                            <td>{{ formatCurrency(item.total_price) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="customer-detail" style="padding-left: 5%;margin-bottom: 20px;">
+                    <h4>ข้อมูลลูกค้า</h4>
+                    <ul>
+                        <li><strong>ชื่อ:</strong> {{ selectedLog.customer.name }}</li>
+                        <li><strong>ที่อยู่:</strong> {{ selectedLog.customer.address }}</li>
+                        <li><strong>อำเภอ:</strong> {{ selectedLog.customer.district }}</li>
+                        <li><strong>จังหวัด:</strong> {{ selectedLog.customer.provice }}</li>
+                        <li><strong>โทร:</strong> {{ selectedLog.customer.tel }}</li>
+                        <li><strong>Email:</strong> {{ selectedLog.customer.email }}</li>
+                    </ul>
+                </div>
+
+                <button @click="closeModal" class="close-btn">ปิด</button>
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import axios from '@/lib/axios'
 
 const sellLogs = ref([])
 const totalSales = ref(0)
 const totalProducts = ref(0)
 const totalProductsInStock = ref(0)
+
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+const totalPages = computed(() => {
+    return Math.ceil(sellLogs.value.length / itemsPerPage)
+})
+
+const paginatedLogs = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage
+    return sellLogs.value.slice(start, start + itemsPerPage)
+})
 
 onMounted(async () => {
     try {
@@ -104,10 +125,24 @@ async function fetchSummary() {
     totalProducts.value = data.totalProduct
     totalProductsInStock.value = data.totalProductInStock
 }
+
 async function fetchSellLogs() {
     const res = await axios.get('/sell-logs')
     sellLogs.value = res.data.data
 }
+
+function prevPage() {
+    if (currentPage.value > 1) currentPage.value--
+}
+
+function nextPage() {
+    if (currentPage.value < totalPages.value) currentPage.value++
+}
+
+function goToPage(page) {
+    currentPage.value = page
+}
+
 const selectedLog = ref(null)
 
 function openModal(log) {
@@ -136,6 +171,34 @@ function formatDate(dateStr) {
 </script>
 
 <style scoped>
+/* Pagination */
+.pagination {
+    margin-top: 15px;
+    text-align: center;
+    margin: 2%;
+}
+
+/* 
+.pagination button {
+    background: var(--secondary-color);
+    border: none;
+    padding: 8px 12px;
+    margin: 0 3px;
+    border-radius: 5px;
+    cursor: pointer;
+    color: white;
+}
+
+.pagination button.active {
+    background: var(--primary-color);
+    font-weight: bold;
+}
+
+.pagination button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+} */
+
 /* modal */
 .modal-overlay {
     position: fixed;
@@ -213,40 +276,6 @@ function formatDate(dateStr) {
     color: var(--primary-color);
 }
 
-.product-table-container {
-    background-color: var(--card-bg);
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-}
-
-.product-table-container h2 {
-    margin-bottom: 20px;
-    font-size: 24px;
-    display: inline-block;
-}
-
-.add-product-btn {
-    float: right;
-    background-color: var(--primary-color);
-    color: var(--white-color);
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s;
-    text-decoration: none;
-}
-
-.add-product-btn:hover {
-    background-color: #43a047;
-}
-
-.add-product-btn i {
-    margin-right: 5px;
-}
-
 .product-table {
     width: 100%;
     border-collapse: collapse;
@@ -267,54 +296,5 @@ function formatDate(dateStr) {
 
 .product-table tbody tr:hover {
     background-color: #f9f9f9;
-}
-
-.product-table img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 8px;
-}
-
-.status-in-stock,
-.status-low-stock,
-.status-out-stock {
-    display: inline-block;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 12px;
-    font-weight: bold;
-    color: var(--white-color);
-}
-
-.status-in-stock {
-    background-color: #4CAF50;
-}
-
-.status-low-stock {
-    background-color: #ff9800;
-}
-
-.status-out-stock {
-    background-color: #f44336;
-}
-
-.action-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    margin: 0 5px;
-    padding: 5px;
-    border-radius: 5px;
-    transition: background-color 0.3s;
-}
-
-.edit-btn {
-    color: #2196F3;
-}
-
-.delete-btn {
-    color: #f44336;
 }
 </style>

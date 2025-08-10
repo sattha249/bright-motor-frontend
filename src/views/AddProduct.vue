@@ -1,36 +1,47 @@
 <template>
     <div class="form-container">
         <h2>เพิ่มสินค้าใหม่</h2>
-        <form class="product-form">
+        <form class="product-form" @submit.prevent="saveProduct">
             <div class="form-group">
-                <label for="product-name">ชื่อสินค้า</label>
-                <input type="text" id="product-name" name="product-name" placeholder="ป้อนชื่อสินค้า" required />
+                <label for="description">ชื่อสินค้า</label>
+                <input v-model="form.description" type="text" id="description" placeholder="ป้อนชื่อสินค้า" />
+                <small v-if="errors.description" class="error">{{ errors.description }}</small>
             </div>
-            <div class="form-group">
-                <label for="product-sku">รหัสสินค้า (SKU)</label>
-                <input type="text" id="product-sku" name="product-sku" placeholder="ป้อนรหัสสินค้า" />
-            </div>
+
             <div class="form-group">
                 <label for="category">หมวดหมู่</label>
-                <select id="category" name="category">
-                    <option value="">เลือกหมวดหมู่</option>
-                    <option value="electronics">อิเล็กทรอนิกส์</option>
-                    <option value="apparel">เสื้อผ้า</option>
-                    <option value="home">ของใช้ในบ้าน</option>
-                </select>
+                <input v-model="form.category" type="text" id="category" placeholder="ป้อนหมวดหมู่" />
+                <small v-if="errors.category" class="error">{{ errors.category }}</small>
             </div>
+
             <div class="form-group">
-                <label for="quantity">จำนวน</label>
-                <input type="number" id="quantity" name="quantity" placeholder="ป้อนจำนวนสินค้า" required />
+                <label for="brand">ยี่ห้อ</label>
+                <input v-model="form.brand" type="text" id="brand" placeholder="ป้อนยี่ห้อ (เว้นว่างได้)" />
             </div>
+
             <div class="form-group">
-                <label for="price">ราคาต่อหน่วย (บาท)</label>
-                <input type="number" id="price" name="price" placeholder="ป้อนราคา" required />
+                <label for="model">รุ่น</label>
+                <input v-model="form.model" type="text" id="model" placeholder="ป้อนรุ่นสินค้า (เว้นว่างได้)" />
             </div>
+
             <div class="form-group">
-                <label for="product-image">รูปภาพสินค้า</label>
-                <input type="file" id="product-image" name="product-image" />
+                <label for="cost_price">ราคาทุน (บาท)</label>
+                <input v-model="form.cost_price" type="number" id="cost_price" placeholder="ป้อนราคาทุน" />
+                <small v-if="errors.cost_price" class="error">{{ errors.cost_price }}</small>
             </div>
+
+            <div class="form-group">
+                <label for="sell_price">ราคาขาย (บาท)</label>
+                <input v-model="form.sell_price" type="number" id="sell_price" placeholder="ป้อนราคาขาย" />
+                <small v-if="errors.sell_price" class="error">{{ errors.sell_price }}</small>
+            </div>
+
+            <div class="form-group">
+                <label for="unit">หน่วย</label>
+                <input v-model="form.unit" type="text" id="unit" placeholder="เช่น ชิ้น, ขวด, กล่อง" />
+                <small v-if="errors.unit" class="error">{{ errors.unit }}</small>
+            </div>
+
             <div class="form-actions">
                 <button type="submit" class="save-btn">บันทึก</button>
                 <router-link to="/products" class="cancel-btn">ยกเลิก</router-link>
@@ -40,7 +51,70 @@
 </template>
 
 <script setup>
-// ไม่ต้องมีโค้ด JavaScript ที่นี่
+import axios from '../lib/axios'
+import { reactive } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const form = reactive({
+    category: '',
+    description: '',
+    brand: '',
+    model: '',
+    cost_price: '',
+    sell_price: '',
+    unit: ''
+})
+
+const errors = reactive({
+    category: '',
+    description: '',
+    cost_price: '',
+    sell_price: '',
+    unit: ''
+})
+
+const validateForm = () => {
+    let valid = true
+    Object.keys(errors).forEach(key => errors[key] = '')
+
+    if (!form.description.trim()) {
+        errors.description = 'กรุณากรอกชื่อสินค้า'
+        valid = false
+    }
+    if (!form.category.trim()) {
+        errors.category = 'กรุณากรอกหมวดหมู่'
+        valid = false
+    }
+    if (!form.cost_price) {
+        errors.cost_price = 'กรุณากรอกราคาทุน'
+        valid = false
+    }
+    if (!form.sell_price) {
+        errors.sell_price = 'กรุณากรอกราคาขาย'
+        valid = false
+    }
+    if (!form.unit.trim()) {
+        errors.unit = 'กรุณากรอกหน่วยสินค้า'
+        valid = false
+    }
+
+    return valid
+}
+
+const saveProduct = async () => {
+    if (!validateForm()) return
+
+    try {
+        await axios.post('/products', form)
+        alert('บันทึกสินค้าสำเร็จ')
+        router.push('/products')
+    } catch (error) {
+        console.error(error)
+        alert('เกิดข้อผิดพลาดในการบันทึกสินค้า')
+    }
+}
 </script>
 
 <style scoped>
@@ -126,6 +200,12 @@
 
 .cancel-btn:hover {
     background-color: #c0c0c0;
+}
+
+.error {
+    color: red;
+    font-size: 14px;
+    margin-top: 5px;
 }
 
 @media (max-width: 768px) {
