@@ -21,6 +21,11 @@
                     </router-link>
                 </li>
                 <li>
+                    <router-link to="/add-to-truck" active-class="active">
+                        <i class="fas fa-truck"></i> เพิ่มสินค้าเข้ารถ
+                    </router-link>
+                </li>
+                <li>
                     <a href="#" class="disabled">
                         <!-- <router-link to="/movements" active-class="active"> -->
                         <i class="fas fa-chart-bar"></i> การเคลื่อนไหว
