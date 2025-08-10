@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import axios from '../lib/axios'
 import { useRouter } from 'vue-router'
 
@@ -12,6 +12,9 @@ const currentPage = ref(1)
 const perPage = ref(10)
 const totalPages = ref(1)
 
+const searchKeyword = ref('') // คำค้นหา
+let searchTimeout = null      // ตัวเก็บ timeout สำหรับ debounce
+
 const fetchProducts = async () => {
     loading.value = true
     error.value = null
@@ -21,6 +24,7 @@ const fetchProducts = async () => {
             params: {
                 page: currentPage.value,
                 perPage: perPage.value,
+                search: searchKeyword.value.trim() || undefined,
             },
         })
 
@@ -54,6 +58,15 @@ const deleteProduct = async (id) => {
     }
 }
 
+// debounce search
+watch(searchKeyword, (newValue) => {
+    clearTimeout(searchTimeout)
+    searchTimeout = setTimeout(() => {
+        currentPage.value = 1 // reset ไปหน้าแรกทุกครั้งที่ search
+        fetchProducts()
+    }, 500) // 0.5 วินาที
+})
+
 onMounted(() => {
     fetchProducts()
 })
@@ -63,7 +76,7 @@ onMounted(() => {
     <div class="product-table-container">
         <h2>รายการสินค้าทั้งหมด</h2>
         <div class="search-box">
-            <input type="text" placeholder="ค้นหาสินค้า..." />
+            <input type="text" v-model="searchKeyword" placeholder="ค้นหาสินค้า..." />
             <i class="fas fa-search"></i>
 
             <router-link to="/products/add" class="add-product-btn">
@@ -95,10 +108,10 @@ onMounted(() => {
                         <td>{{ product.unit }}</td>
                         <td>
                             <router-link :to="`/products/edit/${product.id}`" class="action-btn edit-btn" title="แก้ไข">
-                                <i class="fas fa-pen-to-square"></i> <!-- ไอคอนแก้ไขแบบดินสอ -->
+                                <i class="fas fa-pen-to-square"></i>
                             </router-link>
                             <button class="action-btn delete-btn" @click="deleteProduct(product.id)" title="ลบ">
-                                <i class="fas fa-trash-can"></i> <!-- ถังขยะดูชัดเจนกว่าตัวเก่า -->
+                                <i class="fas fa-trash-can"></i>
                             </button>
                         </td>
                     </tr>
