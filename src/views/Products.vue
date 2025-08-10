@@ -1,19 +1,29 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from '../lib/axios'
 import { useRouter } from 'vue-router'
 
 const products = ref([])
 const loading = ref(true)
 const error = ref(null)
-const router = useRouter()
-
 const currentPage = ref(1)
 const perPage = ref(10)
 const totalPages = ref(1)
+const searchKeyword = ref('')
+const searchTimeout = ref(null)
 
-const searchKeyword = ref('') // คำค้นหา
-let searchTimeout = null      // ตัวเก็บ timeout สำหรับ debounce
+const editModalOpen = ref(false)
+const editProduct = ref({
+    id: '',
+    category: '',
+    description: '',
+    brand: '',
+    model: '',
+    cost_price: '',
+    sell_price: '',
+    unit: ''
+})
+const editingId = ref(null)
 
 const fetchProducts = async () => {
     loading.value = true
@@ -24,10 +34,9 @@ const fetchProducts = async () => {
             params: {
                 page: currentPage.value,
                 perPage: perPage.value,
-                search: searchKeyword.value.trim() || undefined,
+                search: searchKeyword.value || ''
             },
         })
-
         products.value = res.data.data
         totalPages.value = res.data.meta?.last_page || 1
     } catch (err) {
@@ -47,7 +56,6 @@ const goToPage = (page) => {
 
 const deleteProduct = async (id) => {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบสินค้านี้?')) return
-
     try {
         await axios.delete(`/products/${id}`)
         await fetchProducts()
@@ -58,14 +66,45 @@ const deleteProduct = async (id) => {
     }
 }
 
-// debounce search
-watch(searchKeyword, (newValue) => {
-    clearTimeout(searchTimeout)
-    searchTimeout = setTimeout(() => {
-        currentPage.value = 1 // reset ไปหน้าแรกทุกครั้งที่ search
+// เปิด modal เพื่อแก้ไข
+function openEditModal(product) {
+    editProduct.value = { ...product } // clone เพื่อแก้ไขได้โดยไม่กระทบต้นฉบับ
+    editModalOpen.value = true
+}
+
+// บันทึกการแก้ไข
+async function saveEdit() {
+    try {
+        await axios.put(`/products/${editProduct.value.id}`, {
+            category: editProduct.value.category,
+            description: editProduct.value.description,
+            brand: editProduct.value.brand || '',
+            model: editProduct.value.model || '',
+            cost_price: editProduct.value.cost_price,
+            sell_price: editProduct.value.sell_price,
+            unit: editProduct.value.unit
+        })
+
+        alert('บันทึกการแก้ไขเรียบร้อย')
+        editModalOpen.value = false
+
+        // โหลดข้อมูลสินค้าใหม่ (สมมติว่ามีฟังก์ชัน fetchProducts)
         fetchProducts()
-    }, 500) // 0.5 วินาที
-})
+    } catch (error) {
+        console.error(error)
+        alert('เกิดข้อผิดพลาดในการบันทึก')
+    }
+}
+
+// debounce search
+const handleSearch = (e) => {
+    clearTimeout(searchTimeout.value)
+    searchKeyword.value = e.target.value
+    searchTimeout.value = setTimeout(() => {
+        currentPage.value = 1
+        fetchProducts()
+    }, 500)
+}
 
 onMounted(() => {
     fetchProducts()
@@ -76,7 +115,7 @@ onMounted(() => {
     <div class="product-table-container">
         <h2>รายการสินค้าทั้งหมด</h2>
         <div class="search-box">
-            <input type="text" v-model="searchKeyword" placeholder="ค้นหาสินค้า..." />
+            <input type="text" placeholder="ค้นหาสินค้า..." @input="handleSearch" />
             <i class="fas fa-search"></i>
 
             <router-link to="/products/add" class="add-product-btn">
@@ -107,9 +146,9 @@ onMounted(() => {
                         <td>{{ parseFloat(product.sell_price).toFixed(2) }} บาท</td>
                         <td>{{ product.unit }}</td>
                         <td>
-                            <router-link :to="`/products/edit/${product.id}`" class="action-btn edit-btn" title="แก้ไข">
+                            <button class="action-btn edit-btn" @click="openEditModal(product)" title="แก้ไข">
                                 <i class="fas fa-pen-to-square"></i>
-                            </router-link>
+                            </button>
                             <button class="action-btn delete-btn" @click="deleteProduct(product.id)" title="ลบ">
                                 <i class="fas fa-trash-can"></i>
                             </button>
@@ -131,10 +170,165 @@ onMounted(() => {
                 </button>
             </div>
         </div>
+
+        <!-- Modal แก้ไข -->
+        <div v-if="editModalOpen" class="modal-backdrop">
+            <div class="modal">
+                <h2 class="modal-title">แก้ไขสินค้า</h2>
+                <form @submit.prevent="saveEdit" class="product-form">
+                    <div class="form-group">
+                        <label>หมวดหมู่ <span class="required">*</span></label>
+                        <input v-model="editProduct.category" required />
+                    </div>
+                    <div class="form-group">
+                        <label>รายละเอียด <span class="required">*</span></label>
+                        <input v-model="editProduct.description" required />
+                    </div>
+                    <div class="form-group">
+                        <label>ยี่ห้อ</label>
+                        <input v-model="editProduct.brand" />
+                    </div>
+                    <div class="form-group">
+                        <label>รุ่น</label>
+                        <input v-model="editProduct.model" />
+                    </div>
+                    <div class="form-group">
+                        <label>ราคาทุน <span class="required">*</span></label>
+                        <input type="number" v-model="editProduct.cost_price" required />
+                    </div>
+                    <div class="form-group">
+                        <label>ราคาขาย <span class="required">*</span></label>
+                        <input type="number" v-model="editProduct.sell_price" required />
+                    </div>
+                    <div class="form-group">
+                        <label>หน่วย <span class="required">*</span></label>
+                        <input v-model="editProduct.unit" required />
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-save">
+                            <i class="fas fa-save"></i> บันทึก
+                        </button>
+                        <button type="button" class="btn-cancel" @click="editModalOpen = false">
+                            <i class="fas fa-times"></i> ยกเลิก
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </template>
 
 <style scoped>
+/*modal edit*/
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 600px;
+    padding: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1.2rem;
+    color: #333;
+}
+
+.product-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.product-form label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+}
+
+.product-form .required {
+    color: red;
+}
+
+.product-form input {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.product-form input:focus {
+    border-color: #007bff;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    margin-top: 1.2rem;
+}
+
+.btn-save {
+    background: #28a745;
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-save:hover {
+    background: #218838;
+}
+
+.btn-cancel {
+    background: #dc3545;
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-cancel:hover {
+    background: #c82333;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* search */
 .search-box {
     padding-top: 1rem;
