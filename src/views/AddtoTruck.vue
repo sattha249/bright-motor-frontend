@@ -149,7 +149,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from '@/lib/axios'
-import { debounce } from 'lodash'
 
 const trucks = ref([])
 const selectedTruckId = ref('')
@@ -166,6 +165,16 @@ const addQuantities = ref({})
 
 const addedProducts = ref([])
 const saving = ref(false)
+
+let debounceTimeout = null
+function debounce(func, delay) {
+    return (...args) => {
+        if (debounceTimeout) clearTimeout(debounceTimeout)
+        debounceTimeout = setTimeout(() => {
+            func(...args)
+        }, delay)
+    }
+}
 
 const fetchTrucks = async () => {
     try {
@@ -219,7 +228,12 @@ const fetchWarehouseStocks = async () => {
         loading.value = false
     }
 }
+
 const debouncedFetchWarehouseStocks = debounce(fetchWarehouseStocks, 500)
+
+const onSearchInput = () => {
+    debouncedFetchWarehouseStocks()
+}
 
 const addProductToList = (item) => {
     const quantity = addQuantities.value[item.id]
