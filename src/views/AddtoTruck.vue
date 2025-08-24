@@ -13,9 +13,24 @@
                 </select>
             </div>
 
-            <button class="add-stock-btn" @click="openAddModal" :disabled="!selectedTruckId">
-                <i class="fas fa-plus"></i> เพิ่มสินค้า
-            </button>
+            <div class="button-group">
+                <button class="add-stock-btn" @click="openAddModal" :disabled="!selectedTruckId">
+                    <i class="fas fa-plus"></i> เพิ่มสินค้า
+                </button>
+                <button
+                    :class="['refill-btn', { 'refill-success': isRefillConfirmed, 'refill-error': isRefillInsufficient }]"
+                    @click="refillFromSoldProducts" :disabled="!selectedTruckId || loading || isRefillInitiated">
+                    <span v-if="isRefillInsufficient">
+                        <i class="fas fa-exclamation-triangle"></i> สินค้าไม่พอ
+                    </span>
+                    <span v-else-if="isRefillConfirmed">
+                        <i class="fas fa-check"></i> พร้อมยืนยัน
+                    </span>
+                    <span v-else>
+                        <i class="fas fa-sync-alt"></i> เติมสินค้าจากยอดที่ขายไป
+                    </span>
+                </button>
+            </div>
         </div>
 
         <div v-if="loading">กำลังโหลดข้อมูล...</div>
@@ -35,12 +50,17 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="stock in truckStocks" :key="stock.id">
-                        <td>SKU-{{ stock.product_id }}</td>
+                    <tr v-for="stock in truckStocksWithSoldQuantities" :key="stock.id">
+                        <td>{{ stock.sku }}</td>
                         <td>{{ stock.product.description }}</td>
                         <td>{{ stock.product.category }}</td>
                         <td>{{ stock.product.brand || '-' }}</td>
-                        <td>{{ stock.quantity }}</td>
+                        <td>
+                            {{ stock.quantity }}
+                            <span v-if="stock.soldQuantity > 0" class="sold-quantity">
+                                (+{{ stock.soldQuantity }})
+                            </span>
+                        </td>
                         <td>{{ stock.product.unit || '-' }}</td>
                         <td>{{ parseFloat(stock.product.cost_price).toFixed(2) }} บาท</td>
                         <td>{{ parseFloat(stock.product.sell_price).toFixed(2) }} บาท</td>
@@ -52,7 +72,6 @@
             </div>
         </div>
 
-        <!-- สรุปสินค้าที่เลือกเพิ่ม -->
         <div v-if="addedProducts.length > 0" class="added-summary">
             <h3>สินค้าที่จะย้ายเข้า รถ {{ selectedTruckPlate }}</h3>
             <table class="product-table">
@@ -62,6 +81,7 @@
                         <th>ชื่อสินค้า</th>
                         <th>จำนวน</th>
                         <th>หน่วย</th>
+                        <th>สถานะ</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -72,6 +92,14 @@
                         <td>{{ item.quantity }}</td>
                         <td>{{ item.unit }}</td>
                         <td>
+                            <span v-if="insufficientProducts.includes(item.productId)" class="insufficient-indicator">
+                                🔴 ไม่พอ
+                            </span>
+                            <span v-else class="sufficient-indicator">
+                                🟢 พอ
+                            </span>
+                        </td>
+                        <td>
                             <button class="remove-btn" @click="removeProductFromList(item.productId)" title="ลบสินค้า">
                                 &times;
                             </button>
@@ -79,12 +107,14 @@
                     </tr>
                 </tbody>
             </table>
-            <button class="save-btn" @click="saveMoveToTruck" :disabled="saving">
-                {{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}
-            </button>
+            <div class="summary-buttons">
+                <button class="cancel-btn" @click="cancelRefill">ยกเลิก</button>
+                <button class="save-btn" @click="saveRefillData" :disabled="saving || hasInsufficientStockComputed">
+                    {{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}
+                </button>
+            </div>
         </div>
 
-        <!-- Modal เพิ่มสินค้า -->
         <div v-if="showAddModal" class="modal-overlay" @click.self="closeAddModal">
             <div class="modal large-modal">
                 <h3>เลือกสินค้าในคลัง</h3>
@@ -147,7 +177,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import axios from '@/lib/axios'
 
 const trucks = ref([])
@@ -155,6 +185,11 @@ const selectedTruckId = ref('')
 const truckStocks = ref([])
 const loading = ref(false)
 const error = ref(null)
+const soldProducts = ref([])
+const isRefillConfirmed = ref(false)
+const isRefillInsufficient = ref(false)
+const insufficientProducts = ref([]);
+const isRefillInitiated = ref(false);
 
 const showAddModal = ref(false)
 const warehouseStocks = ref([])
@@ -176,6 +211,51 @@ function debounce(func, delay) {
     }
 }
 
+const selectedTruckPlate = computed(() => {
+    const truck = trucks.value.find(t => t.id === selectedTruckId.value)
+    return truck ? truck.plate_number : ''
+})
+
+const hasInsufficientStockComputed = computed(() => {
+    return addedProducts.value.some(item => insufficientProducts.value.includes(item.productId));
+});
+
+watch(hasInsufficientStockComputed, (newVal) => {
+    isRefillInsufficient.value = newVal;
+    isRefillConfirmed.value = !newVal;
+});
+
+const truckStocksWithSoldQuantities = computed(() => {
+    if (soldProducts.value.length === 0) {
+        return truckStocks.value.map(stock => ({ ...stock, soldQuantity: 0, sku: `SKU-${stock.product_id}` }));
+    }
+
+    const soldProductsMap = new Map();
+    soldProducts.value.forEach(soldItem => {
+        if (soldProductsMap.has(soldItem.productId)) {
+            soldProductsMap.set(soldItem.productId, soldProductsMap.get(soldItem.productId) + soldItem.quantity);
+        } else {
+            soldProductsMap.set(soldItem.productId, soldItem.quantity);
+        }
+    });
+
+    return truckStocks.value.map(stock => {
+        const soldQty = soldProductsMap.get(stock.product_id) || 0;
+        return {
+            ...stock,
+            soldQuantity: soldQty,
+            sku: `SKU-${stock.product_id}`
+        };
+    });
+});
+
+watch(selectedTruckId, () => {
+    isRefillConfirmed.value = false;
+    isRefillInsufficient.value = false;
+    addedProducts.value = [];
+    isRefillInitiated.value = false;
+});
+
 const fetchTrucks = async () => {
     try {
         const res = await axios.get('/trucks')
@@ -196,6 +276,9 @@ const fetchTruckStocks = async () => {
     try {
         const res = await axios.get(`/trucks/${selectedTruckId.value}/stocks`)
         truckStocks.value = res.data.data
+        soldProducts.value = []
+        isRefillConfirmed.value = false;
+        isRefillInsufficient.value = false;
     } catch (err) {
         error.value = 'โหลดข้อมูลสินค้าในรถไม่สำเร็จ'
         console.error(err)
@@ -218,7 +301,7 @@ const fetchWarehouseStocks = async () => {
         warehouseStocks.value = res.data.data
         warehouseStocks.value.forEach(item => {
             if (!addQuantities.value[item.id]) {
-                addQuantities.value[item.id] = 1 // กำหนดค่าเริ่มต้นเป็น 1
+                addQuantities.value[item.id] = 1
             }
         })
         totalPages.value = res.data.meta.last_page
@@ -230,10 +313,6 @@ const fetchWarehouseStocks = async () => {
 }
 
 const debouncedFetchWarehouseStocks = debounce(fetchWarehouseStocks, 500)
-
-const onSearchInput = () => {
-    debouncedFetchWarehouseStocks()
-}
 
 const addProductToList = (item) => {
     const quantity = addQuantities.value[item.id]
@@ -275,37 +354,135 @@ const changePage = (page) => {
     fetchWarehouseStocks()
 }
 
-const saveMoveToTruck = async () => {
-    if (!selectedTruckId.value || addedProducts.value.length === 0) {
-        alert('กรุณาเลือกสินค้าและรถให้ครบถ้วน')
-        return
+const saveRefillData = async () => {
+    if (addedProducts.value.length === 0) {
+        isRefillConfirmed.value = false;
+        isRefillInsufficient.value = false;
+        return;
     }
 
-    saving.value = true
-
+    saving.value = true;
     try {
         const payload = {
             truckId: selectedTruckId.value,
             products: addedProducts.value.map(item => ({
                 productId: item.productId,
-                quantity: item.quantity,
-            })),
-        }
-        await axios.post('/warehouse-stocks/move-to-truck', payload)
-        alert('ย้ายสินค้าเรียบร้อยแล้ว')
-        addedProducts.value = []
-        fetchTruckStocks()
-        closeAddModal()
+                quantity: item.quantity
+            }))
+        };
+        await axios.post('/warehouse-stocks/move-to-truck', payload);
+
+        addedProducts.value = [];
+        soldProducts.value = [];
+        isRefillConfirmed.value = false;
+        isRefillInsufficient.value = false;
+        insufficientProducts.value = [];
+        isRefillInitiated.value = false;
+        fetchTruckStocks();
     } catch (err) {
-        alert('เกิดข้อผิดพลาดในการย้ายสินค้า')
-        console.error(err)
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+        console.error(err);
     } finally {
-        saving.value = false
+        saving.value = false;
     }
-}
+};
+
+const refillFromSoldProducts = async () => {
+    loading.value = true;
+    isRefillConfirmed.value = false;
+    isRefillInsufficient.value = false;
+    isRefillInitiated.value = true;
+    addedProducts.value = [];
+    soldProducts.value = [];
+    insufficientProducts.value = [];
+
+    try {
+        const response = await axios.get(`/sell-logs?truck=${selectedTruckId.value}`);
+        const soldQuantitiesMap = {};
+
+        response.data.data.forEach(log => {
+            log.items.forEach(item => {
+                soldQuantitiesMap[item.product_id] = (soldQuantitiesMap[item.product_id] || 0) + item.quantity;
+            });
+        });
+
+        const productsToAdd = [];
+
+        // Check each sold product's stock and prepare for adding
+        const productIds = Object.keys(soldQuantitiesMap);
+        for (const productId of productIds) {
+            const quantityNeeded = soldQuantitiesMap[productId];
+            try {
+                const warehouseRes = await axios.get(`/warehouse-stocks/${productId}`);
+                const warehouseItem = warehouseRes.data.find(item => item.product_id === parseInt(productId));
+
+                if (!warehouseItem || warehouseItem.quantity < quantityNeeded) {
+                    insufficientProducts.value.push(parseInt(productId));
+                    console.warn(`สินค้า SKU-${productId} มีในคลังไม่พอ (${warehouseItem ? warehouseItem.quantity : 0} < ${quantityNeeded})`);
+                }
+
+                if (warehouseItem) {
+                    productsToAdd.push({
+                        productId: warehouseItem.product_id,
+                        description: warehouseItem.product.description,
+                        quantity: quantityNeeded,
+                        unit: warehouseItem.product.unit || '-',
+                    });
+                }
+            } catch (err) {
+                insufficientProducts.value.push(parseInt(productId));
+                console.error(`ไม่สามารถตรวจสอบคลังสำหรับ SKU-${productId} ได้`, err);
+            }
+        }
+
+        addedProducts.value = productsToAdd;
+        // soldProducts.value = productsToAdd;
+        soldProducts.value = addedProducts.value.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity
+        }));
+
+    } catch (err) {
+        alert('เกิดข้อผิดพลาดในการโหลดข้อมูลยอดขาย');
+        console.error(err);
+    } finally {
+        loading.value = false;
+    }
+};
+
+const cancelRefill = () => {
+    addedProducts.value = [];
+    soldProducts.value = [];
+    isRefillConfirmed.value = false;
+    isRefillInsufficient.value = false;
+    insufficientProducts.value = [];
+    isRefillInitiated.value = false;
+};
 
 const removeProductFromList = (productId) => {
-    addedProducts.value = addedProducts.value.filter(item => item.productId !== productId)
+    // Find the item to be removed
+    const itemToRemove = addedProducts.value.find(item => item.productId === productId);
+    if (!itemToRemove) return;
+
+    // Remove the product from the addedProducts list
+    addedProducts.value = addedProducts.value.filter(item => item.productId !== productId);
+
+    // Remove the product from the insufficientProducts list
+    const insufficientIndex = insufficientProducts.value.indexOf(productId);
+    if (insufficientIndex > -1) {
+        insufficientProducts.value.splice(insufficientIndex, 1);
+    }
+
+    // Update the soldProducts list by removing the corresponding quantity
+    const soldIndex = soldProducts.value.findIndex(item => item.productId === productId);
+    if (soldIndex !== -1) {
+        soldProducts.value.splice(soldIndex, 1);
+    }
+
+    // Check if the addedProducts list is now empty and reset status
+    if (addedProducts.value.length === 0) {
+        cancelRefill();
+    }
 }
 
 const decrementQuantity = (id) => {
@@ -326,6 +503,53 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.refill-success {
+    background-color: #28a745 !important;
+    cursor: default !important;
+}
+
+.refill-error {
+    background-color: #dc3545 !important;
+    cursor: default !important;
+}
+
+.sold-quantity {
+    color: #28a745;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.insufficient-indicator {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.sufficient-indicator {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.summary-buttons {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.cancel-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.cancel-btn:hover {
+    background-color: #5a6268;
+}
+
 .product-table-container {
     background-color: var(--card-bg);
     padding: 1.5rem;
@@ -344,12 +568,6 @@ onMounted(() => {
     justify-content: space-between;
     margin-bottom: 1rem;
     flex-wrap: wrap;
-    gap: 10px;
-}
-
-.truck-select-container {
-    display: flex;
-    align-items: center;
     gap: 10px;
 }
 
@@ -373,6 +591,12 @@ onMounted(() => {
     border-color: var(--primary-color);
 }
 
+.button-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 .add-stock-btn {
     background-color: #38a169;
     color: white;
@@ -391,6 +615,26 @@ onMounted(() => {
 
 .add-stock-btn:hover:not(:disabled) {
     background-color: #2f855a;
+}
+
+.refill-btn {
+    background-color: #f6ad55;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s;
+}
+
+.refill-btn:disabled {
+    background-color: #fbd38d;
+    cursor: not-allowed;
+}
+
+.refill-btn:hover:not(:disabled) {
+    background-color: #dd6b20;
 }
 
 .product-table {
@@ -430,7 +674,6 @@ onMounted(() => {
 }
 
 .save-btn {
-    margin-top: 10px;
     background-color: var(--primary-color);
     color: var(--white-color);
     border: none;
@@ -441,7 +684,7 @@ onMounted(() => {
     transition: background-color 0.3s;
 }
 
-.save-btn:hover {
+.save-btn:hover:not(:disabled) {
     background-color: #2c7a7b;
 }
 

@@ -11,6 +11,11 @@
                     </router-link>
                 </li>
                 <li>
+                    <router-link to="/customer" active-class="active">
+                        <i class="fas fa-users"></i> จัดการลูกค้า
+                    </router-link>
+                </li>
+                <li>
                     <router-link to="/products" active-class="active">
                         <i class="fas fa-box-open"></i> สินค้าในระบบ
                     </router-link>

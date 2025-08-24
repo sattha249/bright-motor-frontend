@@ -7,6 +7,7 @@ import Qrcode from '@/views/settings/Qrcode.vue';
 import Login from '@/views/Login.vue';
 import Warehouse from '@/views/Warehouse.vue';
 import AddtoTruck from '@/views/AddtoTruck.vue';
+import Customer from '@/views/Customer.vue';
 import { isAuthenticated } from '@/services/auth';
 
 const router = createRouter({
@@ -27,6 +28,12 @@ const router = createRouter({
       path: '/add-to-truck',
       name: 'AddToTruck',
       component: AddtoTruck,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/customer',
+      name: 'Customer',
+      component: Customer,
       meta: { requiresAuth: true }
     }
   ],
