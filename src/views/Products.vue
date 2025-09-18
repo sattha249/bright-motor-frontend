@@ -134,17 +134,19 @@ onMounted(() => {
                         <th>ต้นทุน</th>
                         <th>ราคาขาย</th>
                         <th>หน่วย</th>
+                        <th>จุดเก็บ</th>
                         <th>การจัดการ</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="product in products" :key="product.id">
-                        <td>SKU-{{ product.id }}</td>
+                        <td>{{ product.product_code }}</td>
                         <td>{{ product.description }}</td>
                         <td>{{ product.category }}</td>
                         <td>{{ parseFloat(product.cost_price).toFixed(2) }} บาท</td>
                         <td>{{ parseFloat(product.sell_price).toFixed(2) }} บาท</td>
                         <td>{{ product.unit }}</td>
+                        <td>{{ product.zone }}</td>
                         <td>
                             <button class="action-btn edit-btn" @click="openEditModal(product)" title="แก้ไข">
                                 <i class="fas fa-pen-to-square"></i>
