@@ -3,6 +3,12 @@
         <h2>เพิ่มสินค้าใหม่</h2>
         <form class="product-form" @submit.prevent="saveProduct">
             <div class="form-group">
+                <label for="description">รหัสสินค้า</label>
+                <input v-model="form.product_code" type="text" id="product_code" placeholder="ป้อนรหัสสินค้า" />
+                <small v-if="errors.product_code" class="error">{{ errors.product_code }}</small>
+            </div>
+
+            <div class="form-group">
                 <label for="description">ชื่อสินค้า</label>
                 <input v-model="form.description" type="text" id="description" placeholder="ป้อนชื่อสินค้า" />
                 <small v-if="errors.description" class="error">{{ errors.description }}</small>
@@ -42,6 +48,11 @@
                 <small v-if="errors.unit" class="error">{{ errors.unit }}</small>
             </div>
 
+            <div class="form-group">
+                <label for="zone">จุดเก็บ</label>
+                <input v-model="form.zone" type="text" id="zone" placeholder="ป้อนจุดเก็บ (เว้นว่างได้)" />
+            </div>
+
             <div class="form-actions">
                 <button type="submit" class="save-btn">บันทึก</button>
                 <router-link to="/products" class="cancel-btn">ยกเลิก</router-link>
@@ -64,7 +75,9 @@ const form = reactive({
     model: '',
     cost_price: '',
     sell_price: '',
-    unit: ''
+    unit: '',
+    product_code: '',
+    zone: ''
 })
 
 const errors = reactive({
@@ -72,7 +85,8 @@ const errors = reactive({
     description: '',
     cost_price: '',
     sell_price: '',
-    unit: ''
+    unit: '',
+    product_code: ''
 })
 
 const validateForm = () => {
@@ -97,6 +111,10 @@ const validateForm = () => {
     }
     if (!form.unit.trim()) {
         errors.unit = 'กรุณากรอกหน่วยสินค้า'
+        valid = false
+    }
+    if (!form.product_code.trim()) {
+        errors.product_code = 'กรุณากรอกรหัสสินค้า'
         valid = false
     }
 

@@ -82,7 +82,8 @@ async function saveEdit() {
             model: editProduct.value.model || '',
             cost_price: editProduct.value.cost_price,
             sell_price: editProduct.value.sell_price,
-            unit: editProduct.value.unit
+            unit: editProduct.value.unit,
+            zone: editProduct.value.zone
         })
 
         alert('บันทึกการแก้ไขเรียบร้อย')
@@ -205,6 +206,10 @@ onMounted(() => {
                     <div class="form-group">
                         <label>หน่วย <span class="required">*</span></label>
                         <input v-model="editProduct.unit" required />
+                    </div>
+                    <div class="form-group">
+                        <label>จุดเก็บ <span class="required">*</span></label>
+                        <input v-model="editProduct.zone" required />
                     </div>
 
                     <div class="form-actions">
