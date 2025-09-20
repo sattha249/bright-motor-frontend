@@ -8,7 +8,7 @@
                 <select id="truck-select" v-model="selectedTruckId" @change="fetchTruckStocks">
                     <option value="" disabled>-- เลือกรถ --</option>
                     <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
-                        {{ truck.plate_number }} - {{ truck.user.fullname }}
+                        {{ truck.plate_number }} - {{ truck?.user?.fullname || 'ยังไม่ได้มอบหมาย' }}
                     </option>
                 </select>
             </div>
@@ -151,8 +151,13 @@
                                     v-model.number="addQuantities[item.id]" style="width: 70px; text-align: center;" />
                                 <button class="qty-btn" @click="incrementQuantity(item.id, item.quantity)"
                                     :disabled="!addQuantities[item.id] || addQuantities[item.id] >= item.quantity">+</button>
-                                <button class="add-btn"
-                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] < 1 || addQuantities[item.id] > item.quantity"
+
+                                <button v-if="addQuantities[item.id] > item.quantity" class="add-btn not-enough-btn"
+                                    disabled>
+                                    ไม่พอ
+                                </button>
+                                <button v-else class="add-btn"
+                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] < 1"
                                     @click="addProductToList(item)">
                                     Add
                                 </button>
@@ -782,5 +787,15 @@ onMounted(() => {
 .add-btn:disabled {
     background-color: #94d3a2;
     cursor: not-allowed;
+}
+
+.not-enough-btn {
+    background-color: #e53e3e !important;
+    color: white !important;
+    cursor: not-allowed;
+}
+
+.not-enough-btn:hover {
+    background-color: #e53e3e !important;
 }
 </style>
