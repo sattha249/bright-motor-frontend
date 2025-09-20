@@ -10,6 +10,11 @@
                         <i class="fas fa-home"></i> หน้าหลัก
                     </router-link>
                 </li>
+                <li v-if="userRole === 'admin'">
+                    <router-link to="/manage-users">
+                        <i class="fas fa-user-plus"></i> เพิ่มผู้ใช้งาน
+                    </router-link>
+                </li>
                 <li>
                     <router-link to="/customer" active-class="active">
                         <i class="fas fa-users"></i> จัดการลูกค้า
@@ -53,7 +58,22 @@
 </template>
 
 <script setup>
-// ไม่ต้องมีโค้ด JavaScript ที่นี่
+import { ref, onMounted } from 'vue';
+import axios from '@/lib/axios';
+const userRole = ref('');
+
+const fetchUserRole = async () => {
+    try {
+        const response = await axios.get('/profile'); // Endpoint สำหรับดึงข้อมูลผู้ใช้ปัจจุบัน
+        userRole.value = response.data.role;
+        console.log('User role:', userRole.value);
+    } catch (error) {
+        console.error('Failed to fetch user role:', error);
+    }
+};
+onMounted(() => {
+    fetchUserRole();
+});
 </script>
 
 <style scoped>
