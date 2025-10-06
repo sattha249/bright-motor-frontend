@@ -45,8 +45,7 @@
                         <th>ยี่ห้อ</th>
                         <th>จำนวน</th>
                         <th>หน่วย</th>
-                        <th>ต้นทุน</th>
-                        <th>ราคาขาย</th>
+                        <th>สถานะ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,8 +61,18 @@
                             </span>
                         </td>
                         <td>{{ stock.product.unit || '-' }}</td>
-                        <td>{{ parseFloat(stock.product.cost_price).toFixed(2) }} บาท</td>
-                        <td>{{ parseFloat(stock.product.sell_price).toFixed(2) }} บาท</td>
+                        <td>
+                            <span v-if="stock.quantity < 5" class="stock-badge badge-low">
+                                ใกล้หมด
+                            </span>
+                            <span v-else-if="stock.quantity >= 5 && stock.quantity < 10"
+                                class="stock-badge badge-medium">
+                                ปานกลาง
+                            </span>
+                            <span v-else class="stock-badge badge-high">
+                                มาก
+                            </span>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -797,5 +806,34 @@ onMounted(() => {
 
 .not-enough-btn:hover {
     background-color: #e53e3e !important;
+}
+
+.stock-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 80px;
+    white-space: nowrap;
+}
+
+.badge-low {
+    background-color: #f56565;
+    /* แดง */
+    color: white;
+}
+
+.badge-medium {
+    background-color: #f6e05e;
+    /* เหลือง */
+    color: #4a5568;
+}
+
+.badge-high {
+    background-color: #48bb78;
+    /* เขียว */
+    color: white;
 }
 </style>

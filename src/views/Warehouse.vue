@@ -7,21 +7,39 @@
             <thead>
                 <tr>
                     <th>#</th>
+                    <th>รหัสสินค้า</th>
                     <th>ชื่อสินค้า</th>
                     <th>ยี่ห้อ</th>
                     <th>จำนวน</th>
                     <th>หน่วย</th>
                     <th>ราคา</th>
+                    <th>จุดเก็บ</th>
+                    <th>สถานะ</th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="(item, index) in warehouseStock" :key="item.id">
                     <td>{{ (page - 1) * perPage + index + 1 }}</td>
+                    <td>{{ item.product?.product_code || '-' }}</td>
                     <td>{{ item.product?.description || 'ไม่ระบุ' }}</td>
                     <td>{{ item.product?.brand || '-' }}</td>
                     <td>{{ item.quantity }}</td>
                     <td>{{ item.product?.unit || '-' }}</td>
                     <td>฿{{ item.product?.sell_price?.toLocaleString() || '0' }}</td>
+                    <td>{{ item.product?.zone || 'ไม่ระบุ' }}</td>
+                    <!-- badge -->
+                    <td>
+                        <span v-if="item.quantity < 20" class="stock-badge badge-low">
+                            ใกล้หมด
+                        </span>
+                        <span v-else-if="item.quantity >= 20 && item.quantity < 50" class="stock-badge badge-medium">
+                            ปานกลาง
+                        </span>
+                        <span v-else class="stock-badge badge-high">
+                            มาก
+                        </span>
+                    </td>
+
                 </tr>
                 <tr v-if="warehouseStock.length === 0">
                     <td colspan="6" style="text-align:center">ไม่มีข้อมูลในคลัง</td>
@@ -457,5 +475,34 @@ watch(page, fetchWarehouseStock)
 
 .modal-actions button:last-child:hover {
     background-color: #666;
+}
+
+.stock-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 80px;
+    white-space: nowrap;
+}
+
+.badge-low {
+    background-color: #f56565;
+    /* แดง */
+    color: white;
+}
+
+.badge-medium {
+    background-color: #f6e05e;
+    /* เหลือง */
+    color: #4a5568;
+}
+
+.badge-high {
+    background-color: #48bb78;
+    /* เขียว */
+    color: white;
 }
 </style>
