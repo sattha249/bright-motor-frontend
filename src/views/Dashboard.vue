@@ -12,6 +12,10 @@
             <h3>ยอดขายเดือนนี้</h3>
             <p class="value">{{ formatCurrency(totalSales) }} บาท</p>
         </div>
+        <div class="widget">
+            <h3>ส่วนลดเดือนนี้</h3>
+            <p class="value" style="color: #F00000;">{{ formatCurrency(totalDiscount) }} บาท</p>
+        </div>
     </div>
 
     <div class="sell-logs-container">
@@ -34,8 +38,8 @@
                     <td>{{ log.customer.name }}</td>
                     <td>{{ log.truck.plate_number }}</td>
                     <td>{{ formatCurrency(log.total_price) }}</td>
-                    <td>{{ formatCurrency(log.total_discount) }}</td>
-                    <td>{{ formatCurrency(log.total_sold_price) }}</td>
+                    <td style="color:#F00000;">{{ formatCurrency(log.total_discount) }}</td>
+                    <td style="color:#00D000;">{{ formatCurrency(log.total_sold_price) }}</td>
                     <td>{{ formatDate(log.created_at) }}</td>
                 </tr>
             </tbody>
@@ -73,8 +77,8 @@
                             <td>{{ item.quantity }}</td>
                             <td>{{ formatCurrency(item.price) }}</td>
                             <td>{{ formatCurrency(item.total_price) }}</td>
-                            <td>{{ formatCurrency(item.discount) }}</td>
-                            <td>{{ formatCurrency(item.sold_price) }}</td>
+                            <td style="color:#F00000;">{{ formatCurrency(item.discount) }}</td>
+                            <td style="color:#00D000;">{{ formatCurrency(item.sold_price) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -103,6 +107,7 @@ import axios from '@/lib/axios'
 
 const sellLogs = ref([])
 const totalSales = ref(0)
+const totalDiscount = ref(0)
 const totalProducts = ref(0)
 const totalProductsInStock = ref(0)
 
@@ -130,6 +135,7 @@ onMounted(async () => {
 async function fetchSummary() {
     const { data } = await axios.get('/sell-logs/summary')
     totalSales.value = data.totalSales
+    totalDiscount.value = data.totalDiscount
     totalProducts.value = data.totalProduct
     totalProductsInStock.value = data.totalProductInStock
 }
