@@ -21,18 +21,23 @@
                     </router-link>
                 </li>
                 <li>
+                    <router-link to="/sale" active-class="active">
+                        <i class="fas fa-money-bill-transfer"></i> ขายสินค้าหน้าโกดัง
+                    </router-link>
+                </li>
+                <li>
                     <router-link to="/products" active-class="active">
                         <i class="fas fa-box-open"></i> สินค้าในระบบ
                     </router-link>
                 </li>
                 <li>
                     <router-link to="/warehouse" active-class="active">
-                        <i class="fas fa-box-open"></i> สินค้าในโกดัง
+                        <i class="fas fa-warehouse"></i> สินค้าในโกดัง
                     </router-link>
                 </li>
                 <li>
                     <router-link to="/add-to-truck" active-class="active">
-                        <i class="fas fa-truck"></i> เพิ่มสินค้าเข้ารถ
+                        <i class="fas fa-truck-fast"></i> เพิ่มสินค้าเข้ารถ
                     </router-link>
                 </li>
                 <li>

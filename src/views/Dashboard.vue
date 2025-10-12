@@ -23,6 +23,8 @@
                     <th>ลูกค้า</th>
                     <th>ทะเบียนรถ</th>
                     <th>ยอดรวม</th>
+                    <th>ส่วนลด</th>
+                    <th>ยอดสุทธิ</th>
                     <th>วันที่ขาย</th>
                 </tr>
             </thead>
@@ -32,6 +34,8 @@
                     <td>{{ log.customer.name }}</td>
                     <td>{{ log.truck.plate_number }}</td>
                     <td>{{ formatCurrency(log.total_price) }}</td>
+                    <td>{{ formatCurrency(log.total_discount) }}</td>
+                    <td>{{ formatCurrency(log.total_sold_price) }}</td>
                     <td>{{ formatDate(log.created_at) }}</td>
                 </tr>
             </tbody>
@@ -59,6 +63,8 @@
                             <th>จำนวน</th>
                             <th>ราคาต่อหน่วย</th>
                             <th>ราคารวม</th>
+                            <th>ส่วนลด</th>
+                            <th>ราคาหลังหักส่วนลด</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -67,6 +73,8 @@
                             <td>{{ item.quantity }}</td>
                             <td>{{ formatCurrency(item.price) }}</td>
                             <td>{{ formatCurrency(item.total_price) }}</td>
+                            <td>{{ formatCurrency(item.discount) }}</td>
+                            <td>{{ formatCurrency(item.sold_price) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -129,6 +137,9 @@ async function fetchSummary() {
 async function fetchSellLogs() {
     const res = await axios.get('/sell-logs')
     sellLogs.value = res.data.data
+    sellLogs.value.forEach(log => {
+        log.truck = log.truck || { plate_number: 'โกดัง' }
+    })
 }
 
 function prevPage() {
