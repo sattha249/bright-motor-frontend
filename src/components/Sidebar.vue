@@ -31,6 +31,11 @@
                     </router-link>
                 </li>
                 <li>
+                    <router-link to="/purchase-orders" active-class="active">
+                        <i class="fas fa-box-open"></i> ใบสั่งซื้อ
+                    </router-link>
+                </li>
+                <li>
                     <router-link to="/warehouse" active-class="active">
                         <i class="fas fa-warehouse"></i> สินค้าในโกดัง
                     </router-link>

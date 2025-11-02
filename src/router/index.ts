@@ -8,6 +8,8 @@ import Login from '@/views/Login.vue';
 import Warehouse from '@/views/Warehouse.vue';
 import AddtoTruck from '@/views/AddtoTruck.vue';
 import Customer from '@/views/Customer.vue';
+import PurchaseOrders from '@/views/PurchaseOrders.vue';
+import PurchaseOrderForm from '@/views/PurchaseOrderForm.vue';
 import { isAuthenticated } from '@/services/auth';
 
 const router = createRouter({
@@ -15,6 +17,24 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'dashboard', component: Dashboard, meta: { requiresAuth: true } },
     { path: '/products', name: 'products', component: Products, meta: { requiresAuth: true } },
+    {
+      path: '/purchase-orders',
+      name: 'PurchaseOrders',
+      component: PurchaseOrders,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/purchase-orders/create',
+      name: 'CreatePO',
+      component: PurchaseOrderForm,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/purchase-orders/edit/:id',
+      name: 'EditPO',
+      component: PurchaseOrderForm,
+      meta: { requiresAuth: true },
+    },
     { path: '/settings', name: 'settings', component: Settings, meta: { requiresAuth: true } },
     { path: '/products/add', name: 'add-product', component: AddProduct, meta: { requiresAuth: true } },
     { path: '/qrcode', name: 'qrcode', component: Qrcode, meta: { requiresAuth: true } },
