@@ -53,9 +53,11 @@
                     </a>
                 </li>
                 <li>
-                    <a href="#" class="disabled">
-                        <i class="fas fa-chart-bar"></i> รายงาน
-                    </a>
+                    <!-- <a href="#" class="disabled"> -->
+                    <router-link to="/report" active-class="active">
+                        <i class="fas fa-truck-fast"></i> รายงานการขาย
+                    </router-link>
+                    <!-- </a> -->
                 </li>
                 <li>
                     <router-link to="/settings" active-class="active">
