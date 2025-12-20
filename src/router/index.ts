@@ -10,6 +10,7 @@ import AddtoTruck from '@/views/AddtoTruck.vue';
 import Customer from '@/views/Customer.vue';
 import PurchaseOrders from '@/views/PurchaseOrders.vue';
 import PurchaseOrderForm from '@/views/PurchaseOrderForm.vue';
+import CreditReport from '../views/credit/CreditReport.vue';
 import { isAuthenticated } from '@/services/auth';
 
 const router = createRouter({
@@ -72,6 +73,12 @@ const router = createRouter({
       path: '/report',
       name: 'report',
       component: () => import('../views/Report.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/credit/report',
+      name: 'CreditReport',
+      component: CreditReport,
       meta: { requiresAuth: true },
     },
   ],

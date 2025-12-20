@@ -26,6 +26,12 @@
                     </router-link>
                 </li>
                 <li>
+                    <router-link to="/credit/report">
+                        <i class="fas fa-chart-pie"></i> รายงานเครดิต
+                    </router-link>
+
+                </li>
+                <li>
                     <router-link to="/products" active-class="active">
                         <i class="fas fa-box-open"></i> สินค้าในระบบ
                     </router-link>
