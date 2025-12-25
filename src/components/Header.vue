@@ -3,7 +3,7 @@
         <div class="search-box">
         </div>
         <div class="user-info">
-            <span>สวัสดี, {{ userData.fullname }}</span>
+            <span>สวัสดี, {{ userData?.fullname || 'ผู้ใช้งาน' }}</span>
             <i class="fas fa-user-circle"></i>
             <button @click="handleLogout" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
@@ -16,22 +16,29 @@
 import { useRouter } from 'vue-router';
 import { logoutUser } from '@/services/auth';
 import { useUserStore } from '@/stores/user';
-import { onMounted } from 'vue';
-import { ref } from 'vue';
-
+import { onMounted, computed } from 'vue'; // [แก้ไข] import computed
+import axios from '@/lib/axios'; // [แก้ไข] import axios สำหรับดึงข้อมูลใหม่
 const router = useRouter();
-let userData = ref({})
+const userStore = useUserStore();
+const userData = computed(() => userStore.userData || {});
 const handleLogout = () => {
-    // เรียกฟังก์ชัน logoutUser() เพื่อลบ Token
     logoutUser();
-
-    // ย้ายผู้ใช้กลับไปยังหน้า login
     router.push('/login');
 };
-onMounted(() => {
-    let userStore = useUserStore();
-    userData.value = userStore.userData
-})
+onMounted(async () => {
+    if (!userStore.userData || !userStore.userData.id) {
+        try {
+            const token = localStorage.getItem('userToken');
+            if (token) {
+                const res = await axios.get('/profile');
+                userStore.setUserData(res.data);
+            }
+        } catch (error) {
+            console.error("Failed to restore session in Header:", error);
+            handleLogout();
+        }
+    }
+});
 </script>
 
 <style scoped>
