@@ -28,9 +28,21 @@
                 <button class="add-item-btn" @click="openModal" :disabled="customerId === null">
                     <i class="fas fa-box-open"></i> เพิ่มรายการสินค้า
                 </button>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="isCredit" v-model="isCredit" />
-                    <label for="isCredit">ติดเครดิต</label>
+
+                <div class="credit-options-container">
+                    <div class="checkbox-group main-credit">
+                        <input type="checkbox" id="isCredit" v-model="isCredit" @change="handleCreditChange" />
+                        <label for="isCredit">ติดเครดิต</label>
+                    </div>
+
+                    <div v-if="isCredit" class="credit-type-options">
+                        <label class="radio-label">
+                            <input type="radio" value="week" v-model="creditType"> สัปดาห์
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" value="month" v-model="creditType"> เดือน
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -40,6 +52,7 @@
                     <thead>
                         <tr>
                             <th>#</th>
+                            <th v-if="isCredit" class="text-center">จ่าย</th>
                             <th>สินค้า</th>
                             <th>จำนวน</th>
                             <th>ราคา/หน่วย</th>
@@ -51,6 +64,11 @@
                     <tbody>
                         <tr v-for="(item, index) in items" :key="item.productId">
                             <td>{{ index + 1 }}</td>
+
+                            <td v-if="isCredit" class="text-center">
+                                <input type="checkbox" v-model="item.is_paid" class="paid-checkbox">
+                            </td>
+
                             <td>{{ item.description }}</td>
                             <td>
                                 <input type="number" v-model.number="item.quantity" min="1" class="qty-input" />
@@ -65,7 +83,7 @@
                             </td>
                         </tr>
                         <tr v-if="items.length === 0">
-                            <td colspan="7" style="text-align: center;">กรุณาเพิ่มรายการสินค้า</td>
+                            <td :colspan="isCredit ? 8 : 7" style="text-align: center;">กรุณาเพิ่มรายการสินค้า</td>
                         </tr>
                     </tbody>
                 </table>
@@ -76,20 +94,31 @@
                     <label>ส่วนลดรวม:</label>
                     <div class="discount-btn-group">
                         <button v-for="pct in [5, 10, 15]" :key="pct" @click="applyDiscountPercentage(pct)"
-                            class="discount-btn">
+                            class="discount-btn" :class="{ 'active': selectedDiscount === pct }"
+                            :disabled="items.length === 0">
                             {{ pct }}%
                         </button>
                     </div>
                     <div class="discount-input-group">
                         <input type="number" v-model.number="manualDiscountAmount" placeholder="หรือกรอกจำนวนเงิน"
-                            class="manual-discount-input" />
-                        <button @click="applyManualDiscount" class="discount-btn apply-manual-btn">เฉลี่ยลด</button>
+                            class="manual-discount-input" :disabled="items.length === 0" />
+                        <button @click="applyManualDiscount" class="discount-btn apply-manual-btn"
+                            :disabled="items.length === 0">เฉลี่ยลด</button>
                     </div>
                 </div>
 
                 <div class="sale-summary">
                     <p class="summary-line">รวมราคาสินค้า (ก่อนลด): ฿{{ totalOriginalPrice.toFixed(2) }}</p>
                     <p class="summary-line discount-amount">ส่วนลดรวม: ฿{{ totalDiscountAmount.toFixed(2) }}</p>
+
+                    <!-- case credit -->
+                    <template v-if="isCredit">
+                        <hr class="summary-divider">
+                        <p class="summary-line paid-today">จ่ายวันนี้: ฿{{ totalPaidToday.toFixed(2) }}</p>
+                        <p class="summary-line credit-amount">ค้างชำระ (Credit): ฿{{ totalCreditAmount.toFixed(2) }}</p>
+                        <hr class="summary-divider">
+                    </template>
+
                     <h3 class="summary-line total-price">รวมทั้งสิ้น: ฿{{ totalSalePrice.toFixed(2) }}</h3>
                     <button class="save-sale-btn" @click="saveSale" :disabled="items.length === 0 || loading">
                         {{ loading ? 'กำลังบันทึก...' : 'บันทึกการขาย' }}
@@ -149,28 +178,30 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue'; // เพิ่ม watch
 import axios from '@/lib/axios';
 import Swal from 'sweetalert2';
 
-// State and Refs
-const truckId = ref(0); // FIX: กำหนด truckId เป็น 0 (ขายที่โกดัง) โดยอัตโนมัติ
+// State
+const truckId = ref(0);
 const customerId = ref(null);
+// [แก้ไข] isCredit เป็น boolean เพื่อเปิดปิด UI เฉยๆ
 const isCredit = ref(false);
-const items = ref([]);
+// [ใหม่] creditType เก็บค่า 'week' หรือ 'month' (default: week)
+const creditType = ref('week');
 
-const trucks = ref([]); // ยังคงต้องดึง trucks ไว้เผื่อใช้ในอนาคต แต่ไม่ถูกใช้ใน Dropdown
+const items = ref([]);
+const trucks = ref([]);
 const allCustomers = ref([]);
 const customerSearchTerm = ref('');
 const showCustomerDropdown = ref(false);
 const manualDiscountAmount = ref(0);
-
 const warehouseStocks = ref([]);
 const loading = ref(false);
 const showModal = ref(false);
 const searchKeyword = ref('');
 
-// Computed Properties
+// Computed
 const totalItems = computed(() => items.value.reduce((sum, item) => sum + item.quantity, 0));
 const totalOriginalPrice = computed(() =>
     items.value.reduce((sum, item) => sum + (item.quantity * item.price), 0)
@@ -189,7 +220,6 @@ const filteredStocks = computed(() => {
     );
 });
 
-// Customer Search Logic
 const filteredCustomers = computed(() => {
     if (!customerSearchTerm.value) return allCustomers.value;
     const query = customerSearchTerm.value.toLowerCase();
@@ -199,7 +229,26 @@ const filteredCustomers = computed(() => {
     );
 });
 
-// Debounce Utility (สร้างเอง)
+// [ใหม่] คำนวณยอดจ่ายวันนี้ (เฉพาะที่ติ๊ก is_paid)
+const totalPaidToday = computed(() => {
+    return items.value
+        .filter(item => item.is_paid)
+        .reduce((sum, item) => {
+            const netPrice = item.price - (item.discount || 0);
+            return sum + (item.quantity * netPrice);
+        }, 0);
+});
+
+// [ใหม่] คำนวณยอดเครดิตค้างชำระ (เฉพาะที่ไม่ได้ติ๊ก is_paid)
+const totalCreditAmount = computed(() => {
+    return items.value
+        .filter(item => !item.is_paid)
+        .reduce((sum, item) => {
+            const netPrice = item.price - (item.discount || 0);
+            return sum + (item.quantity * netPrice);
+        }, 0);
+});
+// Helper Functions
 let searchTimeout = null;
 const debounce = (func, delay) => {
     return (...args) => {
@@ -210,16 +259,26 @@ const debounce = (func, delay) => {
     };
 };
 
-// Functions
+// [ใหม่] Reset ค่าเมื่อเปลี่ยนสถานะเครดิต
+const handleCreditChange = () => {
+    if (!isCredit.value) {
+        // ถ้าไม่ติดเครดิต ให้เคลียร์ค่า is_paid ใน items กลับเป็น true (เผื่อไว้ แต่จริงๆ ตอน save จะบังคับทับอยู่แล้ว)
+        items.value.forEach(item => item.is_paid = true);
+    } else {
+        // ถ้าติดเครดิต ค่าเริ่มต้นคือยังไม่จ่าย
+        creditType.value = 'week'; // default
+        items.value.forEach(item => item.is_paid = false);
+    }
+};
+
+// Data Fetching
 const fetchInitialData = async () => {
     loading.value = true;
     try {
         const customerRes = await axios.get('/customers');
-        // เราไม่จำเป็นต้อง fetch trucks แต่เก็บ allCustomers ไว้
         allCustomers.value = customerRes.data.data;
     } catch (error) {
         Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลเริ่มต้นได้', 'error');
-        console.error(error);
     } finally {
         loading.value = false;
     }
@@ -227,34 +286,24 @@ const fetchInitialData = async () => {
 
 const fetchWarehouseStock = async () => {
     loading.value = true;
-
-    // TruckId = 0 (ขายที่โกดัง) ดึงข้อมูลจาก API Warehouse หลัก
     const url = '/warehouse-stocks';
-
     try {
         const res = await axios.get(url);
-
-        // API Warehouse Stocks ส่งข้อมูลใน .data แต่ API Trucks ส่งใน .data.data
         const stockData = Array.isArray(res.data) ? res.data : res.data.data || res.data;
-
         warehouseStocks.value = stockData.map(stock => ({
             ...stock,
-            tempQuantity: 1, // กำหนดค่าเริ่มต้นใน Modal
+            tempQuantity: 1,
             product: stock.product || { sell_price: '0', description: '', unit: '' }
         }));
     } catch (error) {
         Swal.fire('Error', 'ไม่สามารถโหลดสินค้าในโกดังได้', 'error');
-        console.error(error);
     } finally {
         loading.value = false;
     }
 };
 
 const debouncedFetchWarehouseStock = debounce(fetchWarehouseStock, 300);
-
-const debouncedSearchCustomers = debounce(async () => {
-    // ใช้ computed property กรองจาก allCustomers
-}, 300);
+const debouncedSearchCustomers = debounce(async () => { }, 300);
 
 const selectCustomer = (customer) => {
     customerId.value = customer.id;
@@ -265,44 +314,34 @@ const selectCustomer = (customer) => {
 const hideCustomerDropdown = () => {
     setTimeout(() => {
         showCustomerDropdown.value = false;
-        // Logic เพื่อป้องกันการล้างค่าเมื่อ blur
         if (customerId.value === null) {
             const selectedCustomer = allCustomers.value.find(c => c.id === customerId.value);
-            if (!selectedCustomer) {
-                customerSearchTerm.value = '';
-            }
+            if (!selectedCustomer) customerSearchTerm.value = '';
         }
     }, 150);
 };
-
+const selectedDiscount = ref(0)
 // Discount Logic
 const applyDiscountPercentage = (percent) => {
+    selectedDiscount.value = percent
     const discountFactor = percent / 100;
-
-    items.value.forEach(item => {
-        item.discount = item.price * discountFactor;
-    });
+    items.value.forEach(item => { item.discount = item.price * discountFactor; });
     manualDiscountAmount.value = 0;
 };
 
 const applyManualDiscount = () => {
+    selectedDiscount.value = 0
     if (manualDiscountAmount.value < 0 || manualDiscountAmount.value > totalOriginalPrice.value) {
         Swal.fire('ผิดพลาด', 'ส่วนลดต้องไม่เป็นค่าลบและไม่เกินราคารวมทั้งหมด', 'error');
         return;
     }
-
     if (items.value.length === 0) return;
-
     const totalOriginal = totalOriginalPrice.value;
     const discountTotal = manualDiscountAmount.value;
-
     items.value.forEach(item => {
         const itemOriginalPrice = item.quantity * item.price;
         const ratio = itemOriginalPrice / totalOriginal;
-
-        const itemTotalDiscount = discountTotal * ratio;
-
-        item.discount = itemTotalDiscount / item.quantity;
+        item.discount = discountTotal * ratio;
     });
 };
 
@@ -312,14 +351,12 @@ const openModal = () => {
         Swal.fire('แจ้งเตือน', 'กรุณาเลือกลูกค้าก่อน', 'warning');
         return;
     }
-    fetchWarehouseStock(); // โหลดสินค้าจากโกดัง
+    fetchWarehouseStock();
     searchKeyword.value = '';
     showModal.value = true;
 };
 
-const closeModal = () => {
-    showModal.value = false;
-};
+const closeModal = () => { showModal.value = false; };
 
 const addItemToSale = (stockItem) => {
     const quantity = stockItem.tempQuantity;
@@ -333,7 +370,8 @@ const addItemToSale = (stockItem) => {
             description: stockItem.product.description,
             quantity: quantity,
             price: parseFloat(stockItem.product.sell_price),
-            discount: 0
+            discount: 0,
+            is_paid: !isCredit.value // [ใหม่] ถ้าไม่ติดเครดิต เริ่มต้นเป็น true, ถ้าติด เริ่มเป็น false
         });
     }
     closeModal();
@@ -352,10 +390,13 @@ const saveSale = async () => {
 
     loading.value = true;
     try {
+        // [Logic ใหม่] เตรียมข้อมูล isCredit และ is_paid
+        const finalIsCredit = isCredit.value ? creditType.value : null;
+
         const payload = {
-            truckId: null, // FIX: บังคับเป็น null สำหรับขายที่โกดัง
+            truckId: null,
             customerId: customerId.value,
-            isCredit: isCredit.value ? 1 : 0,
+            isCredit: finalIsCredit,
             totalDiscount: totalDiscountAmount.value.toFixed(2),
             totalSoldPrice: totalSalePrice.value.toFixed(2),
             items: items.value.map(item => {
@@ -365,7 +406,9 @@ const saveSale = async () => {
                     quantity: item.quantity,
                     price: item.price,
                     discount: item.discount.toFixed(2),
-                    sold_price: finalPrice.toFixed(2)
+                    sold_price: finalPrice.toFixed(2),
+                    // [Logic ใหม่] ถ้าไม่ติดเครดิต บังคับ true, ถ้าติดเครดิต ใช้ค่าจาก checkbox
+                    is_paid: isCredit.value ? !!item.is_paid : true
                 };
             })
         };
@@ -374,10 +417,11 @@ const saveSale = async () => {
 
         Swal.fire('สำเร็จ!', 'บันทึกการขายเรียบร้อยแล้ว', 'success');
 
-        // Reset state after successful sale
+        // Reset state
         customerId.value = null;
         items.value = [];
         isCredit.value = false;
+        creditType.value = 'week';
         manualDiscountAmount.value = 0;
         customerSearchTerm.value = '';
         fetchWarehouseStock();
@@ -392,12 +436,12 @@ const saveSale = async () => {
 
 onMounted(() => {
     fetchInitialData();
-    fetchWarehouseStock(); // โหลดสต็อกโกดังทันที
+    fetchWarehouseStock();
 });
 </script>
 
 <style scoped>
-/* ... โค้ด CSS เดิม ... */
+/* ... Styles เดิม ... */
 .sale-container {
     padding: 2rem;
     max-width: 1000px;
@@ -428,11 +472,77 @@ onMounted(() => {
     flex-wrap: wrap;
 }
 
-.select-group label {
-    font-weight: 600;
-    margin-right: 10px;
+.add-item-bar {
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
 }
 
+/* [ใหม่] Credit Options Styles */
+.credit-options-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.checkbox-group input {
+    transform: scale(1.2);
+}
+
+.credit-type-options {
+    display: flex;
+    gap: 15px;
+    background-color: #f0f4f8;
+    padding: 5px 15px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text-color-primary);
+}
+
+/* ... (Styles ตารางและอื่นๆ เหมือนเดิม) ... */
+.product-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.product-table th,
+.product-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.product-table th {
+    background-color: var(--secondary-color);
+    font-weight: 600;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.paid-checkbox {
+    transform: scale(1.5);
+    cursor: pointer;
+}
+
+/* ... (Styles อื่นๆ คงเดิม) ... */
 .select-group select {
     padding: 10px 15px;
     border: 1px solid var(--border-color);
@@ -457,44 +567,6 @@ onMounted(() => {
     cursor: not-allowed;
 }
 
-.add-item-bar {
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 1rem;
-}
-
-.checkbox-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.summary-table-container {
-    margin-bottom: 2rem;
-}
-
-.summary-table-container h3 {
-    margin-bottom: 1rem;
-    font-size: 1.2rem;
-}
-
-.product-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.product-table th,
-.product-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border-color);
-    text-align: left;
-}
-
-.product-table th {
-    background-color: var(--secondary-color);
-    font-weight: 600;
-}
-
 .qty-input {
     width: 60px;
     padding: 5px;
@@ -510,12 +582,6 @@ onMounted(() => {
     padding: 5px 10px;
     border-radius: 4px;
     cursor: pointer;
-}
-
-.action-bar {
-    justify-content: flex-end;
-    border-top: 1px solid var(--border-color);
-    padding-top: 1rem;
 }
 
 .save-sale-btn {
@@ -535,7 +601,6 @@ onMounted(() => {
     cursor: not-allowed;
 }
 
-/* Modal Styles */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -604,7 +669,6 @@ onMounted(() => {
     cursor: pointer;
 }
 
-/* Customer Search Dropdown Styles */
 .customer-search-group {
     position: relative;
 }
@@ -647,7 +711,6 @@ onMounted(() => {
     color: #999;
 }
 
-/* Discount Controls Styles */
 .discount-controls-bar {
     flex-direction: column;
     align-items: flex-start;
@@ -730,5 +793,34 @@ onMounted(() => {
     font-size: 1.8rem;
     color: var(--primary-color);
     font-weight: 700;
+}
+
+.paid-today {
+    color: #38a169;
+    /* สีเขียว */
+    font-weight: 600;
+}
+
+.credit-amount {
+    color: #e53e3e;
+    /* สีแดง */
+    font-weight: 600;
+}
+
+.summary-divider {
+    width: 100%;
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    margin: 5px 0;
+}
+
+.discount-btn.active {
+    background-color: #c05621;
+    /* สีเข้มขึ้น */
+    color: white;
+    transform: scale(1.05);
+    /* ขยายเล็กน้อย */
+    box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.5);
+    /* เพิ่มเงาขอบ */
 }
 </style>
