@@ -121,6 +121,7 @@
                     <tbody>
                         <tr v-for="stock in filteredStocks" :key="stock.id">
                             <td>SKU-{{ stock.product_id }}</td>
+                            <td>{{ stock.product.description }}</td>
                             <td>{{ stock.quantity }}</td>
                             <td>฿{{ parseFloat(stock.product.sell_price).toFixed(2) }}</td>
                             <td class="quantity-control-cell">

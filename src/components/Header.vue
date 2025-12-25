@@ -105,6 +105,40 @@ onMounted(() => {
     margin-right: 8px;
     font-size: 14px;
     color: inherit;
-    /* ให้ไอคอนใช้สีเดียวกับปุ่ม */
+}
+
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 15px;
+    }
+
+    .search-box,
+    .search-box input {
+        width: 100%;
+    }
+
+    .user-info {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .user-info span {
+        font-size: 14px;
+        margin-right: 10px;
+    }
+
+    .logout-btn {
+        margin-left: auto;
+        padding: 6px 10px;
+    }
+}
+
+.header {
+    position: relative;
+    top: 0;
+    z-index: 100;
 }
 </style>
