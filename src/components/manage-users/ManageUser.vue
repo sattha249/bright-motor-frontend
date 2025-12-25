@@ -28,8 +28,8 @@
                                 <i class="fas fa-pen"></i>
                             </button>
 
-                            <button v-if="user.id !== userStore.userData?.id" class="action-btn delete-btn"
-                                @click="confirmDelete(user)"> <i class="fas fa-trash-alt"></i>
+                            <button v-if="user.id !== ''" class="action-btn delete-btn" @click="confirmDelete(user)"> <i
+                                    class="fas fa-trash-alt"></i>
                             </button>
                         </td>
                     </tr>
