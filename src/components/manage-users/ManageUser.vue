@@ -28,8 +28,8 @@
                                 <i class="fas fa-pen"></i>
                             </button>
 
-                            <button v-if="user.id !== ''" class="action-btn delete-btn" @click="confirmDelete(user)"> <i
-                                    class="fas fa-trash-alt"></i>
+                            <button v-if="user.username !== userStore.userData.username" class="action-btn delete-btn"
+                                @click="confirmDelete(user)"> <i class="fas fa-trash-alt"></i>
                             </button>
                         </td>
                     </tr>
@@ -81,6 +81,8 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import axios from '@/lib/axios';
 import Swal from 'sweetalert2';
+import { useUserStore } from '@/stores/user';
+const userStore = useUserStore();
 
 const users = ref([]);
 const loading = ref(false);
@@ -217,8 +219,18 @@ const deleteUser = async () => {
     }
 };
 
-onMounted(() => {
+onMounted(async () => {
     fetchUsers();
+    if (!userStore.userData || Object.keys(userStore.userData).length === 0) {
+        try {
+            const res = await axios.get('/profile');
+            userStore.setUserData(res.data);
+
+            console.log("Restored User Data:", userStore.userData); // เช็ค Log ว่ามาหรือยัง
+        } catch (err) {
+            console.error("Failed to restore user session:", err);
+        }
+    }
 });
 </script>
 
