@@ -11,6 +11,7 @@ import Customer from '@/views/Customer.vue';
 import PurchaseOrders from '@/views/PurchaseOrders.vue';
 import PurchaseOrderForm from '@/views/PurchaseOrderForm.vue';
 import CreditReport from '../views/credit/CreditReport.vue';
+import ManagePreOrder from '@/views/ManagePreOrder.vue';
 import { isAuthenticated } from '@/services/auth';
 
 const router = createRouter({
@@ -79,6 +80,12 @@ const router = createRouter({
       path: '/credit/report',
       name: 'CreditReport',
       component: CreditReport,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/pre-orders',
+      name: 'ManagePreOrders',
+      component: ManagePreOrder,
       meta: { requiresAuth: true },
     },
   ],

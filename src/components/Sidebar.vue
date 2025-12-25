@@ -22,7 +22,7 @@
                 </li>
                 <li>
                     <router-link to="/sale" active-class="active">
-                        <i class="fas fa-money-bill-transfer"></i> ขายสินค้าหน้าโกดัง
+                        <i class="fas fa-money-bill-transfer"></i> ขายหน้าโกดัง
                     </router-link>
                 </li>
                 <li>
@@ -38,7 +38,7 @@
                 </li>
                 <li>
                     <router-link to="/purchase-orders" active-class="active">
-                        <i class="fas fa-box-open"></i> ใบสั่งซื้อ
+                        <i class="fa-solid fa-cubes-stacked"></i>ใบสั่งซื้อ
                     </router-link>
                 </li>
                 <li>
@@ -51,6 +51,11 @@
                         <i class="fas fa-truck-fast"></i> เพิ่มสินค้าเข้ารถ
                     </router-link>
                 </li>
+                <li>
+                    <router-link to="/pre-orders" active-class="active">
+                        <i class="fa-solid fa-truck-arrow-right"></i>พรีออเดอร์
+                    </router-link>
+                </li>
                 <!-- <li>
                     <a href="#" class="disabled">
                         <router-link to="/movements" active-class="active">
@@ -61,15 +66,11 @@
                 <li>
                     <!-- <a href="#" class="disabled"> -->
                     <router-link to="/report" active-class="active">
-                        <i class="fas fa-truck-fast"></i> รายงานการขาย
+                        <i class="fa-solid fa-file-invoice-dollar"></i> รายงานการขาย
                     </router-link>
                     <!-- </a> -->
                 </li>
-                <!-- <li>
-                    <router-link to="/settings" active-class="active">
-                        <i class="fas fa-cog"></i> ตั้งค่า
-                    </router-link>
-                </li> -->
+
             </ul>
         </nav>
     </aside>
