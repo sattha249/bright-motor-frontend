@@ -9,8 +9,8 @@
             <div class="card">
                 <h3 class="card-title">ข้อมูลใบสั่งซื้อ</h3>
                 <div class="form-group">
-                    <label>ผู้จำหน่าย (Supplier)</label>
-                    <input type="text" v-model="form.supplier_name" placeholder="ชื่อร้านค้า หรือผู้จำหน่าย" />
+                    <label>ผู้จำหน่าย (Supplier) <span style="color: #e53e3e;">*</span></label>
+                    <input type="text" v-model="form.supplier_name" placeholder="ชื่อร้านค้า หรือผู้จำหน่าย" required />
                 </div>
                 <div class="form-group">
                     <label>หมายเหตุ</label>
@@ -261,6 +261,16 @@ onMounted(() => {
 });
 
 const submitForm = async () => {
+    if (!form.value.supplier_name || form.value.supplier_name.trim() === '') {
+        Swal.fire('ข้อมูลไม่ครบ', 'กรุณาระบุชื่อผู้จำหน่าย (Supplier)', 'warning');
+        return; // หยุดการทำงานทันที
+    }
+
+    // [เดิม] 2. ตรวจสอบรายการสินค้า
+    if (form.value.items.length === 0) {
+        Swal.fire('ผิดพลาด', 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ', 'warning'); // เปลี่ยน type เป็น warning จะดู soft กว่า error ครับ
+        return;
+    }
     loading.value = true;
     try {
         const payload = {
