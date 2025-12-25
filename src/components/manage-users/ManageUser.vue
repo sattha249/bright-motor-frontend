@@ -27,8 +27,9 @@
                             <button class="action-btn edit-btn" @click="openEditModal(user)">
                                 <i class="fas fa-pen"></i>
                             </button>
-                            <button class="action-btn delete-btn" @click="openDeleteModal(user)">
-                                <i class="fas fa-trash-alt"></i>
+
+                            <button v-if="user.id !== userStore.userData?.id" class="action-btn delete-btn"
+                                @click="confirmDelete(user)"> <i class="fas fa-trash-alt"></i>
                             </button>
                         </td>
                     </tr>
@@ -74,17 +75,6 @@
             </form>
         </div>
     </div>
-
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
-        <div class="modal">
-            <h3>ยืนยันการลบผู้ใช้งาน</h3>
-            <p>คุณแน่ใจหรือไม่ที่จะลบผู้ใช้งานชื่อ **{{ selectedUser.fullname }}**?</p>
-            <div class="modal-buttons">
-                <button class="modal-cancel-btn" @click="closeDeleteModal">ยกเลิก</button>
-                <button class="modal-confirm-btn delete-confirm-btn" @click="deleteUser">ยืนยัน</button>
-            </div>
-        </div>
-    </div>
 </template>
 
 <script setup>
@@ -100,14 +90,19 @@ const currentPage = ref(1);
 const perPage = 10;
 
 const showEditModal = ref(false);
-const showDeleteModal = ref(false);
 const selectedUser = ref(null);
 
 const filteredUsers = computed(() => {
-    return users.value.filter(user =>
-        user.username.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        user.fullname.toLowerCase().includes(searchQuery.value.toLowerCase())
-    );
+    return users.value.filter(user => {
+        // 1. Hardcode ซ่อน admin01
+        if (user.username === 'admin01') return false;
+
+        // 2. Logic ค้นหาปกติ
+        return (
+            user.username.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+            user.fullname.toLowerCase().includes(searchQuery.value.toLowerCase())
+        );
+    });
 });
 
 const totalPages = computed(() => {
@@ -173,14 +168,38 @@ const updateUser = async () => {
     }
 };
 
-const openDeleteModal = (user) => {
-    selectedUser.value = user;
-    showDeleteModal.value = true;
-};
 
-const closeDeleteModal = () => {
-    showDeleteModal.value = false;
-    selectedUser.value = null;
+const confirmDelete = (user) => {
+    Swal.fire({
+        title: 'ยืนยันการลบผู้ใช้งาน',
+        text: `คุณแน่ใจหรือไม่ที่จะลบผู้ใช้งานชื่อ "${user.fullname}"?`, // แสดงชื่อในข้อความ
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e53e3e',
+        cancelButtonColor: '#718096',
+        confirmButtonText: 'ยืนยัน',
+        cancelButtonText: 'ยกเลิก',
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            loading.value = true;
+            try {
+                // ส่ง API ลบข้อมูล
+                await axios.delete(`/users/${user.id}`);
+
+                Swal.fire('สำเร็จ!', 'ลบผู้ใช้งานเรียบร้อยแล้ว', 'success');
+                fetchUsers(); // โหลดข้อมูลใหม่
+            } catch (err) {
+                let msg = 'ไม่สามารถลบผู้ใช้งานได้';
+                if (err.response && err.response.data && err.response.data.message) {
+                    msg = err.response.data.message;
+                }
+                Swal.fire('ผิดพลาด!', msg, 'error');
+                console.error(err);
+            } finally {
+                loading.value = false;
+            }
+        }
+    });
 };
 
 const deleteUser = async () => {
@@ -376,5 +395,73 @@ onMounted(() => {
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 1.5rem;
+}
+
+/* Modal Overlay (Shared) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 400px;
+}
+
+.modal h3 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.modal p {
+    margin-bottom: 1.5rem;
+    color: #555;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.modal-confirm-btn,
+.modal-cancel-btn {
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.3s;
+}
+
+.modal-confirm-btn {
+    background-color: #48bb78;
+    color: white;
+}
+
+.modal-confirm-btn:hover {
+    background-color: #38a169;
+}
+
+.modal-cancel-btn {
+    background-color: #e53e3e;
+    color: white;
+}
+
+.modal-cancel-btn:hover {
+    background-color: #c53030;
 }
 </style>
