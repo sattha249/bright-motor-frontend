@@ -23,12 +23,26 @@
                 <div class="add-item-form">
                     <div class="search-group">
                         <label>ค้นหาสินค้า</label>
-                        <input type="text" v-model="searchTerm" @input="debouncedSearch"
-                            placeholder="พิมพ์ชื่อ หรือ รหัสสินค้า..." />
+
+                        <div class="search-input-wrapper">
+                            <i class="fas fa-search search-icon"></i>
+
+                            <input type="text" v-model="searchTerm" @input="handleSearchInput"
+                                placeholder="พิมพ์ชื่อ หรือ รหัสสินค้า..." class="search-input" />
+
+                            <button v-if="searchTerm" class="clear-search-btn" @click="clearSearch">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
                         <div v-if="searchResults.length" class="search-results">
                             <div v-for="product in searchResults" :key="product.id" class="result-item"
                                 @click="selectProduct(product)">
-                                {{ product.description }} ({{ product.brand }})
+                                <div class="product-info">
+                                    <span class="product-name">{{ product.description }}</span>
+                                    <span class="product-brand">{{ product.brand }}</span>
+                                </div>
+                                <span class="product-code">#{{ product.id }}</span>
                             </div>
                         </div>
                     </div>
@@ -66,14 +80,12 @@
                     <tbody>
                         <tr v-for="(item, index) in form.items" :key="index">
                             <td>{{ item.product_name }}</td>
-
                             <td class="quantity-control-cell">
-                                <button class-="qty-btn" @click="updateItemQuantity(index, -1)"
+                                <button class="qty-btn" @click="updateItemQuantity(index, -1)"
                                     :disabled="item.quantity <= 1">-</button>
                                 <input type="number" v-model.number="item.quantity" min="1" class="qty-input">
-                                <button class-="qty-btn" @click="updateItemQuantity(index, 1)">+</button>
+                                <button class="qty-btn" @click="updateItemQuantity(index, 1)">+</button>
                             </td>
-
                             <td>{{ item.cost_price.toFixed(2) }}</td>
                             <td>{{ (item.quantity * item.cost_price).toFixed(2) }}</td>
                             <td>
@@ -84,7 +96,6 @@
                             <td colspan="5" style="text-align: center;">ยังไม่มีรายการสินค้า</td>
                         </tr>
                     </tbody>
-
                     <tfoot v-if="form.items.length > 0">
                         <tr class="total-row">
                             <td colspan="3" class="total-label">ยอดรวมสุทธิ (Total)</td>
@@ -137,7 +148,88 @@ const totalCost = computed(() => {
     }, 0);
 });
 
-// ดึงข้อมูล PO เดิม (กรณีแก้ไข)
+// --- Logic การค้นหาและเลือกสินค้า ---
+
+// [ใหม่] ฟังก์ชันล้างค่าการค้นหา
+const clearSearch = () => {
+    searchTerm.value = '';
+    searchResults.value = [];
+    selectedProduct.value = null;
+    addItemForm.value = { quantity: 1, cost_price: 0 };
+};
+
+// [ปรับปรุง] เมื่อผู้ใช้พิมพ์
+const handleSearchInput = () => {
+    // ถ้ามีการพิมพ์แก้ไข ให้เคลียร์สินค้าที่เลือกไว้ (เพื่อให้เลือกใหม่)
+    if (selectedProduct.value) {
+        selectedProduct.value = null;
+        addItemForm.value = { quantity: 1, cost_price: 0 };
+    }
+    debouncedSearch();
+};
+
+const debouncedSearch = () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+        if (!searchTerm.value || searchTerm.value.length < 2) {
+            searchResults.value = [];
+            return;
+        }
+        try {
+            const res = await axios.get(`/products?search=${searchTerm.value}`);
+            searchResults.value = res.data.data;
+        } catch (error) { console.error('Search error:', error); }
+    }, 500);
+};
+
+// [ปรับปรุง] เลือกสินค้าแล้วชื่อค้างไว้
+const selectProduct = (product) => {
+    selectedProduct.value = product;
+    addItemForm.value.cost_price = parseFloat(product.cost_price) || 0;
+
+    // เอาชื่อสินค้ามาใส่ใน Input ค้างไว้
+    searchTerm.value = product.description;
+
+    // ซ่อน Dropdown
+    searchResults.value = [];
+};
+
+// [ปรับปรุง] เพิ่มสินค้าแล้วค่อยล้าง
+const addItemToList = () => {
+    if (!selectedProduct.value || addItemForm.value.quantity < 1 || addItemForm.value.cost_price < 0) {
+        Swal.fire('ข้อมูลไม่ครบ', 'กรุณาเลือกสินค้า, จำนวน, และราคาต้นทุน', 'warning');
+        return;
+    }
+
+    const existingItem = form.value.items.find(item => item.product_id === selectedProduct.value.id);
+    if (existingItem) {
+        existingItem.quantity += addItemForm.value.quantity;
+    } else {
+        form.value.items.push({
+            product_id: selectedProduct.value.id,
+            product_name: selectedProduct.value.description,
+            quantity: addItemForm.value.quantity,
+            cost_price: addItemForm.value.cost_price,
+        });
+    }
+
+    // เพิ่มเสร็จแล้ว ล้างค่าทั้งหมด
+    clearSearch();
+};
+
+const removeItem = (index) => {
+    form.value.items.splice(index, 1);
+};
+
+const updateItemQuantity = (index, amount) => {
+    const item = form.value.items[index];
+    if (item.quantity + amount > 0) {
+        item.quantity += amount;
+    }
+};
+
+// --- จบ Logic การค้นหา ---
+
 const fetchPOData = async () => {
     loading.value = true;
     try {
@@ -168,61 +260,6 @@ onMounted(() => {
     }
 });
 
-// Search Products
-const debouncedSearch = () => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(async () => {
-        if (searchTerm.value.length < 2) {
-            searchResults.value = [];
-            return;
-        }
-        try {
-            const res = await axios.get(`/products?search=${searchTerm.value}`);
-            searchResults.value = res.data.data;
-        } catch (error) { console.error('Search error:', error); }
-    }, 500);
-};
-
-const selectProduct = (product) => {
-    selectedProduct.value = product;
-    addItemForm.value.cost_price = parseFloat(product.cost_price) || 0;
-    searchTerm.value = '';
-    searchResults.value = [];
-};
-
-// Add/Remove Items
-const addItemToList = () => {
-    if (!selectedProduct.value || addItemForm.value.quantity < 1 || addItemForm.value.cost_price < 0) {
-        Swal.fire('ข้อมูลไม่ครบ', 'กรุณาเลือกสินค้า, จำนวน, และราคาต้นทุน', 'warning');
-        return;
-    }
-    const existingItem = form.value.items.find(item => item.product_id === selectedProduct.value.id);
-    if (existingItem) {
-        existingItem.quantity += addItemForm.value.quantity;
-    } else {
-        form.value.items.push({
-            product_id: selectedProduct.value.id,
-            product_name: selectedProduct.value.description,
-            quantity: addItemForm.value.quantity,
-            cost_price: addItemForm.value.cost_price,
-        });
-    }
-    selectedProduct.value = null;
-    addItemForm.value = { quantity: 1, cost_price: 0 };
-};
-
-const removeItem = (index) => {
-    form.value.items.splice(index, 1);
-};
-
-const updateItemQuantity = (index, amount) => {
-    const item = form.value.items[index];
-    if (item.quantity + amount > 0) {
-        item.quantity += amount;
-    }
-};
-
-// Submit (Create/Update)
 const submitForm = async () => {
     loading.value = true;
     try {
@@ -316,31 +353,140 @@ const cancel = () => {
     min-height: 100px;
 }
 
+/* --- Search Bar Styles (ปรับปรุงใหม่) --- */
 .add-item-form .search-group {
     position: relative;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    width: 100%;
+    /* เว้นที่ซ้ายให้ไอคอนแว่นขยาย, เว้นที่ขวาให้ปุ่มล้าง */
+    padding: 12px 40px 12px 45px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    background-color: #f9fafa;
+}
+
+.search-input:focus {
+    border-color: var(--primary-color);
+    background-color: white;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+    outline: none;
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    color: #a0aec0;
+    font-size: 1.1rem;
+    pointer-events: none;
+}
+
+/* ปุ่มล้างค่า */
+.clear-search-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #a0aec0;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.clear-search-btn:hover {
+    color: #e53e3e;
+    background-color: #edf2f7;
+}
+
+/* Search Results Dropdown */
 .search-results {
     position: absolute;
+    top: calc(100% + 8px);
     background: white;
-    border: 1px solid #ccc;
-    max-height: 200px;
+    border: 1px solid #e2e8f0;
+    max-height: 250px;
     overflow-y: auto;
     width: 100%;
     z-index: 10;
-    border-radius: 6px;
-    box-shadow: 0 4px 6px rgb(0 0 0 / 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .result-item {
-    padding: 8px 12px;
+    padding: 12px 15px;
     cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.2s;
+}
+
+.result-item:last-child {
+    border-bottom: none;
 }
 
 .result-item:hover {
-    background-color: #f0f0f0;
+    background-color: #f7fafc;
 }
+
+.product-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.product-name {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.product-brand {
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+.product-code {
+    font-size: 0.85rem;
+    color: #a0aec0;
+    background-color: #edf2f7;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+/* Scrollbar */
+.search-results::-webkit-scrollbar {
+    width: 8px;
+}
+
+.search-results::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 8px;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 8px;
+}
+
+.search-results::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* --- End Search Bar Styles --- */
 
 .selected-product-form {
     display: grid;
@@ -439,7 +585,6 @@ const cancel = () => {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    /* ทำให้เป็นวงกลม */
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
@@ -455,7 +600,6 @@ const cancel = () => {
     background-color: #2c7a7b;
 }
 
-/* สไตล์สำหรับแถวสรุปยอดรวม (Total Row) */
 .total-row {
     background-color: #f8f9fa;
     border-top: 2px solid #ddd;
