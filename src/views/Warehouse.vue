@@ -333,13 +333,17 @@ const triggerFileUpload = () => {
 }
 
 const downloadSampleFile = () => {
-    const ws = XLSX.utils.json_to_sheet([
-        { product_code: "P001", quantity: 10 },
-        { product_code: "P002", quantity: 5 }
-    ])
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Sample")
-    XLSX.writeFile(wb, "warehouse_import_sample.xlsx")
+    const csvContent = "product_code,quantity\nP001,10\nP002,5\nP003,20";
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "warehouse_import_sample.csv");
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 const handleFileUpload = (event) => {

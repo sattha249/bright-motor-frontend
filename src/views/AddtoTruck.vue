@@ -187,12 +187,30 @@
                 <button class="close-btn" @click="closeAddModal">ปิด</button>
             </div>
         </div>
+
+        <div v-if="showSuccessModal" class="modal-overlay">
+            <div class="modal success-modal">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>บันทึกข้อมูลสำเร็จ!</h3>
+                <p>ทำการเพิ่มสินค้าเข้าสู่รถเรียบร้อยแล้ว</p>
+                <div class="modal-buttons centered-buttons">
+                    <button class="csv-btn" @click="downloadCSV">
+                        <i class="fas fa-file-csv"></i> Download CSV
+                    </button>
+                    <button class="modal-cancel-btn" @click="closeSuccessModal">ปิด</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import axios from '@/lib/axios'
+import * as XLSX from 'xlsx' // ใช้ xlsx สร้างไฟล์
 
 const trucks = ref([])
 const selectedTruckId = ref('')
@@ -214,6 +232,10 @@ const addQuantities = ref({})
 
 const addedProducts = ref([])
 const saving = ref(false)
+
+// New State for Success Modal
+const showSuccessModal = ref(false)
+const lastSavedData = ref([])
 
 let debounceTimeout = null
 function debounce(func, delay) {
@@ -273,7 +295,7 @@ watch(selectedTruckId, () => {
 const fetchTrucks = async () => {
     try {
         const res = await axios.get('/trucks')
-        trucks.value = res.data
+        trucks.value = res.data.data
     } catch (err) {
         error.value = 'โหลดข้อมูลรถไม่สำเร็จ'
         console.error(err)
@@ -369,11 +391,7 @@ const changePage = (page) => {
 }
 
 const saveRefillData = async () => {
-    if (addedProducts.value.length === 0) {
-        isRefillConfirmed.value = false;
-        isRefillInsufficient.value = false;
-        return;
-    }
+    if (addedProducts.value.length === 0) return;
 
     saving.value = true;
     try {
@@ -386,19 +404,57 @@ const saveRefillData = async () => {
         };
         await axios.post('/warehouse-stocks/move-to-truck', payload);
 
-        addedProducts.value = [];
-        soldProducts.value = [];
-        isRefillConfirmed.value = false;
-        isRefillInsufficient.value = false;
-        insufficientProducts.value = [];
-        isRefillInitiated.value = false;
-        fetchTruckStocks();
+        // --- SUCCESS LOGIC UPDATE ---
+        // 1. เก็บข้อมูลที่เพิ่ง Save ไว้ก่อนล้าง (เพื่อทำ CSV)
+        lastSavedData.value = JSON.parse(JSON.stringify(addedProducts.value));
+
+        // 2. แสดง Modal สำเร็จ
+        showSuccessModal.value = true;
+
+        // หมายเหตุ: เรายังไม่ล้างข้อมูลตรงนี้ จะไปล้างตอนกดปิด Modal
     } catch (err) {
         alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
         console.error(err);
     } finally {
         saving.value = false;
     }
+};
+
+const downloadCSV = () => {
+    // เตรียมข้อมูลสำหรับ Excel/CSV
+    const dataToExport = lastSavedData.value.map(item => ({
+        'รหัสสินค้า (ID)': item.productId,
+        'ชื่อสินค้า': item.description,
+        'จำนวนที่เติม': item.quantity,
+        'หน่วย': item.unit
+    }));
+
+    // สร้าง Worksheet
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "AddedProducts");
+
+    // ตั้งชื่อไฟล์: เติมสินค้า_ทะเบียนรถ_วันที่.csv
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `เติมสินค้า_${selectedTruckPlate.value}_${dateStr}.csv`;
+
+    // ดาวน์โหลด
+    XLSX.writeFile(wb, fileName);
+};
+
+const closeSuccessModal = () => {
+    // --- RESET LOGIC ย้ายมาตรงนี้ ---
+    showSuccessModal.value = false;
+    lastSavedData.value = [];
+
+    addedProducts.value = [];
+    soldProducts.value = [];
+    isRefillConfirmed.value = false;
+    isRefillInsufficient.value = false;
+    insufficientProducts.value = [];
+    isRefillInitiated.value = false;
+
+    fetchTruckStocks(); // โหลดข้อมูลใหม่
 };
 
 const refillFromSoldProducts = async () => {
@@ -421,8 +477,6 @@ const refillFromSoldProducts = async () => {
         });
 
         const productsToAdd = [];
-
-        // Check each sold product's stock and prepare for adding
         const productIds = Object.keys(soldQuantitiesMap);
         for (const productId of productIds) {
             const quantityNeeded = soldQuantitiesMap[productId];
@@ -432,7 +486,6 @@ const refillFromSoldProducts = async () => {
 
                 if (!warehouseItem || warehouseItem.quantity < quantityNeeded) {
                     insufficientProducts.value.push(parseInt(productId));
-                    console.warn(`สินค้า SKU-${productId} มีในคลังไม่พอ (${warehouseItem ? warehouseItem.quantity : 0} < ${quantityNeeded})`);
                 }
 
                 if (warehouseItem) {
@@ -445,12 +498,10 @@ const refillFromSoldProducts = async () => {
                 }
             } catch (err) {
                 insufficientProducts.value.push(parseInt(productId));
-                console.error(`ไม่สามารถตรวจสอบคลังสำหรับ SKU-${productId} ได้`, err);
             }
         }
 
         addedProducts.value = productsToAdd;
-        // soldProducts.value = productsToAdd;
         soldProducts.value = addedProducts.value.map(item => ({
             productId: item.productId,
             quantity: item.quantity
@@ -474,26 +525,21 @@ const cancelRefill = () => {
 };
 
 const removeProductFromList = (productId) => {
-    // Find the item to be removed
     const itemToRemove = addedProducts.value.find(item => item.productId === productId);
     if (!itemToRemove) return;
 
-    // Remove the product from the addedProducts list
     addedProducts.value = addedProducts.value.filter(item => item.productId !== productId);
 
-    // Remove the product from the insufficientProducts list
     const insufficientIndex = insufficientProducts.value.indexOf(productId);
     if (insufficientIndex > -1) {
         insufficientProducts.value.splice(insufficientIndex, 1);
     }
 
-    // Update the soldProducts list by removing the corresponding quantity
     const soldIndex = soldProducts.value.findIndex(item => item.productId === productId);
     if (soldIndex !== -1) {
         soldProducts.value.splice(soldIndex, 1);
     }
 
-    // Check if the addedProducts list is now empty and reset status
     if (addedProducts.value.length === 0) {
         cancelRefill();
     }
@@ -517,6 +563,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* (Styles เดิมทั้งหมดคงไว้) */
 .refill-success {
     background-color: #28a745 !important;
     cursor: default !important;
@@ -717,7 +764,6 @@ onMounted(() => {
     color: #a02828;
 }
 
-/* Modal */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -804,10 +850,6 @@ onMounted(() => {
     cursor: not-allowed;
 }
 
-.not-enough-btn:hover {
-    background-color: #e53e3e !important;
-}
-
 .stock-badge {
     display: inline-block;
     padding: 4px 8px;
@@ -821,19 +863,73 @@ onMounted(() => {
 
 .badge-low {
     background-color: #f56565;
-    /* แดง */
     color: white;
 }
 
 .badge-medium {
     background-color: #f6e05e;
-    /* เหลือง */
     color: #4a5568;
 }
 
 .badge-high {
     background-color: #48bb78;
-    /* เขียว */
     color: white;
+}
+
+/* Styles for Success Modal */
+.success-modal {
+    max-width: 400px;
+    text-align: center;
+    padding: 30px;
+    margin-top: 15vh;
+    /* Center vertically relative to view */
+    align-self: flex-start;
+    /* Reset align from container if needed */
+}
+
+.success-icon {
+    font-size: 50px;
+    color: #28a745;
+    margin-bottom: 15px;
+}
+
+.centered-buttons {
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+    display: flex;
+}
+
+.csv-btn {
+    background-color: #3182ce;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.3s;
+}
+
+.csv-btn:hover {
+    background-color: #2b6cb0;
+}
+
+.modal-cancel-btn {
+    background-color: #e53e3e;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s;
+}
+
+.modal-cancel-btn:hover {
+    background-color: #c53030;
 }
 </style>
