@@ -79,7 +79,7 @@
                         <select v-model="truckId" class="custom-select">
                             <option :value="null">-- เลือกรถที่จะนำของขึ้น --</option>
                             <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
-                                {{ truck.plate_number }} ({{ truck.driver_name || 'ไม่มีชื่อคนขับ' }})
+                                {{ truck.plate_number }} ({{ truck?.user?.fullname || 'ไม่มีชื่อคนขับ' }})
                             </option>
                         </select>
                     </div>
