@@ -19,7 +19,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="truck in paginatedTrucks" :key="truck.id">
+                    <tr v-for="truck in trucks" :key="truck.id">
                         <td>{{ truck.plate_number }}</td>
                         <td>{{ truck.plate_province || '-' }}</td>
                         <td>{{ truck.model || '-' }}</td>
@@ -37,7 +37,7 @@
                 </tbody>
             </table>
 
-            <div class="pagination" v-if="filteredTrucks.length > perPage">
+            <div class="pagination" v-if="totalPages > 1">
                 <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">ก่อนหน้า</button>
                 <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
                 <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">ถัดไป</button>
@@ -95,52 +95,49 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import axios from '@/lib/axios';
 import Swal from 'sweetalert2';
 
+// State
 const trucks = ref([]);
 const drivers = ref([]);
 const loading = ref(false);
 const error = ref(null);
 const searchQuery = ref('');
-const currentPage = ref(1);
-const perPage = 10;
 
+// Pagination State (รับค่าจาก API)
+const currentPage = ref(1);
+const totalPages = ref(1);
+const perPage = ref(10);
+
+// Modal State
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 const selectedTruck = ref(null);
 
-const filteredTrucks = computed(() => {
-    // ป้องกัน trucks.value เป็น undefined
-    if (!trucks.value) return [];
-
-    return trucks.value.filter(truck =>
-        truck.plate_number.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        (truck.plate_province && truck.plate_province.toLowerCase().includes(searchQuery.value.toLowerCase()))
-    );
-});
-
-const totalPages = computed(() => {
-    return Math.ceil(filteredTrucks.value.length / perPage);
-});
-
-const paginatedTrucks = computed(() => {
-    const start = (currentPage.value - 1) * perPage;
-    const end = start + perPage;
-    return filteredTrucks.value.slice(start, end);
-});
-
-watch(filteredTrucks, () => {
-    currentPage.value = 1;
-});
-
-const fetchTrucks = async () => {
+// Fetch Functions
+const fetchTrucks = async (page = 1) => {
     loading.value = true;
     error.value = null;
     try {
-        const res = await axios.get('/trucks');
-        trucks.value = res.data; // ดึงข้อมูลจาก res.data โดยตรง
+        // ส่ง params: page และ search ไปให้ Backend
+        const res = await axios.get('/trucks', {
+            params: {
+                page: page,
+                search: searchQuery.value
+            }
+        });
+
+        // รับข้อมูล Array รถ
+        trucks.value = res.data.data;
+
+        // อัปเดต Pagination จาก Meta Data
+        if (res.data.meta) {
+            currentPage.value = res.data.meta.current_page;
+            totalPages.value = res.data.meta.last_page;
+            perPage.value = res.data.meta.per_page;
+        }
     } catch (err) {
         error.value = 'ไม่สามารถโหลดข้อมูลรถได้';
         console.error(err);
@@ -152,18 +149,33 @@ const fetchTrucks = async () => {
 const fetchDrivers = async () => {
     try {
         const res = await axios.get('/users?role=truck');
-        drivers.value = res.data.data;
+        // ตรวจสอบโครงสร้าง response ของ users ว่ามาแบบ paginate หรือ list ธรรมดา
+        // ถ้า users ทำ pagination แล้ว ตรงนี้อาจต้องแก้ให้ดึงทั้งหมด หรือ search เอา
+        // เบื้องต้นสมมติว่าดึง data ออกมาได้
+        drivers.value = res.data.data || res.data;
     } catch (err) {
         console.error('ไม่สามารถโหลดข้อมูลคนขับได้', err);
     }
 };
 
+// Search Watcher (Debounce)
+let searchTimeout;
+watch(searchQuery, () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        // เมื่อค้นหา ให้กลับไปหน้า 1 เสมอ
+        fetchTrucks(1);
+    }, 500);
+});
+
+// Pagination Change
 const changePage = (page) => {
     if (page >= 1 && page <= totalPages.value) {
-        currentPage.value = page;
+        fetchTrucks(page);
     }
 };
 
+// Modal Logic
 const openEditModal = (truck) => {
     selectedTruck.value = { ...truck };
     showEditModal.value = true;
@@ -177,7 +189,6 @@ const closeEditModal = () => {
 const updateTruck = async () => {
     loading.value = true;
     try {
-        console.log('value is', selectedTruck.value)
         let updateData = {
             plateNumber: selectedTruck.value.plate_number,
             userId: selectedTruck.value.user_id,
@@ -188,7 +199,7 @@ const updateTruck = async () => {
         await axios.put(`/trucks/${selectedTruck.value.id}`, updateData);
         Swal.fire('สำเร็จ!', 'แก้ไขข้อมูลรถเรียบร้อยแล้ว', 'success');
         closeEditModal();
-        fetchTrucks();
+        fetchTrucks(currentPage.value); // รีเฟรชหน้าปัจจุบัน
     } catch (err) {
         let errorMessage = 'ไม่สามารถแก้ไขข้อมูลรถได้';
         if (err.response && err.response.data && err.response.data.message) {
@@ -217,7 +228,7 @@ const deleteTruck = async () => {
         await axios.delete(`/trucks/${selectedTruck.value.id}`);
         Swal.fire('สำเร็จ!', 'ลบรถเรียบร้อยแล้ว', 'success');
         closeDeleteModal();
-        fetchTrucks();
+        fetchTrucks(currentPage.value); // รีเฟรชหน้าปัจจุบัน
     } catch (err) {
         Swal.fire('ผิดพลาด!', 'ไม่สามารถลบรถได้', 'error');
         console.error(err);
@@ -226,14 +237,15 @@ const deleteTruck = async () => {
     }
 };
 
+// Lifecycle
 onMounted(() => {
-    fetchTrucks();
+    fetchTrucks(1);
     fetchDrivers();
 });
 </script>
 
-
 <style scoped>
+/* ใช้ Style เดิมได้เลย หรือจะปรับแต่งเพิ่มตามต้องการ */
 .manage-truck-tab {
     padding: 1rem;
 }

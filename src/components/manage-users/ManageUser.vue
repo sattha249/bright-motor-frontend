@@ -18,7 +18,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="user in paginatedUsers" :key="user.id">
+                    <tr v-for="user in filteredUsers" :key="user.id">
                         <td>{{ user.username }}</td>
                         <td>{{ user.fullname }}</td>
                         <td>{{ user.tel || '-' }}</td>
@@ -36,7 +36,7 @@
                 </tbody>
             </table>
 
-            <div class="pagination" v-if="filteredUsers.length > perPage">
+            <div class="pagination" v-if="totalPages > 1">
                 <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">ก่อนหน้า</button>
                 <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
                 <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">ถัดไป</button>
@@ -78,55 +78,52 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import axios from '@/lib/axios';
 import Swal from 'sweetalert2';
 import { useUserStore } from '@/stores/user';
 const userStore = useUserStore();
 
-const users = ref([]);
+// State
+const filteredUsers = ref([]); // เก็บข้อมูล User ที่จะแสดง (ตัด admin01 ออกแล้ว)
 const loading = ref(false);
 const error = ref(null);
 const searchQuery = ref('');
+
+// Pagination State (จาก API)
 const currentPage = ref(1);
-const perPage = 10;
+const totalPages = ref(1);
+const perPage = ref(10);
 
 const showEditModal = ref(false);
 const selectedUser = ref(null);
 
-const filteredUsers = computed(() => {
-    return users.value.filter(user => {
-        // 1. Hardcode ซ่อน admin01
-        if (user.username === 'admin01') return false;
-
-        // 2. Logic ค้นหาปกติ
-        return (
-            user.username.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-            user.fullname.toLowerCase().includes(searchQuery.value.toLowerCase())
-        );
-    });
-});
-
-const totalPages = computed(() => {
-    return Math.ceil(filteredUsers.value.length / perPage);
-});
-
-const paginatedUsers = computed(() => {
-    const start = (currentPage.value - 1) * perPage;
-    const end = start + perPage;
-    return filteredUsers.value.slice(start, end);
-});
-
-watch(filteredUsers, () => {
-    currentPage.value = 1;
-});
-
-const fetchUsers = async () => {
+// ฟังก์ชันดึงข้อมูล (รับ parameter page)
+const fetchUsers = async (page = 1) => {
     loading.value = true;
     error.value = null;
     try {
-        const res = await axios.get('/users');
-        users.value = res.data.data;
+        // ส่ง params ไปให้ Backend (search, page)
+        // หมายเหตุ: เช็คกับ Backend ว่าใช้ชื่อ param ว่า 'search', 'keyword' หรือ 'q'
+        const res = await axios.get('/users', {
+            params: {
+                page: page,
+                search: searchQuery.value // ส่งคำค้นหาไปที่ API
+            }
+        });
+
+        const rawData = res.data.data;
+
+        // กรอง admin01 ออก (Client-side logic)
+        filteredUsers.value = rawData.filter(user => user.username !== 'admin01');
+
+        // อัปเดตข้อมูล Pagination จาก Meta ที่ API ส่งมา
+        if (res.data.meta) {
+            currentPage.value = res.data.meta.current_page;
+            totalPages.value = res.data.meta.last_page;
+            perPage.value = res.data.meta.per_page;
+        }
+
     } catch (err) {
         error.value = 'ไม่สามารถโหลดข้อมูลผู้ใช้งานได้';
         console.error(err);
@@ -135,12 +132,24 @@ const fetchUsers = async () => {
     }
 };
 
+// เปลี่ยนหน้า
 const changePage = (page) => {
     if (page >= 1 && page <= totalPages.value) {
-        currentPage.value = page;
+        fetchUsers(page);
     }
 };
 
+// Watch search query (Debounce: รอให้หยุดพิมพ์ 500ms ค่อยยิง API)
+let searchTimeout;
+watch(searchQuery, () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        // กลับไปหน้า 1 ทุกครั้งที่ค้นหาใหม่
+        fetchUsers(1);
+    }, 500);
+});
+
+// Modal Logic
 const openEditModal = (user) => {
     selectedUser.value = { ...user };
     showEditModal.value = true;
@@ -157,7 +166,7 @@ const updateUser = async () => {
         await axios.put(`/users/${selectedUser.value.id}`, selectedUser.value);
         Swal.fire('สำเร็จ!', 'แก้ไขข้อมูลผู้ใช้งานเรียบร้อยแล้ว', 'success');
         closeEditModal();
-        fetchUsers();
+        fetchUsers(currentPage.value); // โหลดข้อมูลหน้าปัจจุบันใหม่
     } catch (err) {
         let errorMessage = 'ไม่สามารถแก้ไขข้อมูลผู้ใช้งานได้';
         if (err.response && err.response.data && err.response.data.message) {
@@ -170,11 +179,10 @@ const updateUser = async () => {
     }
 };
 
-
 const confirmDelete = (user) => {
     Swal.fire({
         title: 'ยืนยันการลบผู้ใช้งาน',
-        text: `คุณแน่ใจหรือไม่ที่จะลบผู้ใช้งานชื่อ "${user.fullname}"?`, // แสดงชื่อในข้อความ
+        text: `คุณแน่ใจหรือไม่ที่จะลบผู้ใช้งานชื่อ "${user.fullname}"?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#e53e3e',
@@ -185,11 +193,9 @@ const confirmDelete = (user) => {
         if (result.isConfirmed) {
             loading.value = true;
             try {
-                // ส่ง API ลบข้อมูล
                 await axios.delete(`/users/${user.id}`);
-
                 Swal.fire('สำเร็จ!', 'ลบผู้ใช้งานเรียบร้อยแล้ว', 'success');
-                fetchUsers(); // โหลดข้อมูลใหม่
+                fetchUsers(currentPage.value); // โหลดข้อมูลหน้าปัจจุบันใหม่
             } catch (err) {
                 let msg = 'ไม่สามารถลบผู้ใช้งานได้';
                 if (err.response && err.response.data && err.response.data.message) {
@@ -204,29 +210,13 @@ const confirmDelete = (user) => {
     });
 };
 
-const deleteUser = async () => {
-    loading.value = true;
-    try {
-        await axios.delete(`/users/${selectedUser.value.id}`);
-        Swal.fire('สำเร็จ!', 'ลบผู้ใช้งานเรียบร้อยแล้ว', 'success');
-        closeDeleteModal();
-        fetchUsers();
-    } catch (err) {
-        Swal.fire('ผิดพลาด!', 'ไม่สามารถลบผู้ใช้งานได้', 'error');
-        console.error(err);
-    } finally {
-        loading.value = false;
-    }
-};
-
 onMounted(async () => {
-    fetchUsers();
+    fetchUsers(1);
     if (!userStore.userData || Object.keys(userStore.userData).length === 0) {
         try {
             const res = await axios.get('/profile');
             userStore.setUserData(res.data);
-
-            console.log("Restored User Data:", userStore.userData); // เช็ค Log ว่ามาหรือยัง
+            console.log("Restored User Data:", userStore.userData);
         } catch (err) {
             console.error("Failed to restore user session:", err);
         }
