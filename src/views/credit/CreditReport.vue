@@ -4,7 +4,21 @@
 
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">สถานะเครดิตรายบุคคล (รถ/คนขับ)</h3>
+                <div class="header-left">
+                    <h3 class="card-title">สถานะเครดิต: {{ viewMode === 'truck' ? 'รายรถ/คนขับ' : 'รายลูกค้า' }}</h3>
+
+                    <div class="toggle-container">
+                        <button :class="['toggle-btn', viewMode === 'truck' ? 'active' : '']"
+                            @click="changeViewMode('truck')">
+                            <i class="fas fa-truck"></i> รถ/คนขับ
+                        </button>
+                        <button :class="['toggle-btn', viewMode === 'customer' ? 'active' : '']"
+                            @click="changeViewMode('customer')">
+                            <i class="fas fa-users"></i> ลูกค้า
+                        </button>
+                    </div>
+                </div>
+
                 <button class="primary-btn" @click="fetchCreditSummary">
                     <i class="fas fa-sync-alt"></i> รีเฟรช
                 </button>
@@ -14,7 +28,7 @@
                 <table class="data-table hover-table">
                     <thead>
                         <tr>
-                            <th>ชื่อ (รถ/คนขับ)</th>
+                            <th>{{ viewMode === 'truck' ? 'ชื่อ (รถ/คนขับ)' : 'ชื่อลูกค้า' }}</th>
                             <th class="text-right text-red pr-custom">ยอดค้างชำระ</th>
                             <th class="text-right text-red pr-custom">จำนวนบิลค้าง</th>
                             <th class="text-right text-orange pr-custom">ดอกเบี้ยค้าง</th>
@@ -26,7 +40,7 @@
                         <tr v-for="(item, index) in summaryData" :key="index" @click="openCreditListModal(item)"
                             class="cursor-pointer">
                             <td class="font-bold">
-                                <span class="click-indicator">{{ item.truck_name }} <i
+                                <span class="click-indicator">{{ item.group_name }} <i
                                         class="fas fa-search-plus"></i></span>
                             </td>
                             <td class="text-right font-bold text-red pr-custom">{{
@@ -36,6 +50,9 @@
                             <td class="text-right text-green pr-custom">{{ formatCurrency(item.total_paid_amount) }}
                             </td>
                             <td class="text-right pr-custom">{{ item.count_paid_bills }} บิล</td>
+                        </tr>
+                        <tr v-if="summaryData.length === 0 && !loading">
+                            <td colspan="6" class="text-center" style="padding: 2rem; color: #888;">ไม่พบข้อมูล</td>
                         </tr>
                     </tbody>
                 </table>
@@ -70,8 +87,8 @@
                                         <td>{{ new Date(bill.created_at).toLocaleDateString('th-TH') }}</td>
                                         <td>{{ bill.bill_no }}</td>
                                         <td>{{ bill.customer?.name || '-' }}</td>
-                                        <td class=" font-bold text-red pr-custom">{{
-                                            formatCurrency(bill.pending_amount) }}</td>
+                                        <td class="font-bold text-red pr-custom">{{ formatCurrency(bill.pending_amount)
+                                        }}</td>
                                         <td>
                                             <span :class="['status-badge', bill.is_paid ? 'paid' : 'unpaid']">
                                                 {{ bill.is_paid ? 'ชำระแล้ว' : 'ค้างชำระ' }}
@@ -83,6 +100,10 @@
                                                 <i class="fas fa-money-bill-wave"></i> ชำระ
                                             </button>
                                         </td>
+                                    </tr>
+                                    <tr v-if="creditList.length === 0">
+                                        <td colspan="6" class="text-center" style="padding: 1rem;">
+                                            ไม่พบรายการบิลค้างชำระ</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -191,7 +212,9 @@ import Swal from 'sweetalert2';
 // --- State Variables ---
 const summaryData = ref([]);
 const loading = ref(false);
+const viewMode = ref('truck'); // 'truck' or 'customer'
 
+// State Modals
 const showListModal = ref(false);
 const selectedName = ref('');
 const creditList = ref([]);
@@ -202,20 +225,29 @@ const showPaymentModal = ref(false);
 const paymentLoading = ref(false);
 const selectedBillDetail = ref(null);
 
-// Helper
+// Helper Functions
 const formatCurrency = (val) => {
     return Number(val).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 const checkIsPaid = (status) => {
-    // เช็คครอบคลุมทั้ง number (1), string ('1'), และ boolean (true)
-    console.log('is_paid status:', status);
     return status === 1 || status === '1' || status === true;
 };
+
+// Toggle Function
+const changeViewMode = (mode) => {
+    if (viewMode.value !== mode) {
+        viewMode.value = mode;
+        fetchCreditSummary();
+    }
+};
+
 // 1. Fetch Summary
 const fetchCreditSummary = async () => {
     loading.value = true;
     try {
-        const res = await axios.get('/sell-logs/credit/summary');
+        const res = await axios.get('/sell-logs/credit/summary', {
+            params: { groupBy: viewMode.value }
+        });
         summaryData.value = res.data;
     } catch (error) {
         Swal.fire('Error', 'โหลดข้อมูลสรุปไม่สำเร็จ', 'error');
@@ -226,7 +258,8 @@ const fetchCreditSummary = async () => {
 
 // 2. Open List Modal
 const openCreditListModal = (item) => {
-    selectedName.value = item.truck_name;
+    // ใช้ group_name ตามที่ Backend ส่งมาใหม่
+    selectedName.value = item.group_name || 'ไม่ระบุ';
     showListModal.value = true;
     fetchCreditList(1);
 };
@@ -240,7 +273,12 @@ const fetchCreditList = async (page = 1) => {
     listLoading.value = true;
     try {
         const res = await axios.get('/sell-logs/credit', {
-            params: { page, per_page: 10, search: selectedName.value }
+            params: {
+                page,
+                per_page: 10,
+                search: selectedName.value,
+                filterType: viewMode.value // ส่ง filterType ไปบอก Backend ว่าค้นหาจากอะไร
+            }
         });
         creditList.value = res.data.data;
         listMeta.value = res.data.meta;
@@ -251,7 +289,7 @@ const fetchCreditList = async (page = 1) => {
     }
 };
 
-// 3. Open Payment Modal
+// 3. Open Payment Modal & Logic (เหมือนเดิม)
 const openPaymentSummaryModal = async (billId) => {
     showPaymentModal.value = true;
     paymentLoading.value = true;
@@ -273,9 +311,7 @@ const closePaymentModal = () => {
     selectedBillDetail.value = null;
 };
 
-// 4. Process Payment (API Integration)
 const processPayment = () => {
-    // คำนวณยอดรวมเพื่อแสดงใน Swal
     const totalPay = Number(selectedBillDetail.value.pending_amount) + Number(selectedBillDetail.value.interest);
 
     Swal.fire({
@@ -290,9 +326,8 @@ const processPayment = () => {
         reverseButtons: true
     }).then(async (result) => {
         if (result.isConfirmed) {
-            paymentLoading.value = true; // ล็อกปุ่ม
+            paymentLoading.value = true;
             try {
-                // [API] ยิง API ตัดยอด
                 await axios.post(`/sell-logs/credit/${selectedBillDetail.value.id}/pay`);
 
                 Swal.fire({
@@ -303,8 +338,8 @@ const processPayment = () => {
                 });
 
                 closePaymentModal();
-                fetchCreditList(listMeta.value.current_page); // รีเฟรชรายการใน Modal 1
-                fetchCreditSummary(); // รีเฟรชหน้าหลัก
+                fetchCreditList(listMeta.value.current_page);
+                fetchCreditSummary();
 
             } catch (error) {
                 console.error(error);
@@ -324,6 +359,51 @@ onMounted(fetchCreditSummary);
 </script>
 
 <style scoped>
+/* Header Layout */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    /* เผื่อจอเล็ก */
+}
+
+/* Toggle Switch Styles */
+.toggle-container {
+    display: flex;
+    background-color: #f1f5f9;
+    border-radius: 8px;
+    padding: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.toggle-btn {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #64748b;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toggle-btn.active {
+    background-color: white;
+    color: var(--primary-color);
+    /* ใช้ตัวแปรสีหลัก */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+}
+
+.toggle-btn:hover:not(.active) {
+    color: #334155;
+    background-color: #e2e8f0;
+}
+
 /* ... Styles เดิม ... */
 .main-content-container {
     padding: 2rem;
@@ -355,6 +435,7 @@ onMounted(fetchCreditSummary);
 .card-title {
     font-size: 1.4rem;
     font-weight: 600;
+    margin: 0;
 }
 
 .primary-btn {
@@ -399,7 +480,6 @@ onMounted(fetchCreditSummary);
     cursor: pointer;
 }
 
-/* Utilities */
 .text-right {
     text-align: right;
 }
@@ -424,7 +504,6 @@ onMounted(fetchCreditSummary);
     font-weight: bold;
 }
 
-/* [แก้ไข] Custom Padding ขวา เพื่อขยับข้อมูลเข้ามา */
 .pr-custom {
     padding-right: 2.5rem !important;
 }
@@ -442,13 +521,13 @@ onMounted(fetchCreditSummary);
     align-items: center;
 }
 
-/* [แก้ไข] Z-Index: ลดค่าลงเพื่อให้ SweetAlert (1060) อยู่เหนือกว่า */
+/* [แก้ Z-Index ให้สูงกว่าทุกอย่าง] */
 .z-list {
-    z-index: 900;
+    z-index: 1050 !important;
 }
 
 .z-payment {
-    z-index: 950;
+    z-index: 1060 !important;
 }
 
 .modal {
@@ -503,7 +582,7 @@ onMounted(fetchCreditSummary);
     color: #666;
 }
 
-/* Item List Styling */
+/* Summary List in Payment Modal */
 .items-summary-box {
     background-color: #f8f9fa;
     border-radius: 8px;
@@ -542,16 +621,16 @@ onMounted(fetchCreditSummary);
     display: flex;
     align-items: center;
     padding-left: 15px;
+    flex-wrap: wrap;
+    gap: 2px;
 }
 
-/* [แก้ไข] Tab เข้าไป */
 .dash {
     margin-right: 8px;
     color: #888;
     font-weight: bold;
 }
 
-/* เครื่องหมาย - */
 .item-right {
     text-align: right;
     min-width: 30px;
@@ -559,9 +638,7 @@ onMounted(fetchCreditSummary);
     justify-content: flex-end;
 }
 
-/* [แก้ไข] ชิดขวาสุด */
-
-/* Buttons */
+/* Buttons & Badges */
 .action-btn {
     padding: 6px 12px;
     border-radius: 6px;
@@ -609,7 +686,6 @@ onMounted(fetchCreditSummary);
     font-weight: bold;
 }
 
-/* Status Badges */
 .status-badge {
     padding: 4px 10px;
     border-radius: 12px;
@@ -633,7 +709,6 @@ onMounted(fetchCreditSummary);
     color: var(--primary-color);
 }
 
-/* Loading & Pagination */
 .loading-indicator {
     text-align: center;
     padding: 2rem;
@@ -663,7 +738,6 @@ onMounted(fetchCreditSummary);
     cursor: not-allowed;
 }
 
-/* Summary Rows */
 .summary-row {
     display: flex;
     justify-content: space-between;
@@ -703,12 +777,6 @@ onMounted(fetchCreditSummary);
     font-weight: bold;
 }
 
-.text-muted {
-    color: #888;
-    font-size: 0.85rem;
-    margin-left: 5px;
-}
-
 .qty-badge {
     background-color: #e2e8f0;
     color: #4a5568;
@@ -725,13 +793,7 @@ onMounted(fetchCreditSummary);
     font-size: 0.9rem;
 }
 
-/* ปรับ Flex ให้รองรับเนื้อหาที่ยาวขึ้น */
-.item-left {
-    display: flex;
-    align-items: center;
-    padding-left: 15px;
-    flex-wrap: wrap;
-    /* เผื่อหน้าจอเล็ก */
-    gap: 2px;
+.swal2-container {
+    z-index: 9999 !important;
 }
 </style>
