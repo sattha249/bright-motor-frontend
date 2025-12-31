@@ -115,7 +115,7 @@
 
         <div v-if="showExcelModal" class="modal-overlay" @click.self="closeExcelModal">
             <div class="modal-content excel-modal">
-                <h3>นำเข้าสินค้าจาก Excel</h3>
+                <h3>นำเข้าสินค้าจาก CSV</h3>
 
                 <div class="excel-actions">
                     <input type="file" ref="fileInput" accept=".xlsx, .xls, .csv" style="display: none;"
