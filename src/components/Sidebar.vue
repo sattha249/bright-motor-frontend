@@ -70,6 +70,11 @@
                     </router-link>
                     <!-- </a> -->
                 </li>
+                <li>
+                    <router-link to="/settings" active-class="active">
+                        <i class="fa-solid fa-cog"></i> ตั้งค่า
+                    </router-link>
+                </li>
 
             </ul>
         </nav>

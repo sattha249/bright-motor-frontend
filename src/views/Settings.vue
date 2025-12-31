@@ -2,13 +2,13 @@
     <div class="form-container">
         <h2>ตั้งค่าระบบ</h2>
         <div class="settings-grid">
-            <div class="setting-card">
+            <!-- <div class="setting-card">
                 <h3>ข้อมูลส่วนตัว</h3>
                 <p>จัดการโปรไฟล์และรหัสผ่านของคุณ</p>
-                <!-- <router-link to="/qrcode" active-class="active"> -->
+                <router-link to="/qrcode" active-class="active">
                 <button class="settings-btn">แก้ไข</button>
-                <!-- </router-link> -->
-            </div>
+                </router-link>
+            </div> -->
             <div class="setting-card">
                 <h3>การตั้งค่า QR ชำระเงิน</h3>
                 <p>เปลี่ยนแปลง QR ชำระเงิน</p>
@@ -16,13 +16,13 @@
                     <button class="settings-btn">แก้ไข</button>
                 </router-link>
             </div>
-            <div class="setting-card">
+            <!-- <div class="setting-card">
                 <h3>การแจ้งเตือน</h3>
                 <p>ตั้งค่าการแจ้งเตือนสินค้าใกล้หมด</p>
-                <!-- <router-link to="/qrcode" active-class="active"> -->
+                <router-link to="/qrcode" active-class="active">
                 <button class="settings-btn">ตั้งค่า</button>
-                <!-- </router-link> -->
-            </div>
+                </router-link>
+            </div> -->
         </div>
     </div>
 </template>
