@@ -212,6 +212,7 @@
                             <thead>
                                 <tr>
                                     <th>สินค้า</th>
+                                    <th>หมวดหมู่</th>
                                     <th class="text-center">จำนวน</th>
                                     <th class="text-right">ราคา/หน่วย</th>
                                     <th class="text-right">รวม</th>
@@ -220,6 +221,7 @@
                             <tbody>
                                 <tr v-for="item in selectedPreOrder?.items" :key="item.id">
                                     <td>{{ item.product?.description }}</td>
+                                    <td>{{ item.product?.category || '-' }}</td>
                                     <td class="text-center">{{ item.quantity }}</td>
                                     <td class="text-right">฿{{ Number(item.price).toLocaleString() }}</td>
                                     <td class="text-right bold">฿{{ (item.quantity * item.price).toLocaleString() }}
