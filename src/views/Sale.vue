@@ -54,6 +54,7 @@
                             <th>#</th>
                             <th v-if="isCredit" class="text-center">จ่าย</th>
                             <th>สินค้า</th>
+                            <th>ประเภท</th>
                             <th>จำนวน</th>
                             <th>ราคา/หน่วย</th>
                             <th>ส่วนลด/หน่วย</th>
@@ -70,6 +71,7 @@
                             </td>
 
                             <td>{{ item.description }}</td>
+                            <td>{{ item.category }}</td>
                             <td>
                                 <input type="number" v-model.number="item.quantity" min="1" class="qty-input" />
                             </td>
@@ -141,6 +143,7 @@
                         <tr>
                             <th>รหัส</th>
                             <th>สินค้า</th>
+                            <th>ประเภท</th>
                             <th>คงเหลือ</th>
                             <th>ราคาขาย</th>
                             <th>จำนวนที่ต้องการ</th>
@@ -151,6 +154,7 @@
                         <tr v-for="stock in filteredStocks" :key="stock.id">
                             <td>SKU-{{ stock.product_id }}</td>
                             <td>{{ stock.product.description }}</td>
+                            <td>{{ stock.product.category }}</td>
                             <td>{{ stock.quantity }}</td>
                             <td>฿{{ parseFloat(stock.product.sell_price).toFixed(2) }}</td>
                             <td class="quantity-control-cell">
@@ -368,6 +372,7 @@ const addItemToSale = (stockItem) => {
         items.value.push({
             productId: stockItem.product_id,
             description: stockItem.product.description,
+            category: stockItem.product.category,
             quantity: quantity,
             price: parseFloat(stockItem.product.sell_price),
             discount: 0,
