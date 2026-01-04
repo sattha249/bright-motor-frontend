@@ -128,6 +128,7 @@
                             <thead>
                                 <tr>
                                     <th>สินค้า</th>
+                                    <th>หมวดหมู่</th>
                                     <th width="120" class="text-center">จำนวน</th>
                                     <th class="text-right">ราคา</th>
                                     <th class="text-right">รวม</th>
@@ -137,6 +138,7 @@
                             <tbody>
                                 <tr v-for="(item, index) in items" :key="item.productId">
                                     <td class="bold">{{ item.description }}</td>
+                                    <td>{{ item.category || '-' }}</td>
                                     <td class="text-center">
                                         <input type="number" v-model.number="item.quantity" min="1" class="qty-input">
                                     </td>
@@ -499,6 +501,7 @@ const addItem = (stock) => {
     } else {
         items.value.push({
             productId: stock.product_id,
+            category: stock.product.category,
             description: stock.product.description,
             quantity: qty,
             price: parseFloat(stock.product.sell_price),
@@ -562,6 +565,7 @@ const editPreOrder = async (po) => {
         // สำคัญ: ต้อง mapping field ให้ตรงกับตอน addItem
         items.value = data.items.map(i => ({
             productId: i.product_id,
+            category: i.product?.category || null,
             description: i.product?.description || 'สินค้า',
             quantity: i.quantity,
             price: Number(i.price),
