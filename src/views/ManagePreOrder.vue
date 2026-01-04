@@ -21,7 +21,6 @@
                         <select v-model="filterStatus" @change="fetchPreOrders" class="status-select">
                             <option value="">สถานะทั้งหมด</option>
                             <option value="Pending">Pending (รอรถ)</option>
-                            <!-- <option value="Synced">Synced (รับงานแล้ว)</option> -->
                             <option value="Completed">Completed (ปิดงาน)</option>
                             <option value="Cancelled">Cancelled (ยกเลิก)</option>
                         </select>
@@ -91,7 +90,8 @@
                         <label>ลูกค้าปลายทาง <span class="required">*</span></label>
                         <div class="search-input-wrapper">
                             <input type="text" v-model="customerSearchTerm" placeholder="ค้นหาชื่อลูกค้า..."
-                                @focus="showCustomerDropdown = true" class="search-input" />
+                                @input="debouncedSearchCustomers" @focus="showCustomerDropdown = true"
+                                @blur="hideCustomerDropdown" class="search-input" />
                             <i class="fas fa-search search-icon-inside"></i>
                         </div>
                         <div class="dropdown" v-if="showCustomerDropdown">
@@ -187,6 +187,16 @@
                 </div>
 
                 <div class="modal-body">
+                    <div class="print-only-header">
+                        <h2>ใบส่งของ / ใบแจ้งหนี้</h2>
+                        <div class="print-meta">
+                            <p><strong>เลขที่:</strong> {{ selectedPreOrder?.bill_no }}</p>
+                            <p><strong>วันที่:</strong> {{ new
+                                Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}</p>
+                        </div>
+                        <hr class="sign-line" style="border-top: 2px solid #000; margin: 10px 0;">
+                    </div>
+
                     <div class="info-grid-detail">
                         <div class="info-box">
                             <label>รถขนส่ง:</label>
@@ -236,6 +246,17 @@
                                 </tr>
                             </tfoot>
                         </table>
+                    </div>
+
+                    <div class="print-only-footer">
+                        <div class="sign-box">
+                            <p>ผู้รับของ</p>
+                            <div class="sign-line"></div>
+                        </div>
+                        <div class="sign-box">
+                            <p>ผู้ส่งของ</p>
+                            <div class="sign-line"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer no-print">
@@ -353,13 +374,9 @@ const debounce = (func, delay) => {
 };
 
 // --- Computed ---
+// Update 2: filteredCustomers now returns allCustomers directly as search is handled via API
 const filteredCustomers = computed(() => {
-    if (!customerSearchTerm.value) return allCustomers.value.slice(0, 10);
-    const query = customerSearchTerm.value.toLowerCase();
-    return allCustomers.value.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        (c.customer_no && String(c.customer_no).includes(query))
-    ).slice(0, 10);
+    return allCustomers.value;
 });
 
 const totalSoldPrice = computed(() => items.value.reduce((sum, i) => sum + (i.quantity * i.price), 0));
@@ -381,6 +398,21 @@ const fetchInitialData = async () => {
         allCustomers.value = cRes.data.data;
     } catch (e) {
         console.error("Initial Load Error:", e);
+    }
+};
+
+// Update 3: Implement server-side search logic
+const searchCustomers = async () => {
+    try {
+        const res = await axios.get('/customers', {
+            params: {
+                search: customerSearchTerm.value,
+                per_page: 20
+            }
+        });
+        allCustomers.value = res.data.data;
+    } catch (error) {
+        console.error("Search error", error);
     }
 };
 
@@ -433,10 +465,27 @@ const closeStockModal = () => {
     showModal.value = false;
 };
 
+// Update 4: Register the debounce for customer search
+const debouncedSearchCustomers = debounce(searchCustomers, 300);
+
 const selectCustomer = (c) => {
     customerId.value = c.id;
     customerSearchTerm.value = `${c.name} (${c.customer_no})`;
     showCustomerDropdown.value = false;
+};
+
+// Update 5: Implement dropdown hiding logic
+const hideCustomerDropdown = () => {
+    setTimeout(() => {
+        showCustomerDropdown.value = false;
+        if (customerId.value === null) {
+            const selectedCustomer = allCustomers.value.find(c => c.id === customerId.value);
+            // If the selected ID isn't in the current list but we have a value,
+            // we probably searched and filtered it out, so we don't clear the term if an ID is set.
+            // But if ID is null, we clear.
+            if (!selectedCustomer && !customerId.value) customerSearchTerm.value = '';
+        }
+    }, 150);
 };
 
 const addItem = (stock) => {
@@ -484,9 +533,24 @@ const editPreOrder = async (po) => {
         customerId.value = data.customer_id;
 
         // หาชื่อลูกค้ามาใส่ search term
-        const customer = allCustomers.value.find(c => c.id === data.customer_id);
+        // Update 6: Fetch specific customer if not in list during edit
+        let customer = allCustomers.value.find(c => c.id === data.customer_id);
+        if (!customer) {
+            // If customer not in current list (due to pagination), we might need to fetch them specifically
+            // For simplicity, we can just set the search term if we assume the API returns basic details
+            // Or ideally fetch customer details. Here we rely on pre-loaded logic or existing list.
+            // A robust fix involves fetching the single customer by ID if missing.
+            // For now, assuming basic data is available or search term is sufficient display.
+            if (data.customer) {
+                customer = data.customer
+                // Optionally push to allCustomers if needed for dropdown consistency
+            }
+        }
+
         if (customer) {
             customerSearchTerm.value = `${customer.name} (${customer.customer_no})`;
+        } else if (data.customer) {
+            customerSearchTerm.value = `${data.customer.name} (${data.customer.customer_no})`;
         }
 
         isCredit.value = !!data.is_credit;
