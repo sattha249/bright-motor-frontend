@@ -147,7 +147,7 @@
                     </thead>
                     <tbody>
                         <tr v-for="item in warehouseStocks" :key="item.id">
-                            <td>SKU-{{ item.product_id }}</td>
+                            <td>{{ item.product.product_code }}</td>
                             <td>{{ item.product.description }}</td>
                             <td>{{ item.product.category }}</td>
                             <td>{{ item.product.brand || '-' }}</td>
@@ -263,7 +263,7 @@ watch(hasInsufficientStockComputed, (newVal) => {
 
 const truckStocksWithSoldQuantities = computed(() => {
     if (soldProducts.value.length === 0) {
-        return truckStocks.value.map(stock => ({ ...stock, soldQuantity: 0, sku: `SKU-${stock.product_id}` }));
+        return truckStocks.value.map(stock => ({ ...stock, soldQuantity: 0, sku: `${stock.product.product_code}` }));
     }
 
     const soldProductsMap = new Map();
