@@ -1,10 +1,10 @@
 <template>
     <div class="preorder-container">
-        <h2 class="section-title">
+        <h2 class="section-title no-print">
             <i class="fas fa-truck-loading"></i> จัดการใบส่งของล่วงหน้า & โอนของขึ้นรถ
         </h2>
 
-        <div class="tabs">
+        <div class="tabs no-print">
             <button :class="['tab-btn', { active: currentTab === 'list' }]" @click="currentTab = 'list'">
                 <i class="fas fa-list"></i> รายการใบงาน
             </button>
@@ -13,7 +13,7 @@
             </button>
         </div>
 
-        <div v-if="currentTab === 'list'" class="tab-content">
+        <div v-if="currentTab === 'list'" class="tab-content no-print">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">สถานะการโอนของและบิลล่วงหน้า</h3>
@@ -21,7 +21,7 @@
                         <select v-model="filterStatus" @change="fetchPreOrders" class="status-select">
                             <option value="">สถานะทั้งหมด</option>
                             <option value="Pending">Pending (รอรถ)</option>
-                            <option value="Synced">Synced (รับงานแล้ว)</option>
+                            <!-- <option value="Synced">Synced (รับงานแล้ว)</option> -->
                             <option value="Completed">Completed (ปิดงาน)</option>
                             <option value="Cancelled">Cancelled (ยกเลิก)</option>
                         </select>
@@ -55,6 +55,10 @@
                                     <button class="action-btn view-btn" @click="viewDetail(po)">
                                         <i class="fas fa-eye"></i>
                                     </button>
+                                    <button v-if="po.status === 'Pending'" class="action-btn edit-btn"
+                                        @click="editPreOrder(po)">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
                                     <button v-if="po.status === 'Pending'" class="action-btn delete-btn"
                                         @click="cancelPreOrder(po)">
                                         <i class="fas fa-undo"></i> ยกเลิก
@@ -70,10 +74,10 @@
             </div>
         </div>
 
-        <div v-if="currentTab === 'form'" class="tab-content">
+        <div v-if="currentTab === 'form'" class="tab-content no-print">
             <div class="form-grid">
                 <div class="card info-card">
-                    <h3 class="card-title">ข้อมูลปลายทาง</h3>
+                    <h3 class="card-title">{{ isEditing ? 'แก้ไขข้อมูลใบงาน' : 'ข้อมูลปลายทาง' }}</h3>
                     <div class="form-group">
                         <label>เลือกรถขนส่ง <span class="required">*</span></label>
                         <select v-model="truckId" class="custom-select">
@@ -156,20 +160,32 @@
                             <span>ยอดรวมสุทธิ:</span>
                             <span class="total-amount">฿{{ totalSoldPrice.toLocaleString() }}</span>
                         </div>
-                        <button class="save-btn" @click="submitPreOrder" :disabled="loading">
-                            <i class="fas fa-save"></i> {{ loading ? 'กำลังบันทึก...' : 'บันทึกใบงานและตัดสต็อก' }}
-                        </button>
+                        <div class="button-group">
+                            <button v-if="isEditing" class="cancel-edit-btn" @click="cancelEditMode">
+                                ยกเลิกการแก้ไข
+                            </button>
+                            <button class="save-btn" @click="submitPreOrder" :disabled="loading">
+                                <i class="fas fa-save"></i> {{ loading ? 'กำลังบันทึก...' : (isEditing ?
+                                    'บันทึกการแก้ไข' : 'บันทึกใบงานและตัดสต็อก') }}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
+        <div v-if="showDetailModal" class="modal-overlay printable-modal" @click.self="showDetailModal = false">
             <div class="modal large-modal">
                 <div class="modal-header">
                     <h3><i class="fas fa-info-circle"></i> รายละเอียดใบงาน {{ selectedPreOrder?.bill_no }}</h3>
-                    <button class="close-icon-btn" @click="showDetailModal = false">&times;</button>
+                    <div class="header-actions">
+                        <button class="print-btn no-print" @click="printDetail">
+                            <i class="fas fa-print"></i> พิมพ์
+                        </button>
+                        <button class="close-icon-btn no-print" @click="showDetailModal = false">&times;</button>
+                    </div>
                 </div>
+
                 <div class="modal-body">
                     <div class="info-grid-detail">
                         <div class="info-box">
@@ -220,13 +236,13 @@
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer no-print">
                     <button class="cancel-btn-modal" @click="showDetailModal = false">ปิดหน้าต่าง</button>
                 </div>
             </div>
         </div>
 
-        <div v-if="showModal" class="modal-overlay" @click.self="closeStockModal">
+        <div v-if="showModal" class="modal-overlay no-print" @click.self="closeStockModal">
             <div class="modal large-modal">
                 <div class="modal-header">
                     <h3><i class="fas fa-boxes"></i> เลือกสินค้าจากโกดังหลัก</h3>
@@ -272,11 +288,6 @@
                                 <td colspan="5" class="text-center py-4">ไม่พบสินค้าในคลัง</td>
                             </tr>
                         </tbody>
-                        <tbody v-else>
-                            <tr>
-                                <td colspan="5" class="text-center py-4">กำลังโหลดข้อมูล...</td>
-                            </tr>
-                        </tbody>
                     </table>
                 </div>
 
@@ -317,10 +328,14 @@ const isCredit = ref(false);
 const creditType = ref('week');
 const items = ref([]);
 
+// Edit Mode State
+const isEditing = ref(false);
+const editingId = ref(null);
+
 // Modal & Pagination State
 const showModal = ref(false);
-const showDetailModal = ref(false); // [ใหม่]
-const selectedPreOrder = ref(null); // [ใหม่]
+const showDetailModal = ref(false);
+const selectedPreOrder = ref(null);
 const searchKeyword = ref('');
 const currentPage = ref(1);
 const totalPages = ref(1);
@@ -435,8 +450,8 @@ const addItem = (stock) => {
             quantity: qty,
             price: parseFloat(stock.product.sell_price),
             discount: 0,
-            sold_price: parseFloat(stock.product.sell_price),
-            is_paid: true
+            soldPrice: parseFloat(stock.product.sell_price),
+            isPaid: true
         });
     }
 
@@ -454,34 +469,101 @@ const removeItem = (index) => {
     items.value.splice(index, 1);
 };
 
+// [ใหม่] ฟังก์ชันเตรียมข้อมูลเพื่อแก้ไข
+const editPreOrder = async (po) => {
+    try {
+        loading.value = true;
+        // ดึงข้อมูลละเอียด
+        const res = await axios.get(`/pre-orders/${po.id}`);
+        const data = res.data;
+
+        // map ข้อมูลกลับเข้าตัวแปร Form
+        truckId.value = data.truck_id;
+        customerId.value = data.customer_id;
+
+        // หาชื่อลูกค้ามาใส่ search term
+        const customer = allCustomers.value.find(c => c.id === data.customer_id);
+        if (customer) {
+            customerSearchTerm.value = `${customer.name} (${customer.customer_no})`;
+        }
+
+        isCredit.value = !!data.is_credit;
+        if (data.is_credit) creditType.value = data.is_credit;
+
+        // map items กลับมาให้ตรงโครงสร้างที่ตารางสินค้าใช้
+        // สำคัญ: ต้อง mapping field ให้ตรงกับตอน addItem
+        items.value = data.items.map(i => ({
+            productId: i.product_id,
+            description: i.product?.description || 'สินค้า',
+            quantity: i.quantity,
+            price: Number(i.price),
+            sold_price: Number(i.sold_price),
+            discount: 0,
+            is_paid: true
+        }));
+
+        // ตั้งค่าโหมดแก้ไข
+        isEditing.value = true;
+        editingId.value = po.id;
+        currentTab.value = 'form'; // สลับไปหน้าฟอร์ม
+
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลเพื่อแก้ไขได้', 'error');
+    } finally {
+        loading.value = false;
+    }
+};
+
+// [ใหม่] ยกเลิกโหมดแก้ไข
+const cancelEditMode = () => {
+    isEditing.value = false;
+    editingId.value = null;
+    items.value = [];
+    truckId.value = null;
+    customerId.value = null;
+    customerSearchTerm.value = '';
+    currentTab.value = 'list';
+};
+
+// [แก้ไข] รองรับทั้ง Save และ Update
 const submitPreOrder = async () => {
     if (!truckId.value || !customerId.value || items.value.length === 0) {
         return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบ', 'warning');
     }
-    loading.value = true;
-    try {
-        const payload = {
-            truckId: truckId.value,
-            customerId: customerId.value,
-            isCredit: isCredit.value ? creditType.value : null,
-            totalPrice: totalSoldPrice.value,
-            totalDiscount: 0,
-            totalSoldPrice: totalSoldPrice.value,
-            items: items.value.map(i => ({
-                ...i,
-                sold_price: i.price.toFixed(2),
-                discount: "0.00"
-            }))
-        };
-        await axios.post('/pre-orders', payload);
-        Swal.fire('สำเร็จ', 'เปิดบิลและโอนสินค้าขึ้นรถแล้ว', 'success');
 
-        currentTab.value = 'list';
+    loading.value = true;
+
+    const payload = {
+        truckId: truckId.value,
+        customerId: customerId.value,
+        isCredit: isCredit.value ? creditType.value : null,
+        totalPrice: totalSoldPrice.value,
+        totalDiscount: 0,
+        totalSoldPrice: totalSoldPrice.value,
+        items: items.value.map(i => ({
+            productId: i.productId, // ต้องแน่ใจว่าตัวแปรนี้มีค่าตอน Edit
+            quantity: i.quantity,
+            price: i.price,
+            soldPrice: i.price,
+            discount: "0.00"
+        }))
+    };
+
+    try {
+        if (isEditing.value) {
+            // ยิง API Update
+            await axios.put(`/pre-orders/${editingId.value}`, payload);
+            Swal.fire('สำเร็จ', 'แก้ไขข้อมูลเรียบร้อยแล้ว', 'success');
+        } else {
+            // ยิง API Create (เดิม)
+            await axios.post('/pre-orders', payload);
+            Swal.fire('สำเร็จ', 'เปิดบิลและโอนสินค้าขึ้นรถแล้ว', 'success');
+        }
+
+        // Reset
+        cancelEditMode();
         fetchPreOrders();
-        items.value = [];
-        truckId.value = null;
-        customerId.value = null;
-        customerSearchTerm.value = '';
     } catch (e) {
         Swal.fire('ผิดพลาด', e.response?.data?.message || 'บันทึกไม่สำเร็จ', 'error');
     } finally {
@@ -510,16 +592,19 @@ const cancelPreOrder = (po) => {
     });
 };
 
-// [ใหม่] ดูรายละเอียดใบงาน
 const viewDetail = async (po) => {
     try {
-        // ดึงรายละเอียดเชิงลึก (Items) จาก API
         const res = await axios.get(`/pre-orders/${po.id}`);
         selectedPreOrder.value = res.data;
         showDetailModal.value = true;
     } catch (e) {
         Swal.fire('Error', 'ไม่สามารถดึงข้อมูลรายละเอียดได้', 'error');
     }
+};
+
+// [ใหม่] ฟังก์ชันสั่งพิมพ์
+const printDetail = () => {
+    window.print();
 };
 
 onMounted(() => {
@@ -529,7 +614,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* --- Layout & Global --- */
+/* --- Layout & Global (Styles เดิม) --- */
 .preorder-container {
     max-width: 1240px;
     margin: 2rem auto;
@@ -572,7 +657,7 @@ onMounted(() => {
     margin-top: 1.5rem;
 }
 
-/* --- Tabs --- */
+/* Tabs */
 .tabs {
     display: flex;
     gap: 10px;
@@ -600,7 +685,7 @@ onMounted(() => {
     margin-right: 8px;
 }
 
-/* --- Dashboard --- */
+/* Dashboard */
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -648,7 +733,7 @@ onMounted(() => {
     color: #822727;
 }
 
-/* --- Form --- */
+/* Form */
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 2fr;
@@ -759,7 +844,7 @@ onMounted(() => {
     cursor: pointer;
 }
 
-/* --- Product Table --- */
+/* Product Table */
 .product-table {
     width: 100%;
     border-collapse: collapse;
@@ -836,7 +921,73 @@ onMounted(() => {
     box-shadow: 0 10px 15px -3px rgba(49, 130, 206, 0.4);
 }
 
-/* --- Modal Styles --- */
+/* Buttons */
+.button-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.cancel-edit-btn {
+    background: #cbd5e0;
+    color: #2d3748;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 35px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.action-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+.view-btn {
+    background: #3182ce;
+}
+
+.edit-btn {
+    background: #ecc94b;
+    color: #744210;
+}
+
+.delete-btn {
+    background: #e53e3e;
+    width: auto;
+    padding: 0 15px;
+    font-weight: 600;
+    gap: 8px;
+}
+
+.add-btn {
+    background: #48bb78;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* Modal Styles */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -871,6 +1022,24 @@ onMounted(() => {
     padding-bottom: 1rem;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.print-btn {
+    background: #4a5568;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
 .modal-header h3 {
     font-size: 1.5rem;
     font-weight: 700;
@@ -894,7 +1063,7 @@ onMounted(() => {
     overflow-y: auto;
 }
 
-/* View Detail Specific */
+/* Detail Specific */
 .info-grid-detail {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -943,7 +1112,7 @@ onMounted(() => {
     cursor: pointer;
 }
 
-/* Stock Modal Specific */
+/* Stock Modal */
 .modal-search-bar {
     margin-bottom: 1.5rem;
 }
@@ -1000,40 +1169,7 @@ onMounted(() => {
     cursor: not-allowed;
 }
 
-/* Modal Pagination */
-.modal-pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    margin-top: 1.5rem;
-}
-
-.modal-pagination button {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 1px solid #e2e8f0;
-    background: white;
-    cursor: pointer;
-    transition: 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-pagination button:hover:not(:disabled) {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.page-info {
-    font-weight: 700;
-    color: #4a5568;
-}
-
-/* --- Global Data Table --- */
+/* Global Data Table */
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -1055,53 +1191,165 @@ onMounted(() => {
     border-bottom: 1px solid #edf2f7;
 }
 
-.action-buttons {
-    display: flex;
-    gap: 10px;
-}
-
-.action-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: none;
-    color: white;
-    cursor: pointer;
-    transition: 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.1);
-}
-
-.view-btn {
-    background: #3182ce;
-}
-
-.delete-btn {
-    background: #e53e3e;
-    width: auto;
-    padding: 0 15px;
-    font-weight: 600;
-    gap: 8px;
-}
-
-.add-btn {
-    background: #48bb78;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
 @media (max-width: 1024px) {
     .form-grid {
         grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<style>
+@media print {
+
+    /* 1. Reset พื้นที่กระดาษ */
+    @page {
+        size: auto;
+        margin: 0mm;
+        /* ไร้ขอบ */
+    }
+
+    /* 2. สั่ง Body ให้หดตัวเท่าเนื้อหา ห้ามมีความสูงค้าง */
+    html,
+    body {
+        width: 100%;
+        height: auto !important;
+        /* สำคัญ: ห้าม 100% */
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background-color: white;
+    }
+
+    /* 3. ซ่อนทุกอย่างแบบล่องหน (แต่ยังกินพื้นที่ Layout เดิมอยู่ เพื่อไม่ให้โครงสร้างพัง) */
+    body * {
+        visibility: hidden;
+    }
+
+    /* 4. ดึง Modal ออกมาจากมิติเดิม มาแปะทับหน้าจอ */
+    .printable-modal {
+        visibility: visible !important;
+
+        /* เทคนิคแก้หน้าเบิ้ล: */
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+
+        /* บังคับความกว้างเต็ม แต่ความสูง "หด" ตามเนื้อหา */
+        width: 100% !important;
+        height: auto !important;
+
+        /* ล้างค่า Overlay เดิมที่ทำให้เต็มจอ */
+        bottom: auto !important;
+        right: auto !important;
+        background: white !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+        z-index: 999999 !important;
+        display: block !important;
+    }
+
+    /* 5. แสดงลูกหลานใน Modal */
+    .printable-modal * {
+        visibility: visible !important;
+    }
+
+    /* 6. ปรับกล่อง Modal ให้เป็นกระดาษแผ่นเดียว */
+    .printable-modal .modal {
+        position: relative !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+
+        /* ใส่ Padding ตรงนี้แทน Margin ของ @page เพื่อความสวยงาม */
+        padding: 20px 40px !important;
+
+        box-shadow: none !important;
+        border: none !important;
+        background: white !important;
+    }
+
+    /* 7. ปรับแต่งเนื้อหาภายใน */
+    .modal-body {
+        padding: 0 !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    /* เส้นขอบและตาราง */
+    .info-grid-detail {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        border: 1px solid #000;
+        padding: 15px;
+        margin-bottom: 20px;
+        background-color: white !important;
+    }
+
+    .data-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    .data-table th,
+    .data-table td {
+        border: 1px solid #000 !important;
+        padding: 6px 10px !important;
+        color: #000 !important;
+        font-size: 14px;
+    }
+
+    .data-table th {
+        background-color: #eee !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* Header & Footer */
+    .print-only-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 10px;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+    }
+
+    .print-meta {
+        text-align: right;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+
+    .print-only-footer {
+        display: flex !important;
+        justify-content: space-between;
+        margin-top: 40px;
+        padding: 0 30px;
+        page-break-inside: avoid;
+    }
+
+    .sign-box {
+        width: 200px;
+        text-align: center;
+    }
+
+    .sign-line {
+        border-bottom: 1px solid #000;
+        margin-top: 30px;
+        margin-bottom: 5px;
+    }
+
+    /* ซ่อนปุ่มต่างๆ */
+    .no-print,
+    .modal-footer,
+    .close-icon-btn,
+    .print-btn,
+    .modal-header,
+    .section-title,
+    .tabs,
+    .card:not(.info-card) {
+        display: none !important;
     }
 }
 </style>
