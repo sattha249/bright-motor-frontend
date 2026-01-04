@@ -285,6 +285,7 @@
                         <thead>
                             <tr>
                                 <th>สินค้า</th>
+                                <th>หมวดหมู่</th>
                                 <th class="text-right">คงเหลือ</th>
                                 <th class="text-right">ราคาขาย</th>
                                 <th class="text-center" width="150">จำนวนที่จะโอน</th>
@@ -294,6 +295,7 @@
                         <tbody v-if="!loading">
                             <tr v-for="stock in warehouseStocks" :key="stock.id">
                                 <td class="bold">{{ stock.product.description }}</td>
+                                <td>{{ stock.product.category || '-' }}</td>
                                 <td class="text-right">{{ stock.quantity }} {{ stock.product.unit || 'ชิ้น' }}</td>
                                 <td class="text-right">฿{{ Number(stock.product.sell_price).toLocaleString() }}</td>
                                 <td class="text-center">
