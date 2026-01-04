@@ -113,7 +113,6 @@
                     <p class="summary-line">รวมราคาสินค้า (ก่อนลด): ฿{{ totalOriginalPrice.toFixed(2) }}</p>
                     <p class="summary-line discount-amount">ส่วนลดรวม: ฿{{ totalDiscountAmount.toFixed(2) }}</p>
 
-                    <!-- case credit -->
                     <template v-if="isCredit">
                         <hr class="summary-divider">
                         <p class="summary-line paid-today">จ่ายวันนี้: ฿{{ totalPaidToday.toFixed(2) }}</p>
@@ -224,13 +223,9 @@ const filteredStocks = computed(() => {
     );
 });
 
+// [แก้ไข] ปรับให้ filteredCustomers ใช้ข้อมูลจาก allCustomers ได้เลย เพราะเราจะ search ที่ API แล้ว
 const filteredCustomers = computed(() => {
-    if (!customerSearchTerm.value) return allCustomers.value;
-    const query = customerSearchTerm.value.toLowerCase();
-    return allCustomers.value.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        String(c.customer_no).includes(query)
-    );
+    return allCustomers.value;
 });
 
 // [ใหม่] คำนวณยอดจ่ายวันนี้ (เฉพาะที่ติ๊ก is_paid)
@@ -288,6 +283,23 @@ const fetchInitialData = async () => {
     }
 };
 
+// [ใหม่] ฟังก์ชันค้นหาลูกค้า
+const searchCustomers = async () => {
+    try {
+        // ถ้าไม่มีคำค้นหา ให้โหลดข้อมูลตั้งต้นใหม่ หรือถ้าจะให้เคลียร์ก็ได้
+        // ตรงนี้ให้โหลด customers ทั้งหมด (หรือตาม pagination) ถ้าไม่มี search term
+        const res = await axios.get('/customers', {
+            params: {
+                search: customerSearchTerm.value,
+                per_page: 20 // จำกัดจำนวนผลลัพธ์
+            }
+        });
+        allCustomers.value = res.data.data;
+    } catch (error) {
+        console.error("Search error", error);
+    }
+};
+
 const fetchWarehouseStock = async () => {
     loading.value = true;
     const url = '/warehouse-stocks';
@@ -307,7 +319,8 @@ const fetchWarehouseStock = async () => {
 };
 
 const debouncedFetchWarehouseStock = debounce(fetchWarehouseStock, 300);
-const debouncedSearchCustomers = debounce(async () => { }, 300);
+// [แก้ไข] ให้เรียกฟังก์ชัน searchCustomers แทน empty async
+const debouncedSearchCustomers = debounce(searchCustomers, 300);
 
 const selectCustomer = (customer) => {
     customerId.value = customer.id;
@@ -320,7 +333,10 @@ const hideCustomerDropdown = () => {
         showCustomerDropdown.value = false;
         if (customerId.value === null) {
             const selectedCustomer = allCustomers.value.find(c => c.id === customerId.value);
-            if (!selectedCustomer) customerSearchTerm.value = '';
+            // ถ้าไม่เจอลูกค้าที่เลือกไว้ ให้เคลียร์ search box หรือ reset กลับ (ตาม logic เก่า)
+            // แต่เนื่องจากเรา search API allCustomers อาจจะเปลี่ยนไป ทำให้หาไม่เจอใน list
+            // ดังนั้นถ้า customerId ยังอยู่ ก็ปล่อยไว้
+            if (!selectedCustomer && !customerId.value) customerSearchTerm.value = '';
         }
     }, 150);
 };
