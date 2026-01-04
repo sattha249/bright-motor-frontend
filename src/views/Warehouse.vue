@@ -4,12 +4,20 @@
         <br>
 
         <div class="action-header">
-            <button class="add-product-btn" @click="openModal">
-                <i class="fas fa-plus"></i> เพิ่มสินค้าเข้าคลัง
-            </button>
-            <button class="import-excel-btn" @click="openExcelModal">
-                <i class="fas fa-file-excel"></i> นำเข้าจาก Excel
-            </button>
+            <div class="search-wrapper">
+                <i class="fas fa-search search-icon-main"></i>
+                <input type="text" v-model="tableSearchTerm" @input="handleTableSearch"
+                    placeholder="ค้นหารหัส, ชื่อสินค้า..." class="main-search-input" />
+            </div>
+
+            <div class="buttons-wrapper">
+                <button class="add-product-btn" @click="openModal">
+                    <i class="fas fa-plus"></i> เพิ่มสินค้าเข้าคลัง
+                </button>
+                <button class="import-excel-btn" @click="openExcelModal">
+                    <i class="fas fa-file-excel"></i> นำเข้าจาก Excel
+                </button>
+            </div>
         </div>
 
         <table class="product-table">
@@ -49,7 +57,9 @@
                     </td>
                 </tr>
                 <tr v-if="warehouseStock.length === 0">
-                    <td colspan="9" style="text-align:center">ไม่มีข้อมูลในคลัง</td>
+                    <td colspan="9" style="text-align:center">
+                        {{ tableSearchTerm ? 'ไม่พบข้อมูลที่ค้นหา' : 'ไม่มีข้อมูลในคลัง' }}
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -181,6 +191,10 @@ const page = ref(1)
 const totalPages = ref(1)
 const perPage = 10
 
+// --- Search State (New) ---
+const tableSearchTerm = ref('')
+let tableSearchTimeout = null
+
 // Existing Modal State
 const showModal = ref(false)
 const searchTerm = ref('')
@@ -204,7 +218,8 @@ const fetchWarehouseStock = async () => {
         const res = await axios.get('/warehouse-stocks', {
             params: {
                 page: page.value,
-                perPage: perPage
+                perPage: perPage,
+                search: tableSearchTerm.value // ส่งค่าค้นหาไปที่ API
             }
         })
         warehouseStock.value = res.data.data
@@ -215,9 +230,19 @@ const fetchWarehouseStock = async () => {
     }
 }
 
+// --- Search Handler (New) ---
+const handleTableSearch = () => {
+    if (tableSearchTimeout) clearTimeout(tableSearchTimeout)
+    tableSearchTimeout = setTimeout(() => {
+        page.value = 1 // รีเซ็ตไปหน้าแรกเมื่อค้นหา
+        fetchWarehouseStock()
+    }, 500) // Debounce 500ms
+}
+
 const goToPage = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages.value) {
         page.value = newPage
+        fetchWarehouseStock() // เรียก fetchWarehouseStock แทนการพึ่ง watch
     }
 }
 
@@ -505,7 +530,7 @@ const saveExcelImport = async () => {
 }
 
 onMounted(fetchWarehouseStock)
-watch(page, fetchWarehouseStock)
+// watch(page, fetchWarehouseStock) // เอาออกแล้วเรียกใน goToPage แทนเพื่อความชัดเจน
 </script>
 
 <style scoped>
@@ -522,13 +547,52 @@ watch(page, fetchWarehouseStock)
     display: inline-block;
 }
 
-/* Action Header Layout */
+/* Action Header Layout (Updated) */
 .action-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     margin-top: 1rem;
+    flex-wrap: wrap;
+    /* รองรับหน้าจอเล็ก */
+    gap: 15px;
+}
+
+/* Search Wrapper Styles */
+.search-wrapper {
+    position: relative;
+    width: 300px;
+    max-width: 100%;
+}
+
+.main-search-input {
+    width: 100%;
+    padding: 10px 10px 10px 40px;
+    /* เว้นที่ให้ icon */
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.main-search-input:focus {
+    border-color: var(--primary-color);
+}
+
+.search-icon-main {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0aec0;
+    pointer-events: none;
+}
+
+.buttons-wrapper {
+    display: flex;
+    gap: 10px;
 }
 
 /* Buttons */
@@ -552,7 +616,6 @@ watch(page, fetchWarehouseStock)
 
 .import-excel-btn {
     background-color: #3182ce;
-    /* สีฟ้า */
     color: white;
     border: none;
     padding: 10px 15px;
