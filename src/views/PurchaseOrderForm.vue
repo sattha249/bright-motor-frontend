@@ -39,10 +39,10 @@
                             <div v-for="product in searchResults" :key="product.id" class="result-item"
                                 @click="selectProduct(product)">
                                 <div class="product-info">
-                                    <span class="product-name">{{ product.description }}</span>
+                                    <span class="product-name">{{ product.description }} - {{ product.category }}</span>
                                     <span class="product-brand">{{ product.brand }}</span>
                                 </div>
-                                <span class="product-code">#{{ product.id }}</span>
+                                <span class="product-code">#{{ product.product_code }}</span>
                             </div>
                         </div>
                     </div>
@@ -71,6 +71,7 @@
                     <thead>
                         <tr>
                             <th>สินค้า</th>
+                            <th>หมวดหมู่</th>
                             <th>จำนวน</th>
                             <th>ต้นทุน/หน่วย</th>
                             <th>รวม</th>
@@ -80,6 +81,7 @@
                     <tbody>
                         <tr v-for="(item, index) in form.items" :key="index">
                             <td>{{ item.product_name }}</td>
+                            <td>{{ item.category }}</td>
                             <td class="quantity-control-cell">
                                 <button class="qty-btn" @click="updateItemQuantity(index, -1)"
                                     :disabled="item.quantity <= 1">-</button>
@@ -207,6 +209,7 @@ const addItemToList = () => {
     } else {
         form.value.items.push({
             product_id: selectedProduct.value.id,
+            category: selectedProduct.value.category,
             product_name: selectedProduct.value.description,
             quantity: addItemForm.value.quantity,
             cost_price: addItemForm.value.cost_price,

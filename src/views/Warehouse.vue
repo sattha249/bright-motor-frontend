@@ -26,6 +26,7 @@
                     <th>#</th>
                     <th>รหัสสินค้า</th>
                     <th>ชื่อสินค้า</th>
+                    <th>หมวดหมู่</th>
                     <th>ยี่ห้อ</th>
                     <th>จำนวน</th>
                     <th>หน่วย</th>
@@ -39,6 +40,7 @@
                     <td>{{ (page - 1) * perPage + index + 1 }}</td>
                     <td>{{ item.product?.product_code || '-' }}</td>
                     <td>{{ item.product?.description || 'ไม่ระบุ' }}</td>
+                    <td>{{ item.product?.category || '-' }}</td>
                     <td>{{ item.product?.brand || '-' }}</td>
                     <td>{{ item.quantity }}</td>
                     <td>{{ item.product?.unit || '-' }}</td>
@@ -81,7 +83,7 @@
                     <div class="dropdown" v-if="searchResults.length">
                         <div class="dropdown-item" v-for="product in searchResults" :key="product.id"
                             @click="selectProduct(product)">
-                            {{ product.description }} ({{ product.brand || '-' }})
+                            {{ product.description }} - {{ product.category }} ({{ product.brand || '-' }})
                         </div>
                     </div>
                 </div>
