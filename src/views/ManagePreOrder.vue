@@ -90,8 +90,7 @@
                         <label>ลูกค้าปลายทาง <span class="required">*</span></label>
                         <div class="search-input-wrapper">
                             <input type="text" v-model="customerSearchTerm" placeholder="ค้นหาชื่อลูกค้า..."
-                                @input="debouncedSearchCustomers" @focus="showCustomerDropdown = true"
-                                @blur="hideCustomerDropdown" class="search-input" />
+                                @focus="showCustomerDropdown = true" class="search-input" />
                             <i class="fas fa-search search-icon-inside"></i>
                         </div>
                         <div class="dropdown" v-if="showCustomerDropdown">
@@ -128,7 +127,6 @@
                             <thead>
                                 <tr>
                                     <th>สินค้า</th>
-                                    <th>หมวดหมู่</th>
                                     <th width="120" class="text-center">จำนวน</th>
                                     <th class="text-right">ราคา</th>
                                     <th class="text-right">รวม</th>
@@ -138,7 +136,6 @@
                             <tbody>
                                 <tr v-for="(item, index) in items" :key="item.productId">
                                     <td class="bold">{{ item.description }}</td>
-                                    <td>{{ item.category || '-' }}</td>
                                     <td class="text-center">
                                         <input type="number" v-model.number="item.quantity" min="1" class="qty-input">
                                     </td>
@@ -178,89 +175,124 @@
 
         <div v-if="showDetailModal" class="modal-overlay printable-modal" @click.self="showDetailModal = false">
             <div class="modal large-modal">
-                <div class="modal-header">
+                <div class="modal-header no-print">
                     <h3><i class="fas fa-info-circle"></i> รายละเอียดใบงาน {{ selectedPreOrder?.bill_no }}</h3>
                     <div class="header-actions">
-                        <button class="print-btn no-print" @click="printDetail">
+                        <button class="print-btn" @click="printDetail">
                             <i class="fas fa-print"></i> พิมพ์
                         </button>
-                        <button class="close-icon-btn no-print" @click="showDetailModal = false">&times;</button>
+                        <button class="close-icon-btn" @click="showDetailModal = false">&times;</button>
                     </div>
                 </div>
 
                 <div class="modal-body">
-                    <div class="print-only-header">
-                        <h2>ใบส่งของ / ใบแจ้งหนี้</h2>
-                        <div class="print-meta">
-                            <p><strong>เลขที่:</strong> {{ selectedPreOrder?.bill_no }}</p>
-                            <p><strong>วันที่:</strong> {{ new
-                                Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}</p>
+
+                    <div class="screen-only">
+                        <div class="print-only-header">
+                            <h2>ใบส่งของ / ใบแจ้งหนี้</h2>
+                            <div class="print-meta">
+                                <p><strong>เลขที่:</strong> {{ selectedPreOrder?.bill_no }}</p>
+                                <p><strong>วันที่:</strong> {{ new
+                                    Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}</p>
+                            </div>
+                            <hr class="sign-line" style="border-top: 2px solid #000; margin: 10px 0;">
                         </div>
-                        <hr class="sign-line" style="border-top: 2px solid #000; margin: 10px 0;">
+                        <div class="info-grid-detail">
+                            <div class="info-box">
+                                <label>รถขนส่ง:</label>
+                                <span>{{ selectedPreOrder?.truck?.plate_number }}</span>
+                            </div>
+                            <div class="info-box">
+                                <label>ลูกค้า:</label>
+                                <span>{{ selectedPreOrder?.customer?.name }}</span>
+                            </div>
+                            <div class="info-box">
+                                <label>สถานะ:</label>
+                                <span :class="['status-badge', selectedPreOrder?.status.toLowerCase()]">{{
+                                    selectedPreOrder?.status }}</span>
+                            </div>
+                            <div class="info-box">
+                                <label>เครดิต:</label>
+                                <span>{{ selectedPreOrder?.is_credit || 'เงินสด' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="modal-table-container mt-4">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>สินค้า</th>
+                                        <th class="text-center">จำนวน</th>
+                                        <th class="text-right">ราคา/หน่วย</th>
+                                        <th class="text-right">รวม</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="item in selectedPreOrder?.items" :key="item.id">
+                                        <td>{{ item.product?.description }}</td>
+                                        <td class="text-center">{{ item.quantity }}</td>
+                                        <td class="text-right">฿{{ Number(item.price).toLocaleString() }}</td>
+                                        <td class="text-right bold">฿{{ (item.quantity * item.price).toLocaleString() }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-right bold">รวมสุทธิ:</td>
+                                        <td class="text-right bold total-highlight">฿{{
+                                            Number(selectedPreOrder?.total_sold_price).toLocaleString() }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
 
-                    <div class="info-grid-detail">
-                        <div class="info-box">
-                            <label>รถขนส่ง:</label>
-                            <span>{{ selectedPreOrder?.truck?.plate_number }}</span>
+                    <div class="print-only receipt-layout">
+                        <div class="receipt-header">
+                            <h2>BRIGHT MOTOR STORE</h2>
+                            <p>ใบส่งของ / ใบแจ้งหนี้</p>
+                            <div class="dashed-line"></div>
+                            <div class="receipt-info-row">
+                                <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
+                                }}</span>
+                                <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
+                                    hour:
+                                        '2-digit', minute: '2-digit'
+                                }) }}</span>
+                            </div>
+                            <div class="receipt-info-row">
+                                <span>No: {{ selectedPreOrder?.bill_no }}</span>
+                            </div>
+                            <div class="receipt-info-row">
+                                <span>Customer: {{ selectedPreOrder?.customer?.name }}</span>
+                            </div>
+                            <div class="dashed-line"></div>
                         </div>
-                        <div class="info-box">
-                            <label>ลูกค้า:</label>
-                            <span>{{ selectedPreOrder?.customer?.name }}</span>
-                        </div>
-                        <div class="info-box">
-                            <label>สถานะ:</label>
-                            <span :class="['status-badge', selectedPreOrder?.status.toLowerCase()]">{{
-                                selectedPreOrder?.status }}</span>
-                        </div>
-                        <div class="info-box">
-                            <label>เครดิต:</label>
-                            <span>{{ selectedPreOrder?.is_credit || 'เงินสด' }}</span>
-                        </div>
-                    </div>
 
-                    <div class="modal-table-container mt-4">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>สินค้า</th>
-                                    <th>หมวดหมู่</th>
-                                    <th class="text-center">จำนวน</th>
-                                    <th class="text-right">ราคา/หน่วย</th>
-                                    <th class="text-right">รวม</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="item in selectedPreOrder?.items" :key="item.id">
-                                    <td>{{ item.product?.description }}</td>
-                                    <td>{{ item.product?.category || '-' }}</td>
-                                    <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-right">฿{{ Number(item.price).toLocaleString() }}</td>
-                                    <td class="text-right bold">฿{{ (item.quantity * item.price).toLocaleString() }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="3" class="text-right bold">รวมสุทธิ:</td>
-                                    <td class="text-right bold total-highlight">฿{{
-                                        Number(selectedPreOrder?.total_sold_price).toLocaleString() }}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <div class="print-only-footer">
-                        <div class="sign-box">
-                            <p>ผู้รับของ</p>
-                            <div class="sign-line"></div>
+                        <div class="receipt-items">
+                            <div v-for="item in selectedPreOrder?.items" :key="item.id" class="receipt-item-row">
+                                <div class="item-name">{{ item.product?.description }}</div>
+                                <div class="item-calc">
+                                    <span>{{ item.quantity }} x {{ Number(item.price).toLocaleString() }}</span>
+                                    <span class="item-total">{{ (item.quantity * item.price).toLocaleString() }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="sign-box">
-                            <p>ผู้ส่งของ</p>
-                            <div class="sign-line"></div>
+
+                        <div class="dashed-line"></div>
+
+                        <div class="receipt-footer">
+                            <div class="receipt-total-row">
+                                <span>ยอดรวม:</span>
+                                <span class="grand-total">{{ Number(selectedPreOrder?.total_sold_price).toLocaleString()
+                                }}</span>
+                            </div>
+                            <br>
+                            <p>ขอบคุณที่ใช้บริการ</p>
                         </div>
                     </div>
                 </div>
+
                 <div class="modal-footer no-print">
                     <button class="cancel-btn-modal" @click="showDetailModal = false">ปิดหน้าต่าง</button>
                 </div>
@@ -287,7 +319,6 @@
                         <thead>
                             <tr>
                                 <th>สินค้า</th>
-                                <th>หมวดหมู่</th>
                                 <th class="text-right">คงเหลือ</th>
                                 <th class="text-right">ราคาขาย</th>
                                 <th class="text-center" width="150">จำนวนที่จะโอน</th>
@@ -297,7 +328,6 @@
                         <tbody v-if="!loading">
                             <tr v-for="stock in warehouseStocks" :key="stock.id">
                                 <td class="bold">{{ stock.product.description }}</td>
-                                <td>{{ stock.product.category || '-' }}</td>
                                 <td class="text-right">{{ stock.quantity }} {{ stock.product.unit || 'ชิ้น' }}</td>
                                 <td class="text-right">฿{{ Number(stock.product.sell_price).toLocaleString() }}</td>
                                 <td class="text-center">
@@ -1263,6 +1293,14 @@ onMounted(() => {
     border-bottom: 1px solid #edf2f7;
 }
 
+.print-only {
+    display: none;
+}
+
+.screen-only {
+    display: block;
+}
+
 @media (max-width: 1024px) {
     .form-grid {
         grid-template-columns: 1fr;
@@ -1273,154 +1311,160 @@ onMounted(() => {
 <style>
 @media print {
 
-    /* 1. Reset พื้นที่กระดาษ */
+    /* 1. ล้างขอบกระดาษ */
     @page {
-        size: auto;
+        size: 80mm auto;
+        /* ตั้งเป็น Thermal Size */
         margin: 0mm;
-        /* ไร้ขอบ */
     }
 
-    /* 2. สั่ง Body ให้หดตัวเท่าเนื้อหา ห้ามมีความสูงค้าง */
+    /* 2. สั่ง Body ให้หดตัวเท่าเนื้อหา และซ่อนส่วนเกิน */
     html,
     body {
         width: 100%;
-        height: auto !important;
-        /* สำคัญ: ห้าม 100% */
+        height: fit-content !important;
+        /* ใช้ fit-content แทน auto เพื่อความชัวร์ */
         min-height: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
-        overflow: visible !important;
         background-color: white;
+        overflow: hidden !important;
+        /* ซ่อนส่วนเกินที่อาจจะล้นไปหน้า 2 */
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 12px;
+        color: #000;
     }
 
-    /* 3. ซ่อนทุกอย่างแบบล่องหน (แต่ยังกินพื้นที่ Layout เดิมอยู่ เพื่อไม่ให้โครงสร้างพัง) */
+    /* 3. ซ่อนเนื้อหาอื่นแบบ Invisible (แต่ยังคง Layout ไว้กันพัง) */
     body * {
         visibility: hidden;
+        height: 0;
+        overflow: hidden;
     }
 
-    /* 4. ดึง Modal ออกมาจากมิติเดิม มาแปะทับหน้าจอ */
+    /* 4. ดึง Modal ออกมาแสดงและแปะทับ */
     .printable-modal {
         visibility: visible !important;
-
-        /* เทคนิคแก้หน้าเบิ้ล: */
         position: absolute !important;
         top: 0 !important;
         left: 0 !important;
-
-        /* บังคับความกว้างเต็ม แต่ความสูง "หด" ตามเนื้อหา */
         width: 100% !important;
-        height: auto !important;
 
-        /* ล้างค่า Overlay เดิมที่ทำให้เต็มจอ */
-        bottom: auto !important;
-        right: auto !important;
+        /* บังคับความสูงให้พอดีเนื้อหา */
+        height: fit-content !important;
+
+        /* ล้างค่า Overlay */
         background: white !important;
-
         margin: 0 !important;
         padding: 0 !important;
         z-index: 999999 !important;
         display: block !important;
     }
 
-    /* 5. แสดงลูกหลานใน Modal */
+    /* 5. แสดงลูกหลาน */
     .printable-modal * {
         visibility: visible !important;
+        height: auto;
     }
 
-    /* 6. ปรับกล่อง Modal ให้เป็นกระดาษแผ่นเดียว */
+    /* 6. จัดกล่อง Modal */
     .printable-modal .modal {
         position: relative !important;
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
-
-        /* ใส่ Padding ตรงนี้แทน Margin ของ @page เพื่อความสวยงาม */
-        padding: 20px 40px !important;
-
+        padding: 5px !important;
+        /* Padding น้อยที่สุด */
         box-shadow: none !important;
         border: none !important;
         background: white !important;
+        overflow: hidden !important;
+        /* ตัดส่วนเกินใน Modal */
     }
 
-    /* 7. ปรับแต่งเนื้อหาภายใน */
+    /* 7. เนื้อหา Modal */
     .modal-body {
         padding: 0 !important;
         overflow: visible !important;
         height: auto !important;
     }
 
-    /* เส้นขอบและตาราง */
-    .info-grid-detail {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        border: 1px solid #000;
-        padding: 15px;
-        margin-bottom: 20px;
-        background-color: white !important;
+    /* 8. Toggle View */
+    .screen-only {
+        display: none !important;
     }
 
-    .data-table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-    }
-
-    .data-table th,
-    .data-table td {
-        border: 1px solid #000 !important;
-        padding: 6px 10px !important;
-        color: #000 !important;
-        font-size: 14px;
-    }
-
-    .data-table th {
-        background-color: #eee !important;
-        -webkit-print-color-adjust: exact;
-    }
-
-    /* Header & Footer */
-    .print-only-header {
+    .print-only {
         display: block !important;
+    }
+
+    /* 9. Receipt Styling */
+    .receipt-layout {
+        width: 100%;
+    }
+
+    .receipt-header {
         text-align: center;
         margin-bottom: 10px;
-        border-bottom: 2px solid #000;
-        padding-bottom: 10px;
     }
 
-    .print-meta {
-        text-align: right;
-        font-size: 14px;
-        margin-top: 5px;
+    .receipt-header h2 {
+        font-size: 16px;
+        font-weight: bold;
+        margin: 0;
     }
 
-    .print-only-footer {
-        display: flex !important;
+    .receipt-header p {
+        font-size: 12px;
+        margin: 2px 0;
+    }
+
+    .receipt-info-row {
+        display: flex;
         justify-content: space-between;
-        margin-top: 40px;
-        padding: 0 30px;
-        page-break-inside: avoid;
+        font-size: 12px;
     }
 
-    .sign-box {
-        width: 200px;
-        text-align: center;
+    .dashed-line {
+        border-top: 1px dashed #000;
+        margin: 5px 0;
     }
 
-    .sign-line {
-        border-bottom: 1px solid #000;
-        margin-top: 30px;
+    .receipt-item-row {
         margin-bottom: 5px;
     }
 
-    /* ซ่อนปุ่มต่างๆ */
+    .item-name {
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .item-calc {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        padding-left: 10px;
+    }
+
+    .receipt-total-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .receipt-footer {
+        text-align: center;
+        margin-top: 10px;
+        font-size: 12px;
+    }
+
+    /* 10. Hide Unwanted Elements */
     .no-print,
     .modal-footer,
     .close-icon-btn,
     .print-btn,
-    .modal-header,
-    .section-title,
-    .tabs,
-    .card:not(.info-card) {
+    .modal-header {
         display: none !important;
     }
 }
