@@ -29,7 +29,6 @@
                     <router-link to="/credit/report">
                         <i class="fas fa-chart-pie"></i> รายงานเครดิต
                     </router-link>
-
                 </li>
                 <li>
                     <router-link to="/products" active-class="active">
@@ -56,26 +55,16 @@
                         <i class="fa-solid fa-truck-arrow-right"></i>พรีออเดอร์
                     </router-link>
                 </li>
-                <!-- <li>
-                    <a href="#" class="disabled">
-                        <router-link to="/movements" active-class="active">
-                        <i class="fas fa-chart-bar"></i> การเคลื่อนไหว
-                        </router-link>
-                    </a>
-                </li> -->
                 <li>
-                    <!-- <a href="#" class="disabled"> -->
                     <router-link to="/report" active-class="active">
                         <i class="fa-solid fa-file-invoice-dollar"></i> รายงานการขาย
                     </router-link>
-                    <!-- </a> -->
                 </li>
                 <li>
                     <router-link to="/settings" active-class="active">
                         <i class="fa-solid fa-cog"></i> ตั้งค่า
                     </router-link>
                 </li>
-
             </ul>
         </nav>
     </aside>
@@ -84,17 +73,19 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from '@/lib/axios';
+
 const userRole = ref('');
 
 const fetchUserRole = async () => {
     try {
-        const response = await axios.get('/profile'); // Endpoint สำหรับดึงข้อมูลผู้ใช้ปัจจุบัน
+        const response = await axios.get('/profile');
         userRole.value = response.data.role;
         console.log('User role:', userRole.value);
     } catch (error) {
         console.error('Failed to fetch user role:', error);
     }
 };
+
 onMounted(() => {
     fetchUserRole();
 });
@@ -104,12 +95,18 @@ onMounted(() => {
 .sidebar {
     width: 250px;
     height: 100vh;
+    /* สูงเต็มจอ */
     background-color: #2c3e50;
     color: var(--white-color);
     padding: 20px;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
+    /* เอา fixed หรือ sticky ออกเพื่อให้มันอยู่ใน flow ปกติของ layout (หรือจะใส่ fixed ก็ได้ถ้า layout เดิมคุณเป็นแบบนั้น) */
+    flex-shrink: 0;
+    /* สำคัญ: ป้องกัน sidebar หดตัวเมื่อหน้าจอเล็ก */
+    overflow-y: auto;
+    /* ให้ scroll ได้ถ้าเมนูยาวเกินความสูงจอ */
 }
 
 .logo {
@@ -124,6 +121,7 @@ onMounted(() => {
 
 .sidebar-nav ul {
     list-style: none;
+    padding: 0;
 }
 
 .sidebar-nav li a {
@@ -158,5 +156,23 @@ onMounted(() => {
 
 .sidebar-nav li a.disabled:hover {
     background-color: transparent;
+}
+
+/* เพิ่มส่วนนี้เพื่อให้บนจอมือถือ Sidebar ไม่กินพื้นที่เต็มจนเกินไป (Optional: ปรับลดขนาดลงเล็กน้อย) */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+        /* ลดความกว้างลงหน่อยบนมือถือ */
+        padding: 10px;
+    }
+
+    .logo h2 {
+        font-size: 20px;
+    }
+
+    .sidebar-nav li a {
+        padding: 12px 15px;
+        font-size: 14px;
+    }
 }
 </style>
