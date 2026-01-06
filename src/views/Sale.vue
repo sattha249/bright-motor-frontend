@@ -129,7 +129,7 @@
         </div>
 
         <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-            <div class="modal large-modal">
+            <div class="modal">
                 <h3>เลือกสินค้าในโกดัง</h3>
                 <div class="search-box">
                     <input type="text" placeholder="ค้นหาสินค้า..." v-model="searchKeyword"
@@ -181,21 +181,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'; // เพิ่ม watch
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from '@/lib/axios';
 import Swal from 'sweetalert2';
 
 // State
 const truckId = ref(0);
 const customerId = ref(null);
-// [แก้ไข] isCredit เป็น boolean เพื่อเปิดปิด UI เฉยๆ
 const isCredit = ref(false);
-// [ใหม่] creditType เก็บค่า 'week' หรือ 'month' (default: week)
 const creditType = ref('week');
 
 const items = ref([]);
 const trucks = ref([]);
-const allCustomers = ref([]);
+const allCustomers = ref([]); // ใช้เก็บผลลัพธ์จากการค้นหา
 const customerSearchTerm = ref('');
 const showCustomerDropdown = ref(false);
 const manualDiscountAmount = ref(0);
@@ -215,20 +213,15 @@ const totalDiscountAmount = computed(() =>
 const totalSalePrice = computed(() => totalOriginalPrice.value - totalDiscountAmount.value);
 
 const filteredStocks = computed(() => {
-    if (!searchKeyword.value) return warehouseStocks.value;
-    const query = searchKeyword.value.toLowerCase();
-    return warehouseStocks.value.filter(stock =>
-        (stock.product?.description || '').toLowerCase().includes(query) ||
-        String(stock.product_id).includes(query)
-    );
+    // แก้ไข: ไม่กรองซ้ำที่ฝั่ง Client เพราะ API กรองมาให้แล้ว
+    return warehouseStocks.value;
 });
 
-// [แก้ไข] ปรับให้ filteredCustomers ใช้ข้อมูลจาก allCustomers ได้เลย เพราะเราจะ search ที่ API แล้ว
 const filteredCustomers = computed(() => {
+    // แก้ไข: ไม่กรองซ้ำที่ฝั่ง Client เพราะ API กรองมาให้แล้ว
     return allCustomers.value;
 });
 
-// [ใหม่] คำนวณยอดจ่ายวันนี้ (เฉพาะที่ติ๊ก is_paid)
 const totalPaidToday = computed(() => {
     return items.value
         .filter(item => item.is_paid)
@@ -238,7 +231,6 @@ const totalPaidToday = computed(() => {
         }, 0);
 });
 
-// [ใหม่] คำนวณยอดเครดิตค้างชำระ (เฉพาะที่ไม่ได้ติ๊ก is_paid)
 const totalCreditAmount = computed(() => {
     return items.value
         .filter(item => !item.is_paid)
@@ -247,25 +239,24 @@ const totalCreditAmount = computed(() => {
             return sum + (item.quantity * netPrice);
         }, 0);
 });
+
 // Helper Functions
-let searchTimeout = null;
+// แก้ไข: แยก timer ของแต่ละการ debounce
 const debounce = (func, delay) => {
+    let timeout = null;
     return (...args) => {
-        if (searchTimeout) clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
             func(...args);
         }, delay);
     };
 };
 
-// [ใหม่] Reset ค่าเมื่อเปลี่ยนสถานะเครดิต
 const handleCreditChange = () => {
     if (!isCredit.value) {
-        // ถ้าไม่ติดเครดิต ให้เคลียร์ค่า is_paid ใน items กลับเป็น true (เผื่อไว้ แต่จริงๆ ตอน save จะบังคับทับอยู่แล้ว)
         items.value.forEach(item => item.is_paid = true);
     } else {
-        // ถ้าติดเครดิต ค่าเริ่มต้นคือยังไม่จ่าย
-        creditType.value = 'week'; // default
+        creditType.value = 'week';
         items.value.forEach(item => item.is_paid = false);
     }
 };
@@ -274,7 +265,10 @@ const handleCreditChange = () => {
 const fetchInitialData = async () => {
     loading.value = true;
     try {
-        const customerRes = await axios.get('/customers');
+        // โหลดข้อมูลลูกค้าชุดแรก
+        const customerRes = await axios.get('/customers', {
+            params: { per_page: 20 }
+        });
         allCustomers.value = customerRes.data.data;
     } catch (error) {
         Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลเริ่มต้นได้', 'error');
@@ -283,15 +277,13 @@ const fetchInitialData = async () => {
     }
 };
 
-// [ใหม่] ฟังก์ชันค้นหาลูกค้า
+// [ใหม่] ฟังก์ชันค้นหาลูกค้าแบบ Server-side
 const searchCustomers = async () => {
     try {
-        // ถ้าไม่มีคำค้นหา ให้โหลดข้อมูลตั้งต้นใหม่ หรือถ้าจะให้เคลียร์ก็ได้
-        // ตรงนี้ให้โหลด customers ทั้งหมด (หรือตาม pagination) ถ้าไม่มี search term
         const res = await axios.get('/customers', {
             params: {
                 search: customerSearchTerm.value,
-                per_page: 20 // จำกัดจำนวนผลลัพธ์
+                per_page: 20
             }
         });
         allCustomers.value = res.data.data;
@@ -304,8 +296,15 @@ const fetchWarehouseStock = async () => {
     loading.value = true;
     const url = '/warehouse-stocks';
     try {
-        const res = await axios.get(url);
+        const res = await axios.get(url, {
+            params: {
+                search: searchKeyword.value, // ส่งคำค้นหาไปที่ API
+                limit: 10
+            }
+        });
+        // ตรวจสอบโครงสร้างข้อมูลที่ได้จาก API
         const stockData = Array.isArray(res.data) ? res.data : res.data.data || res.data;
+
         warehouseStocks.value = stockData.map(stock => ({
             ...stock,
             tempQuantity: 1,
@@ -318,8 +317,8 @@ const fetchWarehouseStock = async () => {
     }
 };
 
+// Debounce Wrappers
 const debouncedFetchWarehouseStock = debounce(fetchWarehouseStock, 300);
-// [แก้ไข] ให้เรียกฟังก์ชัน searchCustomers แทน empty async
 const debouncedSearchCustomers = debounce(searchCustomers, 300);
 
 const selectCustomer = (customer) => {
@@ -332,25 +331,25 @@ const hideCustomerDropdown = () => {
     setTimeout(() => {
         showCustomerDropdown.value = false;
         if (customerId.value === null) {
-            const selectedCustomer = allCustomers.value.find(c => c.id === customerId.value);
-            // ถ้าไม่เจอลูกค้าที่เลือกไว้ ให้เคลียร์ search box หรือ reset กลับ (ตาม logic เก่า)
-            // แต่เนื่องจากเรา search API allCustomers อาจจะเปลี่ยนไป ทำให้หาไม่เจอใน list
-            // ดังนั้นถ้า customerId ยังอยู่ ก็ปล่อยไว้
-            if (!selectedCustomer && !customerId.value) customerSearchTerm.value = '';
+            // ถ้าลูกค้าไม่มีใน list แต่เคยพิมพ์ไว้ ให้ลองค้นหาใหม่หรือเคลียร์
+            // แต่ในกรณี server-side search ปล่อยค่าค้างไว้เพื่อให้รู้ว่าพิมพ์อะไรไปจะดีกว่า
+            // หรือถ้าจะเคลียร์ก็ uncomment บรรทัดล่าง
+            // if (!customerSearchTerm.value) customerSearchTerm.value = ''; 
         }
     }, 150);
 };
-const selectedDiscount = ref(0)
-// Discount Logic
+
+const selectedDiscount = ref(0);
+
 const applyDiscountPercentage = (percent) => {
-    selectedDiscount.value = percent
+    selectedDiscount.value = percent;
     const discountFactor = percent / 100;
     items.value.forEach(item => { item.discount = item.price * discountFactor; });
     manualDiscountAmount.value = 0;
 };
 
 const applyManualDiscount = () => {
-    selectedDiscount.value = 0
+    selectedDiscount.value = 0;
     if (manualDiscountAmount.value < 0 || manualDiscountAmount.value > totalOriginalPrice.value) {
         Swal.fire('ผิดพลาด', 'ส่วนลดต้องไม่เป็นค่าลบและไม่เกินราคารวมทั้งหมด', 'error');
         return;
@@ -365,14 +364,14 @@ const applyManualDiscount = () => {
     });
 };
 
-// Item Management
 const openModal = () => {
     if (customerId.value === null) {
         Swal.fire('แจ้งเตือน', 'กรุณาเลือกลูกค้าก่อน', 'warning');
         return;
     }
-    fetchWarehouseStock();
+    // รีเซ็ตคำค้นหาก่อนเปิด Modal เพื่อให้แสดงทั้งหมดก่อน หรือจะคงค่าเดิมก็ได้
     searchKeyword.value = '';
+    fetchWarehouseStock();
     showModal.value = true;
 };
 
@@ -392,7 +391,7 @@ const addItemToSale = (stockItem) => {
             quantity: quantity,
             price: parseFloat(stockItem.product.sell_price),
             discount: 0,
-            is_paid: !isCredit.value // [ใหม่] ถ้าไม่ติดเครดิต เริ่มต้นเป็น true, ถ้าติด เริ่มเป็น false
+            is_paid: !isCredit.value
         });
     }
     closeModal();
@@ -411,7 +410,6 @@ const saveSale = async () => {
 
     loading.value = true;
     try {
-        // [Logic ใหม่] เตรียมข้อมูล isCredit และ is_paid
         const finalIsCredit = isCredit.value ? creditType.value : null;
 
         const payload = {
@@ -428,7 +426,6 @@ const saveSale = async () => {
                     price: item.price,
                     discount: item.discount.toFixed(2),
                     sold_price: finalPrice.toFixed(2),
-                    // [Logic ใหม่] ถ้าไม่ติดเครดิต บังคับ true, ถ้าติดเครดิต ใช้ค่าจาก checkbox
                     is_paid: isCredit.value ? !!item.is_paid : true
                 };
             })
@@ -445,7 +442,8 @@ const saveSale = async () => {
         creditType.value = 'week';
         manualDiscountAmount.value = 0;
         customerSearchTerm.value = '';
-        fetchWarehouseStock();
+        // โหลดข้อมูลตั้งต้นใหม่
+        fetchInitialData();
 
     } catch (error) {
         Swal.fire('ผิดพลาด!', 'เกิดข้อผิดพลาดในการบันทึกการขาย', 'error');
@@ -457,7 +455,7 @@ const saveSale = async () => {
 
 onMounted(() => {
     fetchInitialData();
-    fetchWarehouseStock();
+    // fetchWarehouseStock(); // ไม่จำเป็นต้องโหลด warehouse ทันที รอเปิด Modal ดีกว่า
 });
 </script>
 
