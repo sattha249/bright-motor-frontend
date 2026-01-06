@@ -254,7 +254,7 @@
                             <div class="dashed-line"></div>
                             <div class="receipt-info-row">
                                 <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
-                                    }}</span>
+                                }}</span>
                                 <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
                                     hour:
                                         '2-digit', minute: '2-digit'
@@ -285,7 +285,7 @@
                             <div class="receipt-total-row">
                                 <span>ยอดรวม:</span>
                                 <span class="grand-total">{{ Number(selectedPreOrder?.total_sold_price).toLocaleString()
-                                    }}</span>
+                                }}</span>
                             </div>
                             <br>
                             <p>ขอบคุณที่ใช้บริการ</p>
@@ -1313,7 +1313,7 @@ onMounted(() => {
 
     /* 1. ล้างขอบกระดาษ */
     @page {
-        size: 58mm auto;
+        size: 80mm auto;
         /* ตั้งเป็น Thermal Size */
         margin: 0mm;
     }
@@ -1415,14 +1415,14 @@ onMounted(() => {
     }
 
     .receipt-header p {
-        font-size: 12px;
+        font-size: 24px;
         margin: 2px 0;
     }
 
     .receipt-info-row {
         display: flex;
         justify-content: space-between;
-        font-size: 12px;
+        font-size: 24px;
     }
 
     .dashed-line {
@@ -1435,28 +1435,28 @@ onMounted(() => {
     }
 
     .item-name {
-        font-size: 12px;
+        font-size: 24px;
         font-weight: bold;
     }
 
     .item-calc {
         display: flex;
         justify-content: space-between;
-        font-size: 12px;
+        font-size: 24px;
         padding-left: 10px;
     }
 
     .receipt-total-row {
         display: flex;
         justify-content: space-between;
-        font-size: 16px;
+        font-size: 32px;
         font-weight: bold;
     }
 
     .receipt-footer {
         text-align: center;
         margin-top: 10px;
-        font-size: 12px;
+        font-size: 24px;
     }
 
     /* 10. Hide Unwanted Elements */
