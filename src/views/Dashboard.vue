@@ -64,6 +64,7 @@
                     <thead>
                         <tr>
                             <th>สินค้า ID</th>
+                            <th>ชื่อสินค้า</th>
                             <th>จำนวน</th>
                             <th>ราคาต่อหน่วย</th>
                             <th>ราคารวม</th>
@@ -74,6 +75,7 @@
                     <tbody>
                         <tr v-for="item in selectedLog.items" :key="item.id">
                             <td>{{ item.product_id }}</td>
+                            <td>{{ item.product.description }}</td>
                             <td>{{ item.quantity }}</td>
                             <td>{{ formatCurrency(item.price) }}</td>
                             <td>{{ formatCurrency(item.total_price) }}</td>

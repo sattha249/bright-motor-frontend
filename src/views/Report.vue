@@ -71,6 +71,7 @@
                                             <thead>
                                                 <tr>
                                                     <th>สินค้า</th>
+                                                    <th>ชื่อสินค้า</th>
                                                     <th>จำนวน</th>
                                                     <th>ราคาต่อหน่วย</th>
                                                     <th>ส่วนลดต่อหน่วย</th>
@@ -80,6 +81,7 @@
                                             <tbody>
                                                 <tr v-for="item in report.items" :key="item.id">
                                                     <td>{{ item.product_id }}</td>
+                                                    <td>{{ item.product.description }}</td>
                                                     <td>{{ item.quantity }}</td>
                                                     <td>{{ formatCurrency(item.price) }}</td>
                                                     <td>{{ formatCurrency(item.discount) }}</td>
