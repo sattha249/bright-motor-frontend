@@ -75,7 +75,7 @@
                     <tbody>
                         <tr v-for="item in selectedLog.items" :key="item.id">
                             <td>{{ item.product_id }}</td>
-                            <td>{{ item.product.description }}</td>
+                            <td>{{ item.product?.description || '-' }}</td>
                             <td>{{ item.quantity }}</td>
                             <td>{{ formatCurrency(item.price) }}</td>
                             <td>{{ formatCurrency(item.total_price) }}</td>
