@@ -5,7 +5,7 @@
         <div class="top-controls">
             <div class="truck-select-container">
                 <label for="truck-select">เลือกทะเบียนรถ:</label>
-                <select id="truck-select" v-model="selectedTruckId" @change="fetchTruckStocks">
+                <select id="truck-select" v-model="selectedTruckId" @change="fetchTruckStocks(1)">
                     <option value="" disabled>-- เลือกรถ --</option>
                     <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
                         {{ truck.plate_number }} - {{ truck?.user?.fullname || 'ยังไม่ได้มอบหมาย' }}
@@ -78,6 +78,12 @@
             </table>
             <div v-else>
                 <p>ไม่มีข้อมูลสินค้าในรถคันนี้</p>
+            </div>
+
+            <div class="pagination" v-if="truckStocks.length > 0">
+                <button @click="changeTruckPage(truckPage - 1)" :disabled="truckPage === 1">ก่อนหน้า</button>
+                <span>หน้า {{ truckPage }} / {{ truckTotalPages }}</span>
+                <button @click="changeTruckPage(truckPage + 1)" :disabled="truckPage === truckTotalPages">ถัดไป</button>
             </div>
         </div>
 
@@ -210,7 +216,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import axios from '@/lib/axios'
-import * as XLSX from 'xlsx' // ใช้ xlsx สร้างไฟล์
+import * as XLSX from 'xlsx'
 
 const trucks = ref([])
 const selectedTruckId = ref('')
@@ -223,6 +229,10 @@ const isRefillInsufficient = ref(false)
 const insufficientProducts = ref([]);
 const isRefillInitiated = ref(false);
 
+// Truck Stock Pagination State
+const truckPage = ref(1)
+const truckTotalPages = ref(1)
+
 const showAddModal = ref(false)
 const warehouseStocks = ref([])
 const searchKeyword = ref('')
@@ -233,7 +243,6 @@ const addQuantities = ref({})
 const addedProducts = ref([])
 const saving = ref(false)
 
-// New State for Success Modal
 const showSuccessModal = ref(false)
 const lastSavedData = ref([])
 
@@ -302,16 +311,28 @@ const fetchTrucks = async () => {
     }
 }
 
-const fetchTruckStocks = async () => {
+// Updated fetchTruckStocks with pagination
+const fetchTruckStocks = async (page = 1) => {
     if (!selectedTruckId.value) {
         truckStocks.value = []
         return
     }
     loading.value = true
     error.value = null
+    truckPage.value = page // Update current page state
+
     try {
-        const res = await axios.get(`/trucks/${selectedTruckId.value}/stocks`)
+        // Sending pagination params
+        const res = await axios.get(`/trucks/${selectedTruckId.value}/stocks`, {
+            params: {
+                page: page,
+                perPage: 10
+            }
+        })
         truckStocks.value = res.data.data
+        // Assuming backend returns meta for pagination
+        truckTotalPages.value = res.data.meta?.last_page || 1
+
         soldProducts.value = []
         isRefillConfirmed.value = false;
         isRefillInsufficient.value = false;
@@ -321,6 +342,11 @@ const fetchTruckStocks = async () => {
     } finally {
         loading.value = false
     }
+}
+
+const changeTruckPage = (page) => {
+    if (page < 1 || page > truckTotalPages.value) return
+    fetchTruckStocks(page)
 }
 
 const fetchWarehouseStocks = async () => {
@@ -404,14 +430,8 @@ const saveRefillData = async () => {
         };
         await axios.post('/warehouse-stocks/move-to-truck', payload);
 
-        // --- SUCCESS LOGIC UPDATE ---
-        // 1. เก็บข้อมูลที่เพิ่ง Save ไว้ก่อนล้าง (เพื่อทำ CSV)
         lastSavedData.value = JSON.parse(JSON.stringify(addedProducts.value));
-
-        // 2. แสดง Modal สำเร็จ
         showSuccessModal.value = true;
-
-        // หมายเหตุ: เรายังไม่ล้างข้อมูลตรงนี้ จะไปล้างตอนกดปิด Modal
     } catch (err) {
         alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
         console.error(err);
@@ -421,7 +441,6 @@ const saveRefillData = async () => {
 };
 
 const downloadCSV = () => {
-    // เตรียมข้อมูลสำหรับ Excel/CSV
     const dataToExport = lastSavedData.value.map(item => ({
         'รหัสสินค้า (ID)': item.productId,
         'ชื่อสินค้า': item.description,
@@ -429,21 +448,17 @@ const downloadCSV = () => {
         'หน่วย': item.unit
     }));
 
-    // สร้าง Worksheet
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "AddedProducts");
 
-    // ตั้งชื่อไฟล์: เติมสินค้า_ทะเบียนรถ_วันที่.csv
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = `เติมสินค้า_${selectedTruckPlate.value}_${dateStr}.csv`;
 
-    // ดาวน์โหลด
     XLSX.writeFile(wb, fileName);
 };
 
 const closeSuccessModal = () => {
-    // --- RESET LOGIC ย้ายมาตรงนี้ ---
     showSuccessModal.value = false;
     lastSavedData.value = [];
 
@@ -454,7 +469,7 @@ const closeSuccessModal = () => {
     insufficientProducts.value = [];
     isRefillInitiated.value = false;
 
-    fetchTruckStocks(); // โหลดข้อมูลใหม่
+    fetchTruckStocks();
 };
 
 const refillFromSoldProducts = async () => {
@@ -514,36 +529,6 @@ const refillFromSoldProducts = async () => {
         loading.value = false;
     }
 };
-
-const cancelRefill = () => {
-    addedProducts.value = [];
-    soldProducts.value = [];
-    isRefillConfirmed.value = false;
-    isRefillInsufficient.value = false;
-    insufficientProducts.value = [];
-    isRefillInitiated.value = false;
-};
-
-const removeProductFromList = (productId) => {
-    const itemToRemove = addedProducts.value.find(item => item.productId === productId);
-    if (!itemToRemove) return;
-
-    addedProducts.value = addedProducts.value.filter(item => item.productId !== productId);
-
-    const insufficientIndex = insufficientProducts.value.indexOf(productId);
-    if (insufficientIndex > -1) {
-        insufficientProducts.value.splice(insufficientIndex, 1);
-    }
-
-    const soldIndex = soldProducts.value.findIndex(item => item.productId === productId);
-    if (soldIndex !== -1) {
-        soldProducts.value.splice(soldIndex, 1);
-    }
-
-    if (addedProducts.value.length === 0) {
-        cancelRefill();
-    }
-}
 
 const decrementQuantity = (id) => {
     if (addQuantities.value[id] && addQuantities.value[id] > 1) {
@@ -931,5 +916,28 @@ onMounted(() => {
 
 .modal-cancel-btn:hover {
     background-color: #c53030;
+}
+
+/* Add styles for pagination (same as your other pages) */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    align-items: center;
+}
+
+.pagination button {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    background-color: white;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.pagination button:disabled {
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+    color: #aaa;
 }
 </style>
