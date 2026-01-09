@@ -47,10 +47,14 @@
                     <td>฿{{ item.product?.sell_price?.toLocaleString() || '0' }}</td>
                     <td>{{ item.product?.zone || 'ไม่ระบุ' }}</td>
                     <td>
-                        <span v-if="item.quantity < 20" class="stock-badge badge-low">
+                        <span v-if="item.quantity === 0" class="stock-badge badge-empty">หมด</span>
+                        <span v-else-if="(item.quantity / item.product.max_quantity * 100) < 20"
+                            class="stock-badge badge-low">
                             ใกล้หมด
                         </span>
-                        <span v-else-if="item.quantity >= 20 && item.quantity < 50" class="stock-badge badge-medium">
+                        <span
+                            v-else-if="(item.quantity / item.product.max_quantity * 100) >= 20 && (item.quantity / item.product.max_quantity * 100) < 50"
+                            class="stock-badge badge-medium">
                             ปานกลาง
                         </span>
                         <span v-else class="stock-badge badge-high">
@@ -907,6 +911,11 @@ onMounted(fetchWarehouseStock)
     text-align: center;
     min-width: 80px;
     white-space: nowrap;
+}
+
+.badge-empty {
+    background-color: #f56565;
+    color: white;
 }
 
 .badge-low {
