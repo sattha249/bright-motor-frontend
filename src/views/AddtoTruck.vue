@@ -386,7 +386,7 @@ const fetchWarehouseStocks = async () => {
         const res = await axios.get('/warehouse-stocks', {
             params: {
                 page: currentPage.value,
-                perPage: 10,
+                perPage: 1000,
                 search: searchKeyword.value,
             },
         })

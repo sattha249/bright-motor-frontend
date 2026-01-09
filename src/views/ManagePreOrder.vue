@@ -256,7 +256,7 @@
                             <div class="dashed-line"></div>
                             <div class="receipt-info-row">
                                 <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
-                                }}</span>
+                                    }}</span>
                                 <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
                                     hour:
                                         '2-digit', minute: '2-digit'
@@ -287,7 +287,7 @@
                             <div class="receipt-total-row">
                                 <span>ยอดรวม:</span>
                                 <span class="grand-total">{{ Number(selectedPreOrder?.total_sold_price).toLocaleString()
-                                }}</span>
+                                    }}</span>
                             </div>
                             <br>
                             <p>ขอบคุณที่ใช้บริการ</p>
@@ -461,7 +461,7 @@ const fetchWarehouseStocks = async () => {
             params: {
                 page: currentPage.value,
                 search: searchKeyword.value,
-                limit: 10
+                limit: 1000
             }
         });
         warehouseStocks.value = res.data.data;

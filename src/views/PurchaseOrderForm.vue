@@ -178,7 +178,7 @@ const debouncedSearch = () => {
             return;
         }
         try {
-            const res = await axios.get(`/products?search=${searchTerm.value}`);
+            const res = await axios.get(`/products?search=${searchTerm.value}&perPage=1000`);
             searchResults.value = res.data.data;
         } catch (error) { console.error('Search error:', error); }
     }, 500);

@@ -195,7 +195,7 @@ const warehouseStock = ref([])
 const meta = ref(null)
 const page = ref(1)
 const totalPages = ref(1)
-const perPage = 10
+const perPage = 1000
 
 // --- Search State (New) ---
 const tableSearchTerm = ref('')
@@ -276,7 +276,7 @@ const fetchSearchResults = async () => {
         const res = await axios.get('/products', {
             params: {
                 search: searchTerm.value.trim(),
-                perPage: 10
+                perPage: perPage
             }
         })
         searchResults.value = res.data.data
