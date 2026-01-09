@@ -77,7 +77,8 @@ async function saveEdit() {
             cost_price: editProduct.value.cost_price,
             sell_price: editProduct.value.sell_price,
             unit: editProduct.value.unit,
-            zone: editProduct.value.zone
+            zone: editProduct.value.zone,
+            max_quantity: editProduct.value.max_quantity || 100
         })
         alert('บันทึกการแก้ไขเรียบร้อย')
         editModalOpen.value = false
@@ -111,8 +112,8 @@ const triggerFileUpload = () => {
 
 const downloadTemplate = () => {
     // สร้างไฟล์ตัวอย่าง CSV
-    const header = "product_code,category,description,brand,model,cost_price,sell_price,unit,zone\n"
-    const example = "P001,อะไหล่เครื่อง,ลูกสูบ Wave110i,Honda,Wave110i,100,150,ชิ้น,A1"
+    const header = "product_code,category,description,brand,model,cost_price,sell_price,unit,zone,max_quantity\n"
+    const example = "P001,อะไหล่เครื่อง,ลูกสูบ Wave110i,Honda,Wave110i,100,150,ชิ้น,A1,100"
 
     // สร้าง Blob พร้อม BOM เพื่อให้ Excel อ่านภาษาไทยออก
     const blob = new Blob(["\uFEFF" + header + example], { type: 'text/csv;charset=utf-8;' })
@@ -276,6 +277,11 @@ onMounted(() => {
                             required /></div>
                     <div class="form-group"><label>หน่วย</label><input v-model="editProduct.unit" required /></div>
                     <div class="form-group"><label>จุดเก็บ</label><input v-model="editProduct.zone" /></div>
+                    <div class="form-group"><label>ค่าแสดงเปอร์เซ็นต์</label>
+                        <h6 style="color: #666;padding-bottom: 5px;">(ใช้แสดงค่ามากน้อยในสต็อกเท่านั้น
+                            หากมีจำนวนมากเกินที่กรอก = สินค้ามีมาก)</h6>
+                        <input type="number" v-model="editProduct.max_quantity" />
+                    </div>
 
                     <div class="form-actions">
                         <button type="submit" class="btn-save">บันทึก</button>

@@ -53,6 +53,14 @@
                 <input v-model="form.zone" type="text" id="zone" placeholder="ป้อนจุดเก็บ (เว้นว่างได้)" />
             </div>
 
+            <div class="form-group">
+                <label for="zone">ค่าแสดงเปอร์เซ็นต์</label>
+                <h6 style="color: #666;padding-bottom: 5px;">(ใช้แสดงค่าในสต็อกเท่านั้น
+                    หากมีจำนวนมากเกินที่กรอก = สินค้ามีมาก)</h6>
+                <input v-model="form.max_quantity" type="number" id="max_quantity"
+                    placeholder="ป้อนค่า (ค่าเริ่มต้น 100 หากไม่กรอก)" />
+            </div>
+
             <div class="form-actions">
                 <button type="submit" class="save-btn">บันทึก</button>
                 <router-link to="/products" class="cancel-btn">ยกเลิก</router-link>
@@ -77,7 +85,8 @@ const form = reactive({
     sell_price: '',
     unit: '',
     product_code: '',
-    zone: ''
+    zone: '',
+    max_quantity: 100
 })
 
 const errors = reactive({
@@ -116,6 +125,9 @@ const validateForm = () => {
     if (!form.product_code.trim()) {
         errors.product_code = 'กรุณากรอกรหัสสินค้า'
         valid = false
+    }
+    if (form.max_quantity <= 0) {
+        form.max_quantity = 100
     }
 
     return valid
