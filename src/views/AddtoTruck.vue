@@ -45,7 +45,8 @@
                         <th>ยี่ห้อ</th>
                         <th>จำนวน</th>
                         <th>หน่วย</th>
-                        <th>สถานะ</th>
+                        <!-- <th>สถานะ</th> -->
+                        <th>ดำเนินการ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -61,8 +62,16 @@
                             </span>
                         </td>
                         <td>{{ stock.product.unit || '-' }}</td>
-                        <td>
-                            <span v-if="stock.quantity < 5" class="stock-badge badge-low">
+
+                        <td v-if="stock.quantity > 0"><button class="return-btn" @click="openReturnModal(stock)"
+                                title="return-btn">ตีกลับโกดัง</button></td>
+                        <td v-else><button disabled class="return-btn disabled-btn" @click="openReturnModal(stock)"
+                                title="return-btn">ตีกลับโกดัง</button></td>
+                        <!-- <td>
+                            <span v-if="stock.quantity === 0" class="stock-badge badge-low">
+                                หมด
+                            </span>
+                            <span v-else-if="stock.quantity < 5" class="stock-badge badge-low">
                                 ใกล้หมด
                             </span>
                             <span v-else-if="stock.quantity >= 5 && stock.quantity < 10"
@@ -72,7 +81,7 @@
                             <span v-else class="stock-badge badge-high">
                                 มาก
                             </span>
-                        </td>
+                        </td> -->
                     </tr>
                 </tbody>
             </table>
@@ -210,6 +219,24 @@
             </div>
         </div>
 
+        <div v-if="showReturnModal" class="modal-overlay">
+            <div class="modal success-modal">
+                <h3>ยืนยันการตีสินค้ากลับโกดัง</h3>
+                <p>คุณแน่ใจหรือไม่ว่าต้องการตีสินค้ากลับโกดัง?</p>
+                <br>
+                <!-- show detail of selected product -->
+                <div class="product-detail" style="text-align: center;">
+                    <p>ชื่อสินค้า: {{ selectedProduct?.product.description }}</p>
+                    <p>รหัสสินค้า: {{ selectedProduct?.product.product_code }}</p>
+                    <p>จำนวนในรถ: {{ selectedProduct?.quantity }}</p>
+                </div>
+                <div class="modal-buttons  centered-buttons">
+                    <button class="modal-cancel-btn" @click="closeReturnModal">ยกเลิก</button>
+                    <button class="modal-confirm-btn" @click="returnProduct">ยืนยัน</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </template>
 
@@ -229,11 +256,14 @@ const isRefillInsufficient = ref(false)
 const insufficientProducts = ref([]);
 const isRefillInitiated = ref(false);
 
+const selectedProduct = ref({})
+
 // Truck Stock Pagination State
 const truckPage = ref(1)
 const truckTotalPages = ref(1)
 
 const showAddModal = ref(false)
+const showReturnModal = ref(false)
 const warehouseStocks = ref([])
 const searchKeyword = ref('')
 const currentPage = ref(1)
@@ -406,8 +436,17 @@ const openAddModal = () => {
     showAddModal.value = true
 }
 
+const openReturnModal = (stock) => {
+    selectedProduct.value = stock
+    showReturnModal.value = true;
+}
+
 const closeAddModal = () => {
     showAddModal.value = false
+}
+
+const closeReturnModal = () => {
+    showReturnModal.value = false;
 }
 
 const changePage = (page) => {
@@ -439,6 +478,21 @@ const saveRefillData = async () => {
         saving.value = false;
     }
 };
+
+const returnProduct = async () => {
+    try {
+        await axios.post('/warehouse-stocks/move-to-warehouse', {
+            truckId: selectedTruckId.value,
+            productId: selectedProduct.value.product_id,
+            quantity: selectedProduct.value.quantity
+        });
+        fetchTruckStocks();
+        closeReturnModal();
+    } catch (err) {
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+        console.error(err);
+    }
+}
 
 const downloadCSV = () => {
     const dataToExport = lastSavedData.value.map(item => ({
@@ -851,6 +905,27 @@ onMounted(() => {
     color: white;
 }
 
+.return-btn {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 80px;
+    white-space: nowrap;
+    background-color: #f56565;
+    color: white;
+    cursor: pointer;
+}
+
+.disabled-btn {
+    background-color: #feb2b2;
+    cursor: not-allowed;
+
+}
+
+
 .badge-medium {
     background-color: #f6e05e;
     color: #4a5568;
@@ -916,6 +991,21 @@ onMounted(() => {
 
 .modal-cancel-btn:hover {
     background-color: #c53030;
+}
+
+.modal-confirm-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s;
+}
+
+.modal-confirm-btn:hover {
+    background-color: #1c6e2f;
 }
 
 /* Add styles for pagination (same as your other pages) */
