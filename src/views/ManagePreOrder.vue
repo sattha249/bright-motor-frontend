@@ -79,7 +79,7 @@
                     <h3 class="card-title">{{ isEditing ? 'แก้ไขข้อมูลใบงาน' : 'ข้อมูลปลายทาง' }}</h3>
                     <div class="form-group">
                         <label>เลือกรถขนส่ง <span class="required">*</span></label>
-                        <select v-model="truckId" class="custom-select">
+                        <select v-model="truckId" class="custom-select" :disabled="isEditing">
                             <option :value="null">-- เลือกรถที่จะนำของขึ้น --</option>
                             <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
                                 {{ truck.plate_number }} ({{ truck?.user?.fullname || 'ไม่มีชื่อคนขับ' }})
@@ -89,8 +89,10 @@
                     <div class="form-group customer-search-group">
                         <label>ลูกค้าปลายทาง <span class="required">*</span></label>
                         <div class="search-input-wrapper">
-                            <input type="text" v-model="customerSearchTerm" placeholder="ค้นหาชื่อลูกค้า..."
-                                @focus="showCustomerDropdown = true" class="search-input" />
+                            <input :disabled="isEditing" type="text" v-model="customerSearchTerm"
+                                placeholder="ค้นหาชื่อลูกค้า..." @input="debouncedSearchCustomers"
+                                @focus="showCustomerDropdown = true" @blur="hideCustomerDropdown"
+                                class="search-input" />
                             <i class="fas fa-search search-icon-inside"></i>
                         </div>
                         <div class="dropdown" v-if="showCustomerDropdown">
@@ -401,9 +403,10 @@ const addQuantities = ref({});
 // --- Utility ---
 let searchTimeout = null;
 const debounce = (func, delay) => {
+    let timeout = null;
     return (...args) => {
-        if (searchTimeout) clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => func(...args), delay);
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), delay);
     };
 };
 
@@ -440,8 +443,8 @@ const searchCustomers = async () => {
     try {
         const res = await axios.get('/customers', {
             params: {
-                search: customerSearchTerm.value,
-                per_page: 20
+                search: customerSearchTerm.value, // ส่งคำค้นหาไปที่ API
+                per_page: 20 // จำกัดจำนวนผลลัพธ์ต่อหน้า
             }
         });
         allCustomers.value = res.data.data;
@@ -513,11 +516,11 @@ const hideCustomerDropdown = () => {
     setTimeout(() => {
         showCustomerDropdown.value = false;
         if (customerId.value === null) {
-            const selectedCustomer = allCustomers.value.find(c => c.id === customerId.value);
-            // If the selected ID isn't in the current list but we have a value,
-            // we probably searched and filtered it out, so we don't clear the term if an ID is set.
-            // But if ID is null, we clear.
-            if (!selectedCustomer && !customerId.value) customerSearchTerm.value = '';
+            // ถ้ายังไม่ได้เลือก ID แต่มีข้อความ ให้เคลียร์ (หรือจะปล่อยไว้ก็ได้ตาม UX ที่ชอบ)
+            if (!customerSearchTerm.value) customerSearchTerm.value = '';
+        } else {
+            // ถ้ามี ID แล้ว แต่ชื่อใน input ไม่ตรงกับลูกค้าที่เลือก (กรณี search แล้วไม่เจอตัวเดิม)
+            // อาจจะดึงชื่อจาก allCustomers ถ้ามี หรือปล่อยไว้
         }
     }, 150);
 };
