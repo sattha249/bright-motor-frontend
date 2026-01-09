@@ -227,6 +227,7 @@ onMounted(() => {
                         <th>ราคาขาย</th>
                         <th>หน่วย</th>
                         <th>จุดเก็บ</th>
+                        <th>ค่าคำนวณ</th>
                         <th>การจัดการ</th>
                     </tr>
                 </thead>
@@ -239,6 +240,7 @@ onMounted(() => {
                         <td>{{ parseFloat(product.sell_price).toFixed(2) }} บาท</td>
                         <td>{{ product.unit }}</td>
                         <td>{{ product.zone }}</td>
+                        <td>{{ product.max_quantity }}</td>
                         <td>
                             <button class="action-btn edit-btn" @click="openEditModal(product)">
                                 <i class="fas fa-pen-to-square"></i>
