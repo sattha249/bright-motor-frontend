@@ -17,7 +17,14 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">สถานะการโอนของและบิลล่วงหน้า</h3>
+
                     <div class="filter-group">
+                        <div class="search-input-wrapper small-search">
+                            <input type="text" v-model="preOrderSearchTerm" @input="debouncedFetchPreOrders"
+                                placeholder="ค้นหาเลขบิล / ลูกค้า..." class="search-input" />
+                            <i class="fas fa-search search-icon-inside"></i>
+                        </div>
+
                         <select v-model="filterStatus" @change="fetchPreOrders(1)" class="status-select">
                             <option value="">สถานะทั้งหมด</option>
                             <option value="Pending">Pending (รอรถ)</option>
@@ -71,7 +78,7 @@
                     </table>
                 </div>
 
-                <div class="modal-pagination" style="margin-top: 20px;">
+                <div class="modal-pagination" v-if="preOrdersTotalPages > 1" style="margin-top: 20px;">
                     <button @click="changePreOrderPage(preOrderCurrentPage - 1)" :disabled="preOrderCurrentPage === 1">
                         <i class="fas fa-chevron-left"></i>
                     </button>
@@ -360,7 +367,7 @@
                     </table>
                 </div>
 
-                <div class="modal-pagination">
+                <div class="modal-pagination" v-if="totalPages > 1">
                     <button @click="changeModalPage(currentPage - 1)" :disabled="currentPage === 1">
                         <i class="fas fa-chevron-left"></i>
                     </button>
@@ -388,9 +395,12 @@ const allCustomers = ref([]);
 const warehouseStocks = ref([]);
 const filterStatus = ref('');
 
-// [เพิ่มใหม่] State สำหรับ Pagination หน้า PreOrder
+// State สำหรับ Pagination หน้า PreOrder
 const preOrderCurrentPage = ref(1);
 const preOrdersTotalPages = ref(1);
+
+// [เพิ่ม] State สำหรับ Search PreOrder
+const preOrderSearchTerm = ref('');
 
 // Form State
 const truckId = ref(null);
@@ -405,7 +415,7 @@ const items = ref([]);
 const isEditing = ref(false);
 const editingId = ref(null);
 
-// Modal & Pagination State (สำหรับ Stock Modal)
+// Modal & Pagination State
 const showModal = ref(false);
 const showDetailModal = ref(false);
 const selectedPreOrder = ref(null);
@@ -438,22 +448,21 @@ const totalSoldPrice = computed(() => items.value.reduce((sum, i) => sum + (i.qu
 
 // --- Functions ---
 
-// [แก้ไข] ฟังก์ชันดึงข้อมูลให้รองรับ Pagination
+// [แก้ไข] รองรับ Pagination และ Search
 const fetchPreOrders = async (page = 1) => {
     try {
-        // อัปเดต page ปัจจุบัน
         preOrderCurrentPage.value = page;
 
         const res = await axios.get('/pre-orders', {
             params: {
                 status: filterStatus.value,
                 page: page,
-                limit: 10 // จำนวนต่อหน้า
+                limit: 10,
+                search: preOrderSearchTerm.value // [เพิ่ม] ส่ง search term ไปที่ API
             }
         });
 
         preOrders.value = res.data.data;
-        // อัปเดตจำนวนหน้าทั้งหมดจาก Meta Data
         preOrdersTotalPages.value = res.data.meta?.last_page || 1;
 
     } catch (e) {
@@ -461,7 +470,11 @@ const fetchPreOrders = async (page = 1) => {
     }
 };
 
-// [เพิ่มใหม่] ฟังก์ชันเปลี่ยนหน้า
+// [เพิ่ม] Debounce สำหรับ search pre-orders เพื่อไม่ให้ยิง API รัวๆ
+const debouncedFetchPreOrders = debounce(() => {
+    fetchPreOrders(1); // ค้นหาใหม่ ให้กลับไปหน้า 1
+}, 500);
+
 const changePreOrderPage = (page) => {
     if (page >= 1 && page <= preOrdersTotalPages.value) {
         fetchPreOrders(page);
@@ -478,7 +491,6 @@ const fetchInitialData = async () => {
     }
 };
 
-// Search Customer API (จาก Code ที่คุณให้มาใน Sale.vue ถ้ามีก็ใส่ ถ้าไม่มีก็ใช้ client filter ด้านบน)
 const searchCustomers = async () => {
     try {
         const res = await axios.get('/customers', {
@@ -607,7 +619,8 @@ const editPreOrder = async (po) => {
 
         if (customer) {
             customerSearchTerm.value = `${customer.name} (${customer.customer_no})`;
-
+        } else if (data.customer) {
+            customerSearchTerm.value = `${data.customer.name} (${data.customer.customer_no})`;
         }
 
         isCredit.value = !!data.is_credit;
@@ -615,7 +628,6 @@ const editPreOrder = async (po) => {
 
         items.value = data.items.map(i => ({
             productId: i.product_id,
-            category: i.product?.category || null,
             description: i.product?.description || 'สินค้า',
             quantity: i.quantity,
             price: Number(i.price),
@@ -731,6 +743,22 @@ onMounted(() => {
 
 <style scoped>
 /* --- Layout & Global (Styles เดิม) --- */
+/* ... (Style เดิมทั้งหมด) ... */
+
+/* [แก้ไข] เพิ่ม Style ให้ filter-group เป็น Flex และมี gap */
+.filter-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* [เพิ่ม] Style ให้ช่องค้นหาเล็กใน header */
+.small-search {
+    width: 250px !important;
+    /* หรือขนาดที่ต้องการ */
+}
+
+/* ... (Style เดิมอื่นๆ ต่อจากนี้) ... */
 .preorder-container {
     max-width: 1240px;
     margin: 2rem auto;
