@@ -18,7 +18,7 @@
                 <div class="card-header">
                     <h3 class="card-title">สถานะการโอนของและบิลล่วงหน้า</h3>
                     <div class="filter-group">
-                        <select v-model="filterStatus" @change="fetchPreOrders" class="status-select">
+                        <select v-model="filterStatus" @change="fetchPreOrders(1)" class="status-select">
                             <option value="">สถานะทั้งหมด</option>
                             <option value="Pending">Pending (รอรถ)</option>
                             <option value="Completed">Completed (ปิดงาน)</option>
@@ -69,6 +69,17 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div class="modal-pagination" style="margin-top: 20px;">
+                    <button @click="changePreOrderPage(preOrderCurrentPage - 1)" :disabled="preOrderCurrentPage === 1">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="page-info">หน้า {{ preOrderCurrentPage }} / {{ preOrdersTotalPages }}</span>
+                    <button @click="changePreOrderPage(preOrderCurrentPage + 1)"
+                        :disabled="preOrderCurrentPage === preOrdersTotalPages">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -188,7 +199,6 @@
                 </div>
 
                 <div class="modal-body">
-
                     <div class="screen-only">
                         <div class="print-only-header">
                             <h2>ใบส่งของ / ใบแจ้งหนี้</h2>
@@ -256,7 +266,7 @@
                             <div class="dashed-line"></div>
                             <div class="receipt-info-row">
                                 <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
-                                    }}</span>
+                                }}</span>
                                 <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
                                     hour:
                                         '2-digit', minute: '2-digit'
@@ -287,7 +297,7 @@
                             <div class="receipt-total-row">
                                 <span>ยอดรวม:</span>
                                 <span class="grand-total">{{ Number(selectedPreOrder?.total_sold_price).toLocaleString()
-                                    }}</span>
+                                }}</span>
                             </div>
                             <br>
                             <p>ขอบคุณที่ใช้บริการ</p>
@@ -350,7 +360,7 @@
                     </table>
                 </div>
 
-                <div class="modal-pagination" v-if="totalPages > 1">
+                <div class="modal-pagination">
                     <button @click="changeModalPage(currentPage - 1)" :disabled="currentPage === 1">
                         <i class="fas fa-chevron-left"></i>
                     </button>
@@ -378,6 +388,10 @@ const allCustomers = ref([]);
 const warehouseStocks = ref([]);
 const filterStatus = ref('');
 
+// [เพิ่มใหม่] State สำหรับ Pagination หน้า PreOrder
+const preOrderCurrentPage = ref(1);
+const preOrdersTotalPages = ref(1);
+
 // Form State
 const truckId = ref(null);
 const customerId = ref(null);
@@ -391,7 +405,7 @@ const items = ref([]);
 const isEditing = ref(false);
 const editingId = ref(null);
 
-// Modal & Pagination State
+// Modal & Pagination State (สำหรับ Stock Modal)
 const showModal = ref(false);
 const showDetailModal = ref(false);
 const selectedPreOrder = ref(null);
@@ -411,20 +425,46 @@ const debounce = (func, delay) => {
 };
 
 // --- Computed ---
-// Update 2: filteredCustomers now returns allCustomers directly as search is handled via API
 const filteredCustomers = computed(() => {
-    return allCustomers.value;
+    if (!customerSearchTerm.value) return allCustomers.value.slice(0, 10);
+    const query = customerSearchTerm.value.toLowerCase();
+    return allCustomers.value.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        (c.customer_no && String(c.customer_no).includes(query))
+    ).slice(0, 10);
 });
 
 const totalSoldPrice = computed(() => items.value.reduce((sum, i) => sum + (i.quantity * i.price), 0));
 
 // --- Functions ---
-const fetchPreOrders = async () => {
+
+// [แก้ไข] ฟังก์ชันดึงข้อมูลให้รองรับ Pagination
+const fetchPreOrders = async (page = 1) => {
     try {
-        const res = await axios.get(`/pre-orders?status=${filterStatus.value}`);
+        // อัปเดต page ปัจจุบัน
+        preOrderCurrentPage.value = page;
+
+        const res = await axios.get('/pre-orders', {
+            params: {
+                status: filterStatus.value,
+                page: page,
+                limit: 10 // จำนวนต่อหน้า
+            }
+        });
+
         preOrders.value = res.data.data;
+        // อัปเดตจำนวนหน้าทั้งหมดจาก Meta Data
+        preOrdersTotalPages.value = res.data.meta?.last_page || 1;
+
     } catch (e) {
         console.error("Fetch PreOrders Error:", e);
+    }
+};
+
+// [เพิ่มใหม่] ฟังก์ชันเปลี่ยนหน้า
+const changePreOrderPage = (page) => {
+    if (page >= 1 && page <= preOrdersTotalPages.value) {
+        fetchPreOrders(page);
     }
 };
 
@@ -438,13 +478,13 @@ const fetchInitialData = async () => {
     }
 };
 
-// Update 3: Implement server-side search logic
+// Search Customer API (จาก Code ที่คุณให้มาใน Sale.vue ถ้ามีก็ใส่ ถ้าไม่มีก็ใช้ client filter ด้านบน)
 const searchCustomers = async () => {
     try {
         const res = await axios.get('/customers', {
             params: {
-                search: customerSearchTerm.value, // ส่งคำค้นหาไปที่ API
-                per_page: 20 // จำกัดจำนวนผลลัพธ์ต่อหน้า
+                search: customerSearchTerm.value,
+                per_page: 20
             }
         });
         allCustomers.value = res.data.data;
@@ -452,6 +492,7 @@ const searchCustomers = async () => {
         console.error("Search error", error);
     }
 };
+const debouncedSearchCustomers = debounce(searchCustomers, 300);
 
 const fetchWarehouseStocks = async () => {
     if (!truckId.value) return;
@@ -502,25 +543,17 @@ const closeStockModal = () => {
     showModal.value = false;
 };
 
-// Update 4: Register the debounce for customer search
-const debouncedSearchCustomers = debounce(searchCustomers, 300);
-
 const selectCustomer = (c) => {
     customerId.value = c.id;
     customerSearchTerm.value = `${c.name} (${c.customer_no})`;
     showCustomerDropdown.value = false;
 };
 
-// Update 5: Implement dropdown hiding logic
 const hideCustomerDropdown = () => {
     setTimeout(() => {
         showCustomerDropdown.value = false;
         if (customerId.value === null) {
-            // ถ้ายังไม่ได้เลือก ID แต่มีข้อความ ให้เคลียร์ (หรือจะปล่อยไว้ก็ได้ตาม UX ที่ชอบ)
             if (!customerSearchTerm.value) customerSearchTerm.value = '';
-        } else {
-            // ถ้ามี ID แล้ว แต่ชื่อใน input ไม่ตรงกับลูกค้าที่เลือก (กรณี search แล้วไม่เจอตัวเดิม)
-            // อาจจะดึงชื่อจาก allCustomers ถ้ามี หรือปล่อยไว้
         }
     }, 150);
 };
@@ -558,44 +591,28 @@ const removeItem = (index) => {
     items.value.splice(index, 1);
 };
 
-// [ใหม่] ฟังก์ชันเตรียมข้อมูลเพื่อแก้ไข
 const editPreOrder = async (po) => {
     try {
         loading.value = true;
-        // ดึงข้อมูลละเอียด
         const res = await axios.get(`/pre-orders/${po.id}`);
         const data = res.data;
 
-        // map ข้อมูลกลับเข้าตัวแปร Form
         truckId.value = data.truck_id;
         customerId.value = data.customer_id;
 
-        // หาชื่อลูกค้ามาใส่ search term
-        // Update 6: Fetch specific customer if not in list during edit
         let customer = allCustomers.value.find(c => c.id === data.customer_id);
-        if (!customer) {
-            // If customer not in current list (due to pagination), we might need to fetch them specifically
-            // For simplicity, we can just set the search term if we assume the API returns basic details
-            // Or ideally fetch customer details. Here we rely on pre-loaded logic or existing list.
-            // A robust fix involves fetching the single customer by ID if missing.
-            // For now, assuming basic data is available or search term is sufficient display.
-            if (data.customer) {
-                customer = data.customer
-                // Optionally push to allCustomers if needed for dropdown consistency
-            }
+        if (!customer && data.customer) {
+            customer = data.customer;
         }
 
         if (customer) {
             customerSearchTerm.value = `${customer.name} (${customer.customer_no})`;
-        } else if (data.customer) {
-            customerSearchTerm.value = `${data.customer.name} (${data.customer.customer_no})`;
+
         }
 
         isCredit.value = !!data.is_credit;
         if (data.is_credit) creditType.value = data.is_credit;
 
-        // map items กลับมาให้ตรงโครงสร้างที่ตารางสินค้าใช้
-        // สำคัญ: ต้อง mapping field ให้ตรงกับตอน addItem
         items.value = data.items.map(i => ({
             productId: i.product_id,
             category: i.product?.category || null,
@@ -607,10 +624,9 @@ const editPreOrder = async (po) => {
             is_paid: true
         }));
 
-        // ตั้งค่าโหมดแก้ไข
         isEditing.value = true;
         editingId.value = po.id;
-        currentTab.value = 'form'; // สลับไปหน้าฟอร์ม
+        currentTab.value = 'form';
 
     } catch (e) {
         console.error(e);
@@ -620,7 +636,6 @@ const editPreOrder = async (po) => {
     }
 };
 
-// [ใหม่] ยกเลิกโหมดแก้ไข
 const cancelEditMode = () => {
     isEditing.value = false;
     editingId.value = null;
@@ -631,7 +646,6 @@ const cancelEditMode = () => {
     currentTab.value = 'list';
 };
 
-// [แก้ไข] รองรับทั้ง Save และ Update
 const submitPreOrder = async () => {
     if (!truckId.value || !customerId.value || items.value.length === 0) {
         return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบ', 'warning');
@@ -647,26 +661,23 @@ const submitPreOrder = async () => {
         totalDiscount: 0,
         totalSoldPrice: totalSoldPrice.value,
         items: items.value.map(i => ({
-            productId: i.productId, // ต้องแน่ใจว่าตัวแปรนี้มีค่าตอน Edit
+            productId: i.productId,
             quantity: i.quantity,
             price: i.price,
-            soldPrice: i.price,
+            sold_price: i.price,
             discount: "0.00"
         }))
     };
 
     try {
         if (isEditing.value) {
-            // ยิง API Update
             await axios.put(`/pre-orders/${editingId.value}`, payload);
             Swal.fire('สำเร็จ', 'แก้ไขข้อมูลเรียบร้อยแล้ว', 'success');
         } else {
-            // ยิง API Create (เดิม)
             await axios.post('/pre-orders', payload);
             Swal.fire('สำเร็จ', 'เปิดบิลและโอนสินค้าขึ้นรถแล้ว', 'success');
         }
 
-        // Reset
         cancelEditMode();
         fetchPreOrders();
     } catch (e) {
@@ -707,7 +718,7 @@ const viewDetail = async (po) => {
     }
 };
 
-// [ใหม่] ฟังก์ชันสั่งพิมพ์
+
 const printDetail = () => {
     window.print();
 };
@@ -1304,6 +1315,75 @@ onMounted(() => {
     display: block;
 }
 
+/* Modal Pagination */
+.modal-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 1.5rem;
+}
+
+.modal-pagination button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-pagination button:hover:not(:disabled) {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Added Pagination Style for Main List */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 1.5rem;
+    align-items: center;
+}
+
+.pagination button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4a5568;
+}
+
+.pagination button:hover:not(:disabled) {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.pagination button:disabled {
+    background-color: #e2e8f0;
+    color: #a0aec0;
+    cursor: not-allowed;
+}
+
+.page-info {
+    font-weight: 700;
+    color: #4a5568;
+}
+
+
 @media (max-width: 1024px) {
     .form-grid {
         grid-template-columns: 1fr;
@@ -1314,14 +1394,14 @@ onMounted(() => {
 <style>
 @media print {
 
-    /* 1. ล้างขอบกระดาษ */
+    /* 1. Reset พื้นที่กระดาษ */
     @page {
-        size: 80mm auto;
-        /* ตั้งเป็น Thermal Size */
+        size: auto;
         margin: 0mm;
+        /* ไร้ขอบ */
     }
 
-    /* 2. สั่ง Body ให้หดตัวเท่าเนื้อหา และซ่อนส่วนเกิน */
+    /* 2. สั่ง Body ให้หดตัวเท่าเนื้อหา ห้ามมีความสูงค้าง */
     html,
     body {
         width: 100%;
@@ -1345,7 +1425,7 @@ onMounted(() => {
         overflow: hidden;
     }
 
-    /* 4. ดึง Modal ออกมาแสดงและแปะทับ */
+    /* 4. ดึง Modal ออกมาจากมิติเดิม มาแปะทับหน้าจอ */
     .printable-modal {
         visibility: visible !important;
         position: absolute !important;
