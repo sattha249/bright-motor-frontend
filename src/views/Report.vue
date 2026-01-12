@@ -5,15 +5,15 @@
         <div class="filter-card">
             <div class="filter-group">
                 <label>ตั้งแต่วันที่:</label>
-                <input type="date" v-model="filters.startDate" @change="fetchReports(1)" />
+                <input type="date" v-model="filters.startDate" @change="fetchReports(1); fetchSummary();" />
             </div>
             <div class="filter-group">
                 <label>ถึงวันที่:</label>
-                <input type="date" v-model="filters.endDate" @change="fetchReports(1)" />
+                <input type="date" v-model="filters.endDate" @change="fetchReports(1); fetchSummary();" />
             </div>
             <div class="filter-group">
                 <label>จุดขาย (รถ/โกดัง):</label>
-                <select v-model="filters.truckId" @change="fetchReports(1)">
+                <select v-model="filters.truckId" @change="fetchReports(1); fetchSummary();">
                     <option value="">ทั้งหมด</option>
                     <option :value="0">โกดังหลัก</option>
                     <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
@@ -97,9 +97,9 @@
                     <tfoot>
                         <tr class="total-row">
                             <td colspan="4" class="text-right">รวมทั้งหมด</td>
-                            <td>{{ formatCurrency(totalSummary.totalPrice) }}</td>
-                            <td>{{ formatCurrency(totalSummary.totalDiscount) }}</td>
-                            <td>{{ formatCurrency(totalSummary.totalSoldPrice) }}</td>
+                            <td>{{ formatCurrency(summary.totalSales) }}</td>
+                            <td>{{ formatCurrency(summary.totalDiscount) }}</td>
+                            <td>{{ formatCurrency(summary.totalSales - summary.totalDiscount) }}</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -128,6 +128,7 @@ const trucks = ref([]);
 const meta = ref(null);
 const loading = ref(false);
 const expandedRows = ref([]);
+const summary = ref(null);
 
 const filters = ref({
     startDate: '',
@@ -152,6 +153,21 @@ const fetchReports = async (page = 1) => {
         console.error('Error fetching reports:', error);
     } finally {
         loading.value = false;
+    }
+};
+
+const fetchSummary = async () => {
+    try {
+        const params = {
+            start_date: filters.value.startDate,
+            end_date: filters.value.endDate,
+            truck_id: filters.value.truckId
+        };
+        const res = await axios.get('/sell-logs/summary', { params });
+        summary.value = res.data;
+    } catch (error) {
+        console.error('Error fetching summary:', error);
+        return null;
     }
 };
 
@@ -220,6 +236,8 @@ const exportToExcel = () => {
 onMounted(() => {
     fetchTrucks();
     fetchReports();
+    fetchSummary()
+
 });
 </script>
 

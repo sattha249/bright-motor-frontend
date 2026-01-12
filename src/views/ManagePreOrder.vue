@@ -273,7 +273,7 @@
                             <div class="dashed-line"></div>
                             <div class="receipt-info-row">
                                 <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
-                                }}</span>
+                                    }}</span>
                                 <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
                                     hour:
                                         '2-digit', minute: '2-digit'
@@ -304,7 +304,7 @@
                             <div class="receipt-total-row">
                                 <span>ยอดรวม:</span>
                                 <span class="grand-total">{{ Number(selectedPreOrder?.total_sold_price).toLocaleString()
-                                }}</span>
+                                    }}</span>
                             </div>
                             <br>
                             <p>ขอบคุณที่ใช้บริการ</p>
@@ -631,7 +631,7 @@ const editPreOrder = async (po) => {
             description: i.product?.description || 'สินค้า',
             quantity: i.quantity,
             price: Number(i.price),
-            sold_price: Number(i.sold_price),
+            soldPrice: Number(i.sold_price),
             discount: 0,
             is_paid: true
         }));
@@ -676,7 +676,7 @@ const submitPreOrder = async () => {
             productId: i.productId,
             quantity: i.quantity,
             price: i.price,
-            sold_price: i.price,
+            soldPrice: i.price,
             discount: "0.00"
         }))
     };
