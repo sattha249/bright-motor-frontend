@@ -425,6 +425,10 @@ const addProductToList = (item) => {
     addQuantities.value[item.id] = null
 }
 
+const removeProductFromList = (productId) => {
+    addedProducts.value = addedProducts.value.filter(p => p.productId !== productId)
+}
+
 const openAddModal = () => {
     if (!selectedTruckId.value) {
         alert('กรุณาเลือกทะเบียนรถก่อน')
