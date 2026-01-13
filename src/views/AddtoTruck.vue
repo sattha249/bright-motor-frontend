@@ -244,6 +244,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import axios from '@/lib/axios'
 import * as XLSX from 'xlsx'
+import moment from 'moment'
 
 const trucks = ref([])
 const selectedTruckId = ref('')
@@ -536,7 +537,7 @@ const refillFromSoldProducts = async () => {
     insufficientProducts.value = [];
 
     try {
-        const response = await axios.get(`/sell-logs?truck=${selectedTruckId.value}`);
+        const response = await axios.get(`/sell-logs?truck_id=${selectedTruckId.value}?start_date=${moment().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss')}&end_date=${moment().format('YYYY-MM-DD HH:mm:ss')}?limit=1000`);
         const soldQuantitiesMap = {};
 
         response.data.data.forEach(log => {
