@@ -5,21 +5,29 @@
         <div class="filter-card">
             <div class="filter-group">
                 <label>ตั้งแต่วันที่:</label>
-                <input type="date" v-model="filters.startDate" @change="fetchReports(1); fetchSummary();" />
+                <input type="date" v-model="filters.startDate" @change="(fetchReports(1), fetchSummary())" />
             </div>
             <div class="filter-group">
                 <label>ถึงวันที่:</label>
-                <input type="date" v-model="filters.endDate" @change="fetchReports(1); fetchSummary();" />
+                <input type="date" v-model="filters.endDate" @change="(fetchReports(1), fetchSummary())" />
             </div>
             <div class="filter-group">
                 <label>จุดขาย (รถ/โกดัง):</label>
-                <select v-model="filters.truckId" @change="fetchReports(1); fetchSummary();">
+                <select v-model="filters.truckId" @change="(fetchReports(1), fetchSummary())">
                     <option value="">ทั้งหมด</option>
                     <option :value="0">โกดังหลัก</option>
                     <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
-                        {{ truck.plate_number }}
+                        {{ truck.plate_number }} - {{ truck?.user?.fullname }}
                     </option>
                 </select>
+            </div>
+            <div class="filter-group search-group">
+                <label>ค้นหา:</label>
+                <div class="search-wrapper">
+                    <input type="text" placeholder="ค้นหาเลขที่บิล, ชื่อลูกค้า..." v-model="searchKeyword"
+                        @input="debouncedSearch" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
             </div>
             <div class="filter-actions">
                 <button class="export-btn" @click="exportToExcel" :disabled="reports.length === 0">
@@ -58,8 +66,10 @@
                                 <td class="text-green font-bold">{{ formatCurrency(report.total_sold_price) }}</td>
                                 <td>
                                     <button class="toggle-btn" @click="toggleDetails(report.id)">
-                                        <i
-                                            :class="expandedRows.includes(report.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+                                        <i :class="expandedRows.includes(report.id)
+                                                ? 'fas fa-chevron-up'
+                                                : 'fas fa-chevron-down'
+                                            "></i>
                                     </button>
                                 </td>
                             </tr>
@@ -95,7 +105,7 @@
                         </template>
                     </tbody>
                     <tfoot>
-                        <tr class="total-row">
+                        <tr class="total-row" v-if="summary">
                             <td colspan="4" class="text-right">รวมทั้งหมด</td>
                             <td>{{ formatCurrency(summary.totalSales) }}</td>
                             <td>{{ formatCurrency(summary.totalDiscount) }}</td>
@@ -107,138 +117,153 @@
             </div>
 
             <div class="pagination" v-if="meta && meta.last_page > 1">
-                <button @click="fetchReports(meta.current_page - 1)"
-                    :disabled="!meta.previous_page_url">ก่อนหน้า</button>
+                <button @click="fetchReports(meta.current_page - 1)" :disabled="!meta.previous_page_url">
+                    ก่อนหน้า
+                </button>
                 <span>หน้า {{ meta.current_page }} / {{ meta.last_page }}</span>
-                <button @click="fetchReports(meta.current_page + 1)" :disabled="!meta.next_page_url">ถัดไป</button>
+                <button @click="fetchReports(meta.current_page + 1)" :disabled="!meta.next_page_url">
+                    ถัดไป
+                </button>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import axios from '@/lib/axios';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import moment from 'moment';
+import { ref, onMounted, computed } from 'vue'
+import axios from '@/lib/axios'
+import * as XLSX from 'xlsx'
+import { saveAs } from 'file-saver'
+import moment from 'moment'
 
-const reports = ref([]);
-const trucks = ref([]);
-const meta = ref(null);
-const loading = ref(false);
-const expandedRows = ref([]);
-const summary = ref(null);
+const reports = ref([])
+const trucks = ref([])
+const meta = ref(null)
+const loading = ref(false)
+const expandedRows = ref([])
+const summary = ref(null)
+
+// [เพิ่ม] ตัวแปร searchKeyword
+const searchKeyword = ref('')
 
 const filters = ref({
     startDate: '',
     endDate: '',
-    truckId: ''
-});
+    truckId: '',
+})
+
+// [เพิ่ม] Debounce Utility
+let debounceTimeout = null
+function debounce(func, delay) {
+    return (...args) => {
+        if (debounceTimeout) clearTimeout(debounceTimeout)
+        debounceTimeout = setTimeout(() => {
+            func(...args)
+        }, delay)
+    }
+}
 
 // Fetch Data
 const fetchReports = async (page = 1) => {
-    loading.value = true;
+    loading.value = true
     try {
         const params = {
             page,
             start_date: filters.value.startDate,
             end_date: filters.value.endDate,
-            truck_id: filters.value.truckId
-        };
-        const res = await axios.get('/sell-logs', { params });
-        reports.value = res.data.data;
-        meta.value = res.data.meta;
+            truck_id: filters.value.truckId,
+            search: searchKeyword.value, // [แก้ไข] แนบ params search ไปด้วย
+        }
+        const res = await axios.get('/sell-logs', { params })
+        reports.value = res.data.data
+        meta.value = res.data.meta
     } catch (error) {
-        console.error('Error fetching reports:', error);
+        console.error('Error fetching reports:', error)
     } finally {
-        loading.value = false;
+        loading.value = false
     }
-};
+}
 
 const fetchSummary = async () => {
     try {
         const params = {
             start_date: filters.value.startDate,
             end_date: filters.value.endDate,
-            truck_id: filters.value.truckId
-        };
-        const res = await axios.get('/sell-logs/summary', { params });
-        summary.value = res.data;
+            truck_id: filters.value.truckId,
+            search: searchKeyword.value, // [แก้ไข] แนบ params search ให้ summary ด้วยเพื่อให้ยอดตรงกัน
+        }
+        const res = await axios.get('/sell-logs/summary', { params })
+        summary.value = res.data
     } catch (error) {
-        console.error('Error fetching summary:', error);
-        return null;
+        console.error('Error fetching summary:', error)
+        return null
     }
-};
+}
+
+// [เพิ่ม] Debounced function สำหรับเรียก API เมื่อพิมพ์ค้นหา
+const debouncedSearch = debounce(() => {
+    fetchReports(1) // กลับไปหน้า 1
+    fetchSummary() // อัพเดทยอดรวม
+}, 500)
 
 const fetchTrucks = async () => {
     try {
-        const res = await axios.get('/trucks');
-        trucks.value = res.data;
+        const res = await axios.get('/trucks?perPage=1000')
+        trucks.value = res.data.data
     } catch (error) {
-        console.error('Error fetching trucks:', error);
+        console.error('Error fetching trucks:', error)
     }
-};
+}
 
 // Helpers
-const formatDate = (date) => moment(date).format('DD/MM/YYYY HH:mm');
-const formatCurrency = (value) => Number(value).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+const formatDate = (date) => moment(date).format('DD/MM/YYYY HH:mm')
+const formatCurrency = (value) =>
+    Number(value).toLocaleString('th-TH', { minimumFractionDigits: 2 })
 
 const getTruckName = (truck) => {
-    if (!truck) return 'โกดังหลัก';
-    return `รถ ${truck.plate_number}`;
-};
+    if (!truck) return 'โกดังหลัก'
+    return `รถ ${truck.plate_number}`
+}
 
 const toggleDetails = (id) => {
     if (expandedRows.value.includes(id)) {
-        expandedRows.value = expandedRows.value.filter(rowId => rowId !== id);
+        expandedRows.value = expandedRows.value.filter((rowId) => rowId !== id)
     } else {
-        expandedRows.value.push(id);
+        expandedRows.value.push(id)
     }
-};
-
-// Computed Summary
-const totalSummary = computed(() => {
-    return reports.value.reduce((acc, report) => {
-        acc.totalPrice += Number(report.total_price);
-        acc.totalDiscount += Number(report.total_discount);
-        acc.totalSoldPrice += Number(report.total_sold_price);
-        return acc;
-    }, { totalPrice: 0, totalDiscount: 0, totalSoldPrice: 0 });
-});
+}
 
 // Export Excel
 const exportToExcel = () => {
     // เตรียมข้อมูลสำหรับ Excel (Flat Data)
-    const data = reports.value.flatMap(report => {
-        return report.items.map(item => ({
-            'วันที่': formatDate(report.created_at),
-            'เลขที่บิล': report.bill_no,
-            'ลูกค้า': report.customer?.name || '-',
-            'จุดขาย': getTruckName(report.truck),
-            'รหัสสินค้า': item.product_id,
-            'จำนวน': item.quantity,
-            'ราคาต่อหน่วย': Number(item.price),
-            'ส่วนลดต่อหน่วย': Number(item.discount),
-            'ราคาสุทธิ (รวม)': Number(item.quantity * item.sold_price)
-        }));
-    });
+    const data = reports.value.flatMap((report) => {
+        return report.items.map((item) => ({
+            วันที่: formatDate(report.created_at),
+            เลขที่บิล: report.bill_no,
+            ลูกค้า: report.customer?.name || '-',
+            จุดขาย: getTruckName(report.truck),
+            รหัสสินค้า: item.product_id,
+            จำนวน: item.quantity,
+            ราคาต่อหน่วย: Number(item.price),
+            ส่วนลดต่อหน่วย: Number(item.discount),
+            'ราคาสุทธิ (รวม)': Number(item.quantity * item.sold_price),
+        }))
+    })
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
+    const worksheet = XLSX.utils.json_to_sheet(data)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Report')
 
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const dataBlob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(dataBlob, `sales_report_${moment().format('YYYYMMDD_HHmm')}.xlsx`);
-};
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+    const dataBlob = new Blob([excelBuffer], { type: 'application/octet-stream' })
+    saveAs(dataBlob, `sales_report_${moment().format('YYYYMMDD_HHmm')}.xlsx`)
+}
 
 onMounted(() => {
-    fetchTrucks();
-    fetchReports();
+    fetchTrucks()
+    fetchReports()
     fetchSummary()
-
-});
+})
 </script>
 
 <style scoped>
@@ -409,5 +434,25 @@ onMounted(() => {
 .pagination button:disabled {
     background: #f5f5f5;
     color: #ccc;
+}
+
+.search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-wrapper input {
+    padding-right: 30px;
+    /* เว้นที่ให้ icon */
+    width: 100%;
+    min-width: 250px;
+}
+
+.search-icon {
+    position: absolute;
+    right: 10px;
+    color: #888;
+    pointer-events: none;
 }
 </style>
