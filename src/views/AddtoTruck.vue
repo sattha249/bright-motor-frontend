@@ -27,13 +27,37 @@
                     <button :class="[
                         'refill-btn',
                         { 'refill-success': isRefillConfirmed, 'refill-error': isRefillInsufficient },
-                    ]" @click="refillFromSoldProducts" :disabled="!selectedTruckId || loading || isRefillInitiated">
+                    ]" @click="openRefillDateModal" :disabled="!selectedTruckId || loading || isRefillInitiated">
                         <span v-if="isRefillInsufficient">
                             <i class="fas fa-exclamation-triangle"></i> สินค้าไม่พอ
                         </span>
                         <span v-else-if="isRefillConfirmed"> <i class="fas fa-check"></i> พร้อมยืนยัน </span>
                         <span v-else> <i class="fas fa-sync-alt"></i> เติมสินค้าจากยอดที่ขายไป </span>
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showRefillDateModal" class="modal-overlay" @click.self="closeRefillDateModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>เลือกช่วงเวลาที่ขาย</h3>
+                </div>
+
+                <div class="date-filter-container">
+                    <div class="form-group">
+                        <label>ตั้งแต่วันที่</label>
+                        <input type="date" v-model="refillStartDate" class="date-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>ถึงวันที่</label>
+                        <input type="date" v-model="refillEndDate" class="date-input" />
+                    </div>
+                    <div class="form-group button-wrapper">
+                        <button class="search-action-btn" @click="refillFromSoldProducts" :disabled="loading">
+                            <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-search'"></i> ค้นหา
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -292,6 +316,10 @@ import axios from '@/lib/axios'
 import * as XLSX from 'xlsx'
 import moment from 'moment'
 
+const showRefillDateModal = ref(false)
+const refillStartDate = ref(moment().subtract(1, 'days').format('YYYY-MM-DD')) // Default เมื่อวาน
+const refillEndDate = ref(moment().format('YYYY-MM-DD'))
+
 const trucks = ref([])
 const returnQuantity = ref(1)
 const selectedTruckId = ref('')
@@ -475,7 +503,7 @@ const addProductToList = (item) => {
         addedProducts.value[existIndex].quantity += quantity
     } else {
         addedProducts.value.push({
-            productId: item.product_id,
+            productId: item.product.product_code,
             description: item.product.description,
             quantity: quantity,
             unit: item.product.unit || '-',
@@ -518,6 +546,17 @@ const changePage = (page) => {
     if (page < 1 || page > totalPages.value) return
     currentPage.value = page
     fetchWarehouseStocks()
+}
+
+const openRefillDateModal = () => {
+    // Reset วันที่เป็นค่า default ทุกครั้งที่เปิด หรือจะจำค่าเดิมไว้ก็ได้
+    refillStartDate.value = moment().subtract(1, 'days').format('YYYY-MM-DD')
+    refillEndDate.value = moment().format('YYYY-MM-DD')
+    showRefillDateModal.value = true
+}
+
+const closeRefillDateModal = () => {
+    showRefillDateModal.value = false
 }
 
 const saveRefillData = async () => {
@@ -596,6 +635,11 @@ const closeSuccessModal = () => {
 }
 
 const refillFromSoldProducts = async () => {
+    if (!refillStartDate.value || !refillEndDate.value) {
+        alert('กรุณาเลือกช่วงเวลา')
+        return
+    }
+
     loading.value = true
     isRefillConfirmed.value = false
     isRefillInsufficient.value = false
@@ -605,8 +649,13 @@ const refillFromSoldProducts = async () => {
     insufficientProducts.value = []
 
     try {
+        // จัด Format วันที่ให้ครอบคลุมทั้งวัน (00:00:00 - 23:59:59)
+        const start = moment(refillStartDate.value).format('YYYY-MM-DD 00:00:00')
+        const end = moment(refillEndDate.value).format('YYYY-MM-DD 23:59:59')
+
+        // แก้ไข URL string: เปลี่ยน ? ตัวที่ 2,3 เป็น &
         const response = await axios.get(
-            `/sell-logs?truck_id=${selectedTruckId.value}?start_date=${moment().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss')}&end_date=${moment().format('YYYY-MM-DD HH:mm:ss')}?limit=1000`,
+            `/sell-logs?truck_id=${selectedTruckId.value}&start_date=${start}&end_date=${end}&limit=1000`,
         )
         const soldQuantitiesMap = {}
 
@@ -619,6 +668,8 @@ const refillFromSoldProducts = async () => {
 
         const productsToAdd = []
         const productIds = Object.keys(soldQuantitiesMap)
+
+        // ... (Logic วน loop เช็ค stock เหมือนเดิม) ...
         for (const productId of productIds) {
             const quantityNeeded = soldQuantitiesMap[productId]
             try {
@@ -649,6 +700,9 @@ const refillFromSoldProducts = async () => {
             productId: item.productId,
             quantity: item.quantity,
         }))
+
+        // [เพิ่ม] ปิด Modal เมื่อโหลดข้อมูลเสร็จ
+        closeRefillDateModal()
     } catch (err) {
         alert('เกิดข้อผิดพลาดในการโหลดข้อมูลยอดขาย')
         console.error(err)
@@ -656,7 +710,6 @@ const refillFromSoldProducts = async () => {
         loading.value = false
     }
 }
-
 const decrementQuantity = (id) => {
     if (addQuantities.value[id] && addQuantities.value[id] > 1) {
         addQuantities.value[id]--
@@ -1244,5 +1297,51 @@ onMounted(() => {
 .qty-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+}
+
+.date-filter-container {
+    display: flex;
+    align-items: flex-end;
+    /* จัดให้ปุ่มอยู่ระดับเดียวกับ input */
+    gap: 15px;
+    padding: 20px 0;
+    justify-content: center;
+}
+
+.date-input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.search-action-btn {
+    padding: 9px 20px;
+    /* ปรับความสูงให้ใกล้เคียง input */
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-action-btn:hover {
+    background-color: #2563eb;
+}
+
+.search-action-btn:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
 }
 </style>
