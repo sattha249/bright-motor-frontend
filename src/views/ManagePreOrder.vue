@@ -19,6 +19,14 @@
                     <h3 class="card-title">สถานะการโอนของและบิลล่วงหน้า</h3>
 
                     <div class="filter-group">
+                        <select v-model="filterTruckId" @change="fetchPreOrders(1)" class="status-select"
+                            style="margin-right: 8px">
+                            <option value="">รถทั้งหมด</option>
+                            <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
+                                {{ truck.plate_number }} - {{ truck?.user?.fullname || 'ไม่ระบุคนขับ' }}
+                            </option>
+                        </select>
+
                         <div class="search-input-wrapper small-search">
                             <input type="text" v-model="preOrderSearchTerm" @input="debouncedFetchPreOrders"
                                 placeholder="ค้นหาเลขบิล / ลูกค้า..." class="search-input" />
@@ -78,7 +86,7 @@
                     </table>
                 </div>
 
-                <div class="modal-pagination" v-if="preOrdersTotalPages > 1" style="margin-top: 20px;">
+                <div class="modal-pagination" v-if="preOrdersTotalPages > 1" style="margin-top: 20px">
                     <button @click="changePreOrderPage(preOrderCurrentPage - 1)" :disabled="preOrderCurrentPage === 1">
                         <i class="fas fa-chevron-left"></i>
                     </button>
@@ -118,7 +126,8 @@
                                 @mousedown.prevent="selectCustomer(c)">
                                 {{ c.name }} ({{ c.customer_no }})
                             </div>
-                            <div v-if="filteredCustomers.length === 0" class="dropdown-item disabled">ไม่พบข้อมูลลูกค้า
+                            <div v-if="filteredCustomers.length === 0" class="dropdown-item disabled">
+                                ไม่พบข้อมูลลูกค้า
                             </div>
                         </div>
                     </div>
@@ -127,9 +136,9 @@
                         <label for="preIsCredit">ตั้งยอดเครดิต</label>
                     </div>
                     <div v-if="isCredit" class="credit-type-selector">
-                        <label class="radio-label"><input type="radio" v-model="creditType" value="week">
+                        <label class="radio-label"><input type="radio" v-model="creditType" value="week" />
                             รายสัปดาห์</label>
-                        <label class="radio-label"><input type="radio" v-model="creditType" value="month">
+                        <label class="radio-label"><input type="radio" v-model="creditType" value="month" />
                             รายเดือน</label>
                     </div>
                 </div>
@@ -157,18 +166,20 @@
                                 <tr v-for="(item, index) in items" :key="item.productId">
                                     <td class="bold">{{ item.description }}</td>
                                     <td class="text-center">
-                                        <input type="number" v-model.number="item.quantity" min="1" class="qty-input">
+                                        <input type="number" v-model.number="item.quantity" min="1" class="qty-input" />
                                     </td>
                                     <td class="text-right">฿{{ item.price.toLocaleString() }}</td>
-                                    <td class="text-right bold">฿{{ (item.quantity * item.price).toLocaleString() }}
+                                    <td class="text-right bold">
+                                        ฿{{ (item.quantity * item.price).toLocaleString() }}
                                     </td>
                                     <td class="text-center">
                                         <button class="remove-btn" @click="removeItem(index)">&times;</button>
                                     </td>
                                 </tr>
                                 <tr v-if="items.length === 0">
-                                    <td colspan="5" class="text-center py-4 text-muted">ยังไม่มีรายการสินค้า
-                                        กรุณากดปุ่มเพิ่มสินค้า</td>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        ยังไม่มีรายการสินค้า กรุณากดปุ่มเพิ่มสินค้า
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -184,8 +195,14 @@
                                 ยกเลิกการแก้ไข
                             </button>
                             <button class="save-btn" @click="submitPreOrder" :disabled="loading">
-                                <i class="fas fa-save"></i> {{ loading ? 'กำลังบันทึก...' : (isEditing ?
-                                    'บันทึกการแก้ไข' : 'บันทึกใบงานและตัดสต็อก') }}
+                                <i class="fas fa-save"></i>
+                                {{
+                                    loading
+                                        ? 'กำลังบันทึก...'
+                                        : isEditing
+                                            ? 'บันทึกการแก้ไข'
+                                : 'บันทึกใบงานและตัดสต็อก'
+                                }}
                             </button>
                         </div>
                     </div>
@@ -196,7 +213,9 @@
         <div v-if="showDetailModal" class="modal-overlay printable-modal" @click.self="showDetailModal = false">
             <div class="modal large-modal">
                 <div class="modal-header no-print">
-                    <h3><i class="fas fa-info-circle"></i> รายละเอียดใบงาน {{ selectedPreOrder?.bill_no }}</h3>
+                    <h3>
+                        <i class="fas fa-info-circle"></i> รายละเอียดใบงาน {{ selectedPreOrder?.bill_no }}
+                    </h3>
                     <div class="header-actions">
                         <button class="print-btn" @click="printDetail">
                             <i class="fas fa-print"></i> พิมพ์
@@ -211,10 +230,12 @@
                             <h2>ใบส่งของ / ใบแจ้งหนี้</h2>
                             <div class="print-meta">
                                 <p><strong>เลขที่:</strong> {{ selectedPreOrder?.bill_no }}</p>
-                                <p><strong>วันที่:</strong> {{ new
-                                    Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}</p>
+                                <p>
+                                    <strong>วันที่:</strong>
+                                    {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}
+                                </p>
                             </div>
-                            <hr class="sign-line" style="border-top: 2px solid #000; margin: 10px 0;">
+                            <hr class="sign-line" style="border-top: 2px solid #000; margin: 10px 0" />
                         </div>
                         <div class="info-grid-detail">
                             <div class="info-box">
@@ -228,7 +249,8 @@
                             <div class="info-box">
                                 <label>สถานะ:</label>
                                 <span :class="['status-badge', selectedPreOrder?.status.toLowerCase()]">{{
-                                    selectedPreOrder?.status }}</span>
+                                    selectedPreOrder?.status
+                                    }}</span>
                             </div>
                             <div class="info-box">
                                 <label>เครดิต:</label>
@@ -251,15 +273,17 @@
                                         <td>{{ item.product?.description }}</td>
                                         <td class="text-center">{{ item.quantity }}</td>
                                         <td class="text-right">฿{{ Number(item.price).toLocaleString() }}</td>
-                                        <td class="text-right bold">฿{{ (item.quantity * item.price).toLocaleString() }}
+                                        <td class="text-right bold">
+                                            ฿{{ (item.quantity * item.price).toLocaleString() }}
                                         </td>
                                     </tr>
                                 </tbody>
                                 <tfoot>
                                     <tr>
                                         <td colspan="3" class="text-right bold">รวมสุทธิ:</td>
-                                        <td class="text-right bold total-highlight">฿{{
-                                            Number(selectedPreOrder?.total_sold_price).toLocaleString() }}</td>
+                                        <td class="text-right bold total-highlight">
+                                            ฿{{ Number(selectedPreOrder?.total_sold_price).toLocaleString() }}
+                                        </td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -272,12 +296,15 @@
                             <p>ใบส่งของ / ใบแจ้งหนี้</p>
                             <div class="dashed-line"></div>
                             <div class="receipt-info-row">
-                                <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
+                                <span>Date:
+                                    {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}</span>
+                                <span>Time:
+                                    {{
+                                        new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                    })
                                     }}</span>
-                                <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
-                                    hour:
-                                        '2-digit', minute: '2-digit'
-                                }) }}</span>
                             </div>
                             <div class="receipt-info-row">
                                 <span>No: {{ selectedPreOrder?.bill_no }}</span>
@@ -293,7 +320,9 @@
                                 <div class="item-name">{{ item.product?.description }}</div>
                                 <div class="item-calc">
                                     <span>{{ item.quantity }} x {{ Number(item.price).toLocaleString() }}</span>
-                                    <span class="item-total">{{ (item.quantity * item.price).toLocaleString() }}</span>
+                                    <span class="item-total">{{
+                                        (item.quantity * item.price).toLocaleString()
+                                        }}</span>
                                 </div>
                             </div>
                         </div>
@@ -303,10 +332,11 @@
                         <div class="receipt-footer">
                             <div class="receipt-total-row">
                                 <span>ยอดรวม:</span>
-                                <span class="grand-total">{{ Number(selectedPreOrder?.total_sold_price).toLocaleString()
+                                <span class="grand-total">{{
+                                    Number(selectedPreOrder?.total_sold_price).toLocaleString()
                                     }}</span>
                             </div>
-                            <br>
+                            <br />
                             <p>ขอบคุณที่ใช้บริการ</p>
                         </div>
                     </div>
@@ -329,7 +359,7 @@
                     <div class="search-input-wrapper">
                         <i class="fas fa-search search-icon-inside"></i>
                         <input type="text" v-model="searchKeyword" @input="debouncedSearch"
-                            placeholder="ค้นหาชื่อสินค้า หรือ SKU..." class="modal-search-input">
+                            placeholder="ค้นหาชื่อสินค้า หรือ SKU..." class="modal-search-input" />
                     </div>
                 </div>
 
@@ -351,11 +381,13 @@
                                 <td class="text-right">฿{{ Number(stock.product.sell_price).toLocaleString() }}</td>
                                 <td class="text-center">
                                     <input type="number" v-model.number="addQuantities[stock.id]" min="1"
-                                        :max="stock.quantity" class="modal-qty-input">
+                                        :max="stock.quantity" class="modal-qty-input" />
                                 </td>
                                 <td class="text-center">
-                                    <button class="mini-add-btn" @click="addItem(stock)"
-                                        :disabled="!addQuantities[stock.id] || addQuantities[stock.id] > stock.quantity || addQuantities[stock.id] < 1">
+                                    <button class="mini-add-btn" @click="addItem(stock)" :disabled="!addQuantities[stock.id] ||
+                                        addQuantities[stock.id] > stock.quantity ||
+                                        addQuantities[stock.id] < 1
+                                        ">
                                         <i class="fas fa-plus"></i> เพิ่ม
                                     </button>
                                 </td>
@@ -382,200 +414,204 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import axios from '@/lib/axios';
-import Swal from 'sweetalert2';
+import { ref, onMounted, computed } from 'vue'
+import axios from '@/lib/axios'
+import Swal from 'sweetalert2'
 
 // --- State Management ---
-const currentTab = ref('list');
-const loading = ref(false);
-const preOrders = ref([]);
-const trucks = ref([]);
-const allCustomers = ref([]);
-const warehouseStocks = ref([]);
-const filterStatus = ref('');
+const currentTab = ref('list')
+const loading = ref(false)
+const preOrders = ref([])
+const trucks = ref([])
+const allCustomers = ref([])
+const warehouseStocks = ref([])
+const filterStatus = ref('')
 
 // State สำหรับ Pagination หน้า PreOrder
-const preOrderCurrentPage = ref(1);
-const preOrdersTotalPages = ref(1);
+const preOrderCurrentPage = ref(1)
+const preOrdersTotalPages = ref(1)
 
 // [เพิ่ม] State สำหรับ Search PreOrder
-const preOrderSearchTerm = ref('');
+const preOrderSearchTerm = ref('')
+const filterTruckId = ref('')
 
 // Form State
-const truckId = ref(null);
-const customerId = ref(null);
-const customerSearchTerm = ref('');
-const showCustomerDropdown = ref(false);
-const isCredit = ref(false);
-const creditType = ref('week');
-const items = ref([]);
+const truckId = ref(null)
+const customerId = ref(null)
+const customerSearchTerm = ref('')
+const showCustomerDropdown = ref(false)
+const isCredit = ref(false)
+const creditType = ref('week')
+const items = ref([])
 
 // Edit Mode State
-const isEditing = ref(false);
-const editingId = ref(null);
+const isEditing = ref(false)
+const editingId = ref(null)
 
 // Modal & Pagination State
-const showModal = ref(false);
-const showDetailModal = ref(false);
-const selectedPreOrder = ref(null);
-const searchKeyword = ref('');
-const currentPage = ref(1);
-const totalPages = ref(1);
-const addQuantities = ref({});
+const showModal = ref(false)
+const showDetailModal = ref(false)
+const selectedPreOrder = ref(null)
+const searchKeyword = ref('')
+const currentPage = ref(1)
+const totalPages = ref(1)
+const addQuantities = ref({})
 
 // --- Utility ---
-let searchTimeout = null;
+let searchTimeout = null
 const debounce = (func, delay) => {
-    let timeout = null;
+    let timeout = null
     return (...args) => {
-        if (timeout) clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), delay);
-    };
-};
+        if (timeout) clearTimeout(timeout)
+        timeout = setTimeout(() => func(...args), delay)
+    }
+}
 
 // --- Computed ---
 const filteredCustomers = computed(() => {
-    if (!customerSearchTerm.value) return allCustomers.value.slice(0, 10);
-    const query = customerSearchTerm.value.toLowerCase();
-    return allCustomers.value.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        (c.customer_no && String(c.customer_no).includes(query))
-    ).slice(0, 10);
-});
+    if (!customerSearchTerm.value) return allCustomers.value.slice(0, 10)
+    const query = customerSearchTerm.value.toLowerCase()
+    return allCustomers.value
+        .filter(
+            (c) =>
+                c.name.toLowerCase().includes(query) ||
+                (c.customer_no && String(c.customer_no).includes(query)),
+        )
+        .slice(0, 10)
+})
 
-const totalSoldPrice = computed(() => items.value.reduce((sum, i) => sum + (i.quantity * i.price), 0));
+const totalSoldPrice = computed(() => items.value.reduce((sum, i) => sum + i.quantity * i.price, 0))
 
 // --- Functions ---
 
 // [แก้ไข] รองรับ Pagination และ Search
 const fetchPreOrders = async (page = 1) => {
     try {
-        preOrderCurrentPage.value = page;
+        preOrderCurrentPage.value = page
 
         const res = await axios.get('/pre-orders', {
             params: {
                 status: filterStatus.value,
                 page: page,
                 limit: 10,
-                search: preOrderSearchTerm.value // [เพิ่ม] ส่ง search term ไปที่ API
-            }
-        });
+                search: preOrderSearchTerm.value,
+                truckId: filterTruckId.value, // [เพิ่ม] ส่ง truck_id ไปที่ API
+            },
+        })
 
-        preOrders.value = res.data.data;
-        preOrdersTotalPages.value = res.data.meta?.last_page || 1;
-
+        preOrders.value = res.data.data
+        preOrdersTotalPages.value = res.data.meta?.last_page || 1
     } catch (e) {
-        console.error("Fetch PreOrders Error:", e);
+        console.error('Fetch PreOrders Error:', e)
     }
-};
+}
 
 // [เพิ่ม] Debounce สำหรับ search pre-orders เพื่อไม่ให้ยิง API รัวๆ
 const debouncedFetchPreOrders = debounce(() => {
-    fetchPreOrders(1); // ค้นหาใหม่ ให้กลับไปหน้า 1
-}, 500);
+    fetchPreOrders(1) // ค้นหาใหม่ ให้กลับไปหน้า 1
+}, 500)
 
 const changePreOrderPage = (page) => {
     if (page >= 1 && page <= preOrdersTotalPages.value) {
-        fetchPreOrders(page);
+        fetchPreOrders(page)
     }
-};
+}
 
 const fetchInitialData = async () => {
     try {
-        const [tRes, cRes] = await Promise.all([axios.get('/trucks'), axios.get('/customers')]);
-        trucks.value = tRes.data.data;
-        allCustomers.value = cRes.data.data;
+        const [tRes, cRes] = await Promise.all([axios.get('/trucks'), axios.get('/customers')])
+        trucks.value = tRes.data.data
+        allCustomers.value = cRes.data.data
     } catch (e) {
-        console.error("Initial Load Error:", e);
+        console.error('Initial Load Error:', e)
     }
-};
+}
 
 const searchCustomers = async () => {
     try {
         const res = await axios.get('/customers', {
             params: {
                 search: customerSearchTerm.value,
-                per_page: 20
-            }
-        });
-        allCustomers.value = res.data.data;
+                per_page: 20,
+            },
+        })
+        allCustomers.value = res.data.data
     } catch (error) {
-        console.error("Search error", error);
+        console.error('Search error', error)
     }
-};
-const debouncedSearchCustomers = debounce(searchCustomers, 300);
+}
+const debouncedSearchCustomers = debounce(searchCustomers, 300)
 
 const fetchWarehouseStocks = async () => {
-    if (!truckId.value) return;
-    loading.value = true;
+    if (!truckId.value) return
+    loading.value = true
     try {
         const res = await axios.get('/warehouse-stocks', {
             params: {
                 page: currentPage.value,
                 search: searchKeyword.value,
-                limit: 1000
-            }
-        });
-        warehouseStocks.value = res.data.data;
-        warehouseStocks.value.forEach(item => {
+                limit: 1000,
+            },
+        })
+        warehouseStocks.value = res.data.data
+        warehouseStocks.value.forEach((item) => {
             if (!addQuantities.value[item.id]) {
-                addQuantities.value[item.id] = 1;
+                addQuantities.value[item.id] = 1
             }
-        });
-        totalPages.value = res.data.meta.last_page;
+        })
+        totalPages.value = res.data.meta.last_page
     } catch (err) {
-        console.error('โหลดสินค้าในคลังไม่สำเร็จ', err);
+        console.error('โหลดสินค้าในคลังไม่สำเร็จ', err)
     } finally {
-        loading.value = false;
+        loading.value = false
     }
-};
+}
 
 const debouncedSearch = debounce(() => {
-    currentPage.value = 1;
-    fetchWarehouseStocks();
-}, 500);
+    currentPage.value = 1
+    fetchWarehouseStocks()
+}, 500)
 
 const changeModalPage = (page) => {
-    currentPage.value = page;
-    fetchWarehouseStocks();
-};
+    currentPage.value = page
+    fetchWarehouseStocks()
+}
 
 const openStockModal = () => {
     if (!truckId.value) {
-        return Swal.fire('แจ้งเตือน', 'กรุณาเลือกรถที่จะรับของก่อน', 'warning');
+        return Swal.fire('แจ้งเตือน', 'กรุณาเลือกรถที่จะรับของก่อน', 'warning')
     }
-    searchKeyword.value = '';
-    currentPage.value = 1;
-    fetchWarehouseStocks();
-    showModal.value = true;
-};
+    searchKeyword.value = ''
+    currentPage.value = 1
+    fetchWarehouseStocks()
+    showModal.value = true
+}
 
 const closeStockModal = () => {
-    showModal.value = false;
-};
+    showModal.value = false
+}
 
 const selectCustomer = (c) => {
-    customerId.value = c.id;
-    customerSearchTerm.value = `${c.name} (${c.customer_no})`;
-    showCustomerDropdown.value = false;
-};
+    customerId.value = c.id
+    customerSearchTerm.value = `${c.name} (${c.customer_no})`
+    showCustomerDropdown.value = false
+}
 
 const hideCustomerDropdown = () => {
     setTimeout(() => {
-        showCustomerDropdown.value = false;
+        showCustomerDropdown.value = false
         if (customerId.value === null) {
-            if (!customerSearchTerm.value) customerSearchTerm.value = '';
+            if (!customerSearchTerm.value) customerSearchTerm.value = ''
         }
-    }, 150);
-};
+    }, 150)
+}
 
 const addItem = (stock) => {
-    const qty = addQuantities.value[stock.id];
-    const existing = items.value.find(i => i.productId === stock.product_id);
+    const qty = addQuantities.value[stock.id]
+    const existing = items.value.find((i) => i.productId === stock.product_id)
 
     if (existing) {
-        existing.quantity += qty;
+        existing.quantity += qty
     } else {
         items.value.push({
             productId: stock.product_id,
@@ -585,8 +621,8 @@ const addItem = (stock) => {
             price: parseFloat(stock.product.sell_price),
             discount: 0,
             soldPrice: parseFloat(stock.product.sell_price),
-            isPaid: true
-        });
+            isPaid: true,
+        })
     }
 
     Swal.fire({
@@ -595,75 +631,74 @@ const addItem = (stock) => {
         icon: 'success',
         title: `เพิ่ม ${stock.product.description} แล้ว`,
         showConfirmButton: false,
-        timer: 1000
-    });
-};
+        timer: 1000,
+    })
+}
 
 const removeItem = (index) => {
-    items.value.splice(index, 1);
-};
+    items.value.splice(index, 1)
+}
 
 const editPreOrder = async (po) => {
     try {
-        loading.value = true;
-        const res = await axios.get(`/pre-orders/${po.id}`);
-        const data = res.data;
+        loading.value = true
+        const res = await axios.get(`/pre-orders/${po.id}`)
+        const data = res.data
 
-        truckId.value = data.truck_id;
-        customerId.value = data.customer_id;
+        truckId.value = data.truck_id
+        customerId.value = data.customer_id
 
-        let customer = allCustomers.value.find(c => c.id === data.customer_id);
+        let customer = allCustomers.value.find((c) => c.id === data.customer_id)
         if (!customer && data.customer) {
-            customer = data.customer;
+            customer = data.customer
         }
 
         if (customer) {
-            customerSearchTerm.value = `${customer.name} (${customer.customer_no})`;
+            customerSearchTerm.value = `${customer.name} (${customer.customer_no})`
         } else if (data.customer) {
-            customerSearchTerm.value = `${data.customer.name} (${data.customer.customer_no})`;
+            customerSearchTerm.value = `${data.customer.name} (${data.customer.customer_no})`
         }
 
-        isCredit.value = !!data.is_credit;
-        if (data.is_credit) creditType.value = data.is_credit;
+        isCredit.value = !!data.is_credit
+        if (data.is_credit) creditType.value = data.is_credit
 
-        items.value = data.items.map(i => ({
+        items.value = data.items.map((i) => ({
             productId: i.product_id,
             description: i.product?.description || 'สินค้า',
             quantity: i.quantity,
             price: Number(i.price),
             soldPrice: Number(i.sold_price),
             discount: 0,
-            is_paid: true
-        }));
+            is_paid: true,
+        }))
 
-        isEditing.value = true;
-        editingId.value = po.id;
-        currentTab.value = 'form';
-
+        isEditing.value = true
+        editingId.value = po.id
+        currentTab.value = 'form'
     } catch (e) {
-        console.error(e);
-        Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลเพื่อแก้ไขได้', 'error');
+        console.error(e)
+        Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลเพื่อแก้ไขได้', 'error')
     } finally {
-        loading.value = false;
+        loading.value = false
     }
-};
+}
 
 const cancelEditMode = () => {
-    isEditing.value = false;
-    editingId.value = null;
-    items.value = [];
-    truckId.value = null;
-    customerId.value = null;
-    customerSearchTerm.value = '';
-    currentTab.value = 'list';
-};
+    isEditing.value = false
+    editingId.value = null
+    items.value = []
+    truckId.value = null
+    customerId.value = null
+    customerSearchTerm.value = ''
+    currentTab.value = 'list'
+}
 
 const submitPreOrder = async () => {
     if (!truckId.value || !customerId.value || items.value.length === 0) {
-        return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบ', 'warning');
+        return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบ', 'warning')
     }
 
-    loading.value = true;
+    loading.value = true
 
     const payload = {
         truckId: truckId.value,
@@ -672,32 +707,32 @@ const submitPreOrder = async () => {
         totalPrice: totalSoldPrice.value,
         totalDiscount: 0,
         totalSoldPrice: totalSoldPrice.value,
-        items: items.value.map(i => ({
+        items: items.value.map((i) => ({
             productId: i.productId,
             quantity: i.quantity,
             price: i.price,
             soldPrice: i.price,
-            discount: "0.00"
-        }))
-    };
+            discount: '0.00',
+        })),
+    }
 
     try {
         if (isEditing.value) {
-            await axios.put(`/pre-orders/${editingId.value}`, payload);
-            Swal.fire('สำเร็จ', 'แก้ไขข้อมูลเรียบร้อยแล้ว', 'success');
+            await axios.put(`/pre-orders/${editingId.value}`, payload)
+            Swal.fire('สำเร็จ', 'แก้ไขข้อมูลเรียบร้อยแล้ว', 'success')
         } else {
-            await axios.post('/pre-orders', payload);
-            Swal.fire('สำเร็จ', 'เปิดบิลและโอนสินค้าขึ้นรถแล้ว', 'success');
+            await axios.post('/pre-orders', payload)
+            Swal.fire('สำเร็จ', 'เปิดบิลและโอนสินค้าขึ้นรถแล้ว', 'success')
         }
 
-        cancelEditMode();
-        fetchPreOrders();
+        cancelEditMode()
+        fetchPreOrders()
     } catch (e) {
-        Swal.fire('ผิดพลาด', e.response?.data?.message || 'บันทึกไม่สำเร็จ', 'error');
+        Swal.fire('ผิดพลาด', e.response?.data?.message || 'บันทึกไม่สำเร็จ', 'error')
     } finally {
-        loading.value = false;
+        loading.value = false
     }
-};
+}
 
 const cancelPreOrder = (po) => {
     Swal.fire({
@@ -706,39 +741,38 @@ const cancelPreOrder = (po) => {
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#e53e3e',
-        confirmButtonText: 'ยืนยันยกเลิกและคืนของ'
+        confirmButtonText: 'ยืนยันยกเลิกและคืนของ',
     }).then(async (res) => {
         if (res.isConfirmed) {
             try {
-                await axios.post(`/pre-orders/${po.id}/cancel`);
-                Swal.fire('เรียบร้อย', 'คืนของเข้าโกดังแล้ว', 'success');
-                fetchPreOrders();
+                await axios.post(`/pre-orders/${po.id}/cancel`)
+                Swal.fire('เรียบร้อย', 'คืนของเข้าโกดังแล้ว', 'success')
+                fetchPreOrders()
             } catch (e) {
-                Swal.fire('Error', 'ไม่สามารถยกเลิกได้', 'error');
+                Swal.fire('Error', 'ไม่สามารถยกเลิกได้', 'error')
             }
         }
-    });
-};
+    })
+}
 
 const viewDetail = async (po) => {
     try {
-        const res = await axios.get(`/pre-orders/${po.id}`);
-        selectedPreOrder.value = res.data;
-        showDetailModal.value = true;
+        const res = await axios.get(`/pre-orders/${po.id}`)
+        selectedPreOrder.value = res.data
+        showDetailModal.value = true
     } catch (e) {
-        Swal.fire('Error', 'ไม่สามารถดึงข้อมูลรายละเอียดได้', 'error');
+        Swal.fire('Error', 'ไม่สามารถดึงข้อมูลรายละเอียดได้', 'error')
     }
-};
-
+}
 
 const printDetail = () => {
-    window.print();
-};
+    window.print()
+}
 
 onMounted(() => {
-    fetchPreOrders();
-    fetchInitialData();
-});
+    fetchPreOrders()
+    fetchInitialData()
+})
 </script>
 
 <style scoped>
@@ -1410,7 +1444,6 @@ onMounted(() => {
     font-weight: 700;
     color: #4a5568;
 }
-
 
 @media (max-width: 1024px) {
     .form-grid {
