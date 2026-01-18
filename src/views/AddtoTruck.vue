@@ -151,7 +151,7 @@
                 </thead>
                 <tbody>
                     <tr v-for="item in addedProducts" :key="item.productId">
-                        <td>SKU-{{ item.productId }}</td>
+                        <td>{{ item.product_code }}</td>
                         <td>{{ item.description }}</td>
                         <td>{{ item.quantity }}</td>
                         <td>{{ item.unit }}</td>
@@ -403,7 +403,7 @@ const truckStocksWithSoldQuantities = computed(() => {
         return {
             ...stock,
             soldQuantity: soldQty,
-            sku: `SKU-${stock.product_id}`,
+            sku: `${stock.product_id}`,
         }
     })
 })
@@ -503,7 +503,8 @@ const addProductToList = (item) => {
         addedProducts.value[existIndex].quantity += quantity
     } else {
         addedProducts.value.push({
-            productId: item.product.product_code,
+            productId: item.product_id,
+            product_code: item.product.product_code,
             description: item.product.description,
             quantity: quantity,
             unit: item.product.unit || '-',
