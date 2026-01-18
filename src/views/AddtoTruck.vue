@@ -13,23 +13,28 @@
                 </select>
             </div>
 
-            <div class="button-group">
-                <button class="add-stock-btn" @click="openAddModal" :disabled="!selectedTruckId">
-                    <i class="fas fa-plus"></i> เพิ่มสินค้า
-                </button>
-                <button
-                    :class="['refill-btn', { 'refill-success': isRefillConfirmed, 'refill-error': isRefillInsufficient }]"
-                    @click="refillFromSoldProducts" :disabled="!selectedTruckId || loading || isRefillInitiated">
-                    <span v-if="isRefillInsufficient">
-                        <i class="fas fa-exclamation-triangle"></i> สินค้าไม่พอ
-                    </span>
-                    <span v-else-if="isRefillConfirmed">
-                        <i class="fas fa-check"></i> พร้อมยืนยัน
-                    </span>
-                    <span v-else>
-                        <i class="fas fa-sync-alt"></i> เติมสินค้าจากยอดที่ขายไป
-                    </span>
-                </button>
+            <div class="right-actions">
+                <div class="search-box truck-search">
+                    <input type="text" placeholder="ค้นหาสินค้าในรถ..." v-model="truckSearchKeyword"
+                        @input="debouncedTruckSearch" :disabled="!selectedTruckId" />
+                    <i class="fas fa-search"></i>
+                </div>
+
+                <div class="button-group">
+                    <button class="add-stock-btn" @click="openAddModal" :disabled="!selectedTruckId">
+                        <i class="fas fa-plus"></i> เพิ่มสินค้า
+                    </button>
+                    <button :class="[
+                        'refill-btn',
+                        { 'refill-success': isRefillConfirmed, 'refill-error': isRefillInsufficient },
+                    ]" @click="refillFromSoldProducts" :disabled="!selectedTruckId || loading || isRefillInitiated">
+                        <span v-if="isRefillInsufficient">
+                            <i class="fas fa-exclamation-triangle"></i> สินค้าไม่พอ
+                        </span>
+                        <span v-else-if="isRefillConfirmed"> <i class="fas fa-check"></i> พร้อมยืนยัน </span>
+                        <span v-else> <i class="fas fa-sync-alt"></i> เติมสินค้าจากยอดที่ขายไป </span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -63,10 +68,17 @@
                         </td>
                         <td>{{ stock.product.unit || '-' }}</td>
 
-                        <td v-if="stock.quantity > 0"><button class="return-btn" @click="openReturnModal(stock)"
-                                title="return-btn">ตีกลับโกดัง</button></td>
-                        <td v-else><button disabled class="return-btn disabled-btn" @click="openReturnModal(stock)"
-                                title="return-btn">ตีกลับโกดัง</button></td>
+                        <td v-if="stock.quantity > 0">
+                            <button class="return-btn" @click="openReturnModal(stock)" title="return-btn">
+                                ตีกลับโกดัง
+                            </button>
+                        </td>
+                        <td v-else>
+                            <button disabled class="return-btn disabled-btn" @click="openReturnModal(stock)"
+                                title="return-btn">
+                                ตีกลับโกดัง
+                            </button>
+                        </td>
                         <!-- <td>
                             <span v-if="stock.quantity === 0" class="stock-badge badge-low">
                                 หมด
@@ -90,9 +102,13 @@
             </div>
 
             <div class="pagination" v-if="truckStocks.length > 0">
-                <button @click="changeTruckPage(truckPage - 1)" :disabled="truckPage === 1">ก่อนหน้า</button>
+                <button @click="changeTruckPage(truckPage - 1)" :disabled="truckPage === 1">
+                    ก่อนหน้า
+                </button>
                 <span>หน้า {{ truckPage }} / {{ truckTotalPages }}</span>
-                <button @click="changeTruckPage(truckPage + 1)" :disabled="truckPage === truckTotalPages">ถัดไป</button>
+                <button @click="changeTruckPage(truckPage + 1)" :disabled="truckPage === truckTotalPages">
+                    ถัดไป
+                </button>
             </div>
         </div>
 
@@ -119,9 +135,7 @@
                             <span v-if="insufficientProducts.includes(item.productId)" class="insufficient-indicator">
                                 🔴 ไม่พอ
                             </span>
-                            <span v-else class="sufficient-indicator">
-                                🟢 พอ
-                            </span>
+                            <span v-else class="sufficient-indicator"> 🟢 พอ </span>
                         </td>
                         <td>
                             <button class="remove-btn" @click="removeProductFromList(item.productId)" title="ลบสินค้า">
@@ -170,11 +184,15 @@
                             <td>{{ item.product.unit || '-' }}</td>
                             <td class="quantity-control-cell">
                                 <button class="qty-btn" @click="decrementQuantity(item.id)"
-                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] <= 1">-</button>
+                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] <= 1">
+                                    -
+                                </button>
                                 <input type="number" min="1" :max="item.quantity"
-                                    v-model.number="addQuantities[item.id]" style="width: 70px; text-align: center;" />
+                                    v-model.number="addQuantities[item.id]" style="width: 70px; text-align: center" />
                                 <button class="qty-btn" @click="incrementQuantity(item.id, item.quantity)"
-                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] >= item.quantity">+</button>
+                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] >= item.quantity">
+                                    +
+                                </button>
 
                                 <button v-if="addQuantities[item.id] > item.quantity" class="add-btn not-enough-btn"
                                     disabled>
@@ -188,15 +206,19 @@
                             </td>
                         </tr>
                         <tr v-if="warehouseStocks.length === 0">
-                            <td colspan="7" style="text-align:center;">ไม่พบสินค้าที่ค้นหา</td>
+                            <td colspan="7" style="text-align: center">ไม่พบสินค้าที่ค้นหา</td>
                         </tr>
                     </tbody>
                 </table>
 
                 <div class="pagination">
-                    <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">ก่อนหน้า</button>
+                    <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">
+                        ก่อนหน้า
+                    </button>
                     <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
-                    <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">ถัดไป</button>
+                    <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">
+                        ถัดไป
+                    </button>
                 </div>
 
                 <button class="close-btn" @click="closeAddModal">ปิด</button>
@@ -222,21 +244,45 @@
         <div v-if="showReturnModal" class="modal-overlay">
             <div class="modal success-modal">
                 <h3>ยืนยันการตีสินค้ากลับโกดัง</h3>
-                <p>คุณแน่ใจหรือไม่ว่าต้องการตีสินค้ากลับโกดัง?</p>
-                <br>
-                <!-- show detail of selected product -->
-                <div class="product-detail" style="text-align: center;">
-                    <p>ชื่อสินค้า: {{ selectedProduct?.product.description }}</p>
-                    <p>รหัสสินค้า: {{ selectedProduct?.product.product_code }}</p>
-                    <p>จำนวนในรถ: {{ selectedProduct?.quantity }}</p>
+                <p>ระบุจำนวนที่ต้องการตีกลับโกดัง</p>
+                <br />
+
+                <div class="product-detail" style="text-align: center">
+                    <p>
+                        <strong>{{ selectedProduct?.product.description }}</strong>
+                    </p>
+                    <p class="sub-text">รหัส: {{ selectedProduct?.product.product_code }}</p>
+                    <p class="sub-text">
+                        จำนวนทั้งหมดในรถ: {{ selectedProduct?.quantity }} {{ selectedProduct?.product.unit }}
+                    </p>
                 </div>
-                <div class="modal-buttons  centered-buttons">
+
+                <div class="return-qty-control">
+                    <label>จำนวนที่จะคืน:</label>
+                    <div class="qty-wrapper">
+                        <button class="qty-btn" @click="decrementReturnQty" :disabled="returnQuantity <= 1">
+                            <i class="fas fa-minus"></i>
+                        </button>
+
+                        <input type="number" v-model.number="returnQuantity" @input="validateReturnInput"
+                            class="qty-input" />
+
+                        <button class="qty-btn" @click="incrementReturnQty"
+                            :disabled="returnQuantity >= selectedProduct?.quantity">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="modal-buttons centered-buttons">
                     <button class="modal-cancel-btn" @click="closeReturnModal">ยกเลิก</button>
-                    <button class="modal-confirm-btn" @click="returnProduct">ยืนยัน</button>
+                    <button class="modal-confirm-btn" @click="returnProduct"
+                        :disabled="returnQuantity <= 0 || returnQuantity > selectedProduct?.quantity">
+                        ยืนยัน ({{ returnQuantity }})
+                    </button>
                 </div>
             </div>
         </div>
-
     </div>
 </template>
 
@@ -247,15 +293,17 @@ import * as XLSX from 'xlsx'
 import moment from 'moment'
 
 const trucks = ref([])
+const returnQuantity = ref(1)
 const selectedTruckId = ref('')
+const truckSearchKeyword = ref('')
 const truckStocks = ref([])
 const loading = ref(false)
 const error = ref(null)
 const soldProducts = ref([])
 const isRefillConfirmed = ref(false)
 const isRefillInsufficient = ref(false)
-const insufficientProducts = ref([]);
-const isRefillInitiated = ref(false);
+const insufficientProducts = ref([])
+const isRefillInitiated = ref(false)
 
 const selectedProduct = ref({})
 
@@ -288,49 +336,56 @@ function debounce(func, delay) {
 }
 
 const selectedTruckPlate = computed(() => {
-    const truck = trucks.value.find(t => t.id === selectedTruckId.value)
+    const truck = trucks.value.find((t) => t.id === selectedTruckId.value)
     return truck ? truck.plate_number : ''
 })
 
 const hasInsufficientStockComputed = computed(() => {
-    return addedProducts.value.some(item => insufficientProducts.value.includes(item.productId));
-});
+    return addedProducts.value.some((item) => insufficientProducts.value.includes(item.productId))
+})
 
 watch(hasInsufficientStockComputed, (newVal) => {
-    isRefillInsufficient.value = newVal;
-    isRefillConfirmed.value = !newVal;
-});
+    isRefillInsufficient.value = newVal
+    isRefillConfirmed.value = !newVal
+})
 
 const truckStocksWithSoldQuantities = computed(() => {
     if (soldProducts.value.length === 0) {
-        return truckStocks.value.map(stock => ({ ...stock, soldQuantity: 0, sku: `${stock.product.product_code}` }));
+        return truckStocks.value.map((stock) => ({
+            ...stock,
+            soldQuantity: 0,
+            sku: `${stock.product.product_code}`,
+        }))
     }
 
-    const soldProductsMap = new Map();
-    soldProducts.value.forEach(soldItem => {
+    const soldProductsMap = new Map()
+    soldProducts.value.forEach((soldItem) => {
         if (soldProductsMap.has(soldItem.productId)) {
-            soldProductsMap.set(soldItem.productId, soldProductsMap.get(soldItem.productId) + soldItem.quantity);
+            soldProductsMap.set(
+                soldItem.productId,
+                soldProductsMap.get(soldItem.productId) + soldItem.quantity,
+            )
         } else {
-            soldProductsMap.set(soldItem.productId, soldItem.quantity);
+            soldProductsMap.set(soldItem.productId, soldItem.quantity)
         }
-    });
+    })
 
-    return truckStocks.value.map(stock => {
-        const soldQty = soldProductsMap.get(stock.product_id) || 0;
+    return truckStocks.value.map((stock) => {
+        const soldQty = soldProductsMap.get(stock.product_id) || 0
         return {
             ...stock,
             soldQuantity: soldQty,
-            sku: `SKU-${stock.product_id}`
-        };
-    });
-});
+            sku: `SKU-${stock.product_id}`,
+        }
+    })
+})
 
 watch(selectedTruckId, () => {
-    isRefillConfirmed.value = false;
-    isRefillInsufficient.value = false;
-    addedProducts.value = [];
-    isRefillInitiated.value = false;
-});
+    isRefillConfirmed.value = false
+    isRefillInsufficient.value = false
+    addedProducts.value = []
+    isRefillInitiated.value = false
+})
 
 const fetchTrucks = async () => {
     try {
@@ -357,16 +412,17 @@ const fetchTruckStocks = async (page = 1) => {
         const res = await axios.get(`/trucks/${selectedTruckId.value}/stocks`, {
             params: {
                 page: page,
-                perPage: 10
-            }
+                perPage: 30,
+                search: truckSearchKeyword.value,
+            },
         })
         truckStocks.value = res.data.data
         // Assuming backend returns meta for pagination
         truckTotalPages.value = res.data.meta?.last_page || 1
 
         soldProducts.value = []
-        isRefillConfirmed.value = false;
-        isRefillInsufficient.value = false;
+        isRefillConfirmed.value = false
+        isRefillInsufficient.value = false
     } catch (err) {
         error.value = 'โหลดข้อมูลสินค้าในรถไม่สำเร็จ'
         console.error(err)
@@ -392,7 +448,7 @@ const fetchWarehouseStocks = async () => {
             },
         })
         warehouseStocks.value = res.data.data
-        warehouseStocks.value.forEach(item => {
+        warehouseStocks.value.forEach((item) => {
             if (!addQuantities.value[item.id]) {
                 addQuantities.value[item.id] = 1
             }
@@ -406,12 +462,15 @@ const fetchWarehouseStocks = async () => {
 }
 
 const debouncedFetchWarehouseStocks = debounce(fetchWarehouseStocks, 500)
+const debouncedTruckSearch = debounce(() => {
+    fetchTruckStocks(1)
+}, 500)
 
 const addProductToList = (item) => {
     const quantity = addQuantities.value[item.id]
     if (!quantity || quantity < 1 || quantity > item.quantity) return
 
-    const existIndex = addedProducts.value.findIndex(p => p.productId === item.product_id)
+    const existIndex = addedProducts.value.findIndex((p) => p.productId === item.product_id)
     if (existIndex !== -1) {
         addedProducts.value[existIndex].quantity += quantity
     } else {
@@ -426,7 +485,7 @@ const addProductToList = (item) => {
 }
 
 const removeProductFromList = (productId) => {
-    addedProducts.value = addedProducts.value.filter(p => p.productId !== productId)
+    addedProducts.value = addedProducts.value.filter((p) => p.productId !== productId)
 }
 
 const openAddModal = () => {
@@ -443,7 +502,8 @@ const openAddModal = () => {
 
 const openReturnModal = (stock) => {
     selectedProduct.value = stock
-    showReturnModal.value = true;
+    returnQuantity.value = stock.quantity
+    showReturnModal.value = true
 }
 
 const closeAddModal = () => {
@@ -451,7 +511,7 @@ const closeAddModal = () => {
 }
 
 const closeReturnModal = () => {
-    showReturnModal.value = false;
+    showReturnModal.value = false
 }
 
 const changePage = (page) => {
@@ -461,105 +521,114 @@ const changePage = (page) => {
 }
 
 const saveRefillData = async () => {
-    if (addedProducts.value.length === 0) return;
+    if (addedProducts.value.length === 0) return
 
-    saving.value = true;
+    saving.value = true
     try {
         const payload = {
             truckId: selectedTruckId.value,
-            products: addedProducts.value.map(item => ({
+            products: addedProducts.value.map((item) => ({
                 productId: item.productId,
-                quantity: item.quantity
-            }))
-        };
-        await axios.post('/warehouse-stocks/move-to-truck', payload);
+                quantity: item.quantity,
+            })),
+        }
+        await axios.post('/warehouse-stocks/move-to-truck', payload)
 
-        lastSavedData.value = JSON.parse(JSON.stringify(addedProducts.value));
-        showSuccessModal.value = true;
+        lastSavedData.value = JSON.parse(JSON.stringify(addedProducts.value))
+        showSuccessModal.value = true
     } catch (err) {
-        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-        console.error(err);
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+        console.error(err)
     } finally {
-        saving.value = false;
+        saving.value = false
     }
-};
+}
 
 const returnProduct = async () => {
+    if (returnQuantity.value <= 0 || returnQuantity.value > selectedProduct.value.quantity) {
+        alert('จำนวนไม่ถูกต้อง')
+        return
+    }
     try {
         await axios.post('/warehouse-stocks/move-to-warehouse', {
             truckId: selectedTruckId.value,
             productId: selectedProduct.value.product_id,
-            quantity: selectedProduct.value.quantity
-        });
-        fetchTruckStocks();
-        closeReturnModal();
+            quantity: returnQuantity.value,
+        })
+        fetchTruckStocks()
+        closeReturnModal()
     } catch (err) {
-        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-        console.error(err);
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+        console.error(err)
     }
 }
 
 const downloadCSV = () => {
-    const dataToExport = lastSavedData.value.map(item => ({
+    const dataToExport = lastSavedData.value.map((item) => ({
         'รหัสสินค้า (ID)': item.productId,
-        'ชื่อสินค้า': item.description,
-        'จำนวนที่เติม': item.quantity,
-        'หน่วย': item.unit
-    }));
+        ชื่อสินค้า: item.description,
+        จำนวนที่เติม: item.quantity,
+        หน่วย: item.unit,
+    }))
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "AddedProducts");
+    const ws = XLSX.utils.json_to_sheet(dataToExport)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'AddedProducts')
 
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const fileName = `เติมสินค้า_${selectedTruckPlate.value}_${dateStr}.csv`;
+    const dateStr = new Date().toISOString().slice(0, 10)
+    const fileName = `เติมสินค้า_${selectedTruckPlate.value}_${dateStr}.csv`
 
-    XLSX.writeFile(wb, fileName);
-};
+    XLSX.writeFile(wb, fileName)
+}
 
 const closeSuccessModal = () => {
-    showSuccessModal.value = false;
-    lastSavedData.value = [];
+    showSuccessModal.value = false
+    lastSavedData.value = []
 
-    addedProducts.value = [];
-    soldProducts.value = [];
-    isRefillConfirmed.value = false;
-    isRefillInsufficient.value = false;
-    insufficientProducts.value = [];
-    isRefillInitiated.value = false;
+    addedProducts.value = []
+    soldProducts.value = []
+    isRefillConfirmed.value = false
+    isRefillInsufficient.value = false
+    insufficientProducts.value = []
+    isRefillInitiated.value = false
 
-    fetchTruckStocks();
-};
+    fetchTruckStocks()
+}
 
 const refillFromSoldProducts = async () => {
-    loading.value = true;
-    isRefillConfirmed.value = false;
-    isRefillInsufficient.value = false;
-    isRefillInitiated.value = true;
-    addedProducts.value = [];
-    soldProducts.value = [];
-    insufficientProducts.value = [];
+    loading.value = true
+    isRefillConfirmed.value = false
+    isRefillInsufficient.value = false
+    isRefillInitiated.value = true
+    addedProducts.value = []
+    soldProducts.value = []
+    insufficientProducts.value = []
 
     try {
-        const response = await axios.get(`/sell-logs?truck_id=${selectedTruckId.value}?start_date=${moment().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss')}&end_date=${moment().format('YYYY-MM-DD HH:mm:ss')}?limit=1000`);
-        const soldQuantitiesMap = {};
+        const response = await axios.get(
+            `/sell-logs?truck_id=${selectedTruckId.value}?start_date=${moment().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss')}&end_date=${moment().format('YYYY-MM-DD HH:mm:ss')}?limit=1000`,
+        )
+        const soldQuantitiesMap = {}
 
-        response.data.data.forEach(log => {
-            log.items.forEach(item => {
-                soldQuantitiesMap[item.product_id] = (soldQuantitiesMap[item.product_id] || 0) + item.quantity;
-            });
-        });
+        response.data.data.forEach((log) => {
+            log.items.forEach((item) => {
+                soldQuantitiesMap[item.product_id] =
+                    (soldQuantitiesMap[item.product_id] || 0) + item.quantity
+            })
+        })
 
-        const productsToAdd = [];
-        const productIds = Object.keys(soldQuantitiesMap);
+        const productsToAdd = []
+        const productIds = Object.keys(soldQuantitiesMap)
         for (const productId of productIds) {
-            const quantityNeeded = soldQuantitiesMap[productId];
+            const quantityNeeded = soldQuantitiesMap[productId]
             try {
-                const warehouseRes = await axios.get(`/warehouse-stocks/${productId}`);
-                const warehouseItem = warehouseRes.data.find(item => item.product_id === parseInt(productId));
+                const warehouseRes = await axios.get(`/warehouse-stocks/${productId}`)
+                const warehouseItem = warehouseRes.data.find(
+                    (item) => item.product_id === parseInt(productId),
+                )
 
                 if (!warehouseItem || warehouseItem.quantity < quantityNeeded) {
-                    insufficientProducts.value.push(parseInt(productId));
+                    insufficientProducts.value.push(parseInt(productId))
                 }
 
                 if (warehouseItem) {
@@ -568,26 +637,25 @@ const refillFromSoldProducts = async () => {
                         description: warehouseItem.product.description,
                         quantity: quantityNeeded,
                         unit: warehouseItem.product.unit || '-',
-                    });
+                    })
                 }
             } catch (err) {
-                insufficientProducts.value.push(parseInt(productId));
+                insufficientProducts.value.push(parseInt(productId))
             }
         }
 
-        addedProducts.value = productsToAdd;
-        soldProducts.value = addedProducts.value.map(item => ({
+        addedProducts.value = productsToAdd
+        soldProducts.value = addedProducts.value.map((item) => ({
             productId: item.productId,
-            quantity: item.quantity
-        }));
-
+            quantity: item.quantity,
+        }))
     } catch (err) {
-        alert('เกิดข้อผิดพลาดในการโหลดข้อมูลยอดขาย');
-        console.error(err);
+        alert('เกิดข้อผิดพลาดในการโหลดข้อมูลยอดขาย')
+        console.error(err)
     } finally {
-        loading.value = false;
+        loading.value = false
     }
-};
+}
 
 const decrementQuantity = (id) => {
     if (addQuantities.value[id] && addQuantities.value[id] > 1) {
@@ -598,6 +666,35 @@ const decrementQuantity = (id) => {
 const incrementQuantity = (id, max) => {
     if (addQuantities.value[id] < max) {
         addQuantities.value[id]++
+    }
+}
+
+const decrementReturnQty = () => {
+    if (returnQuantity.value > 1) returnQuantity.value--
+}
+
+const incrementReturnQty = () => {
+    if (returnQuantity.value < selectedProduct.value.quantity) returnQuantity.value++
+}
+
+const cancelRefill = () => {
+    addedProducts.value = []
+    soldProducts.value = []
+    insufficientProducts.value = []
+    isRefillConfirmed.value = false
+    isRefillInsufficient.value = false
+    isRefillInitiated.value = false
+    addQuantities.value = {}
+}
+
+const validateReturnInput = () => {
+    if (returnQuantity.value === '' || returnQuantity.value === null) return
+
+    const max = selectedProduct.value.quantity
+    if (returnQuantity.value > max) {
+        returnQuantity.value = max
+    } else if (returnQuantity.value < 1) {
+        returnQuantity.value = 1
     }
 }
 
@@ -927,9 +1024,7 @@ onMounted(() => {
 .disabled-btn {
     background-color: #feb2b2;
     cursor: not-allowed;
-
 }
-
 
 .badge-medium {
     background-color: #f6e05e;
@@ -1034,5 +1129,120 @@ onMounted(() => {
     background-color: #f0f0f0;
     cursor: not-allowed;
     color: #aaa;
+}
+
+.top-controls {
+    display: flex;
+    justify-content: space-between;
+    /* ดันซ้ายสุด และ ขวาสุด */
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.right-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /* ระยะห่างระหว่างช่องค้นหากับปุ่ม */
+}
+
+.truck-search {
+    position: relative;
+}
+
+.truck-search input {
+    padding: 8px 30px 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 250px;
+    /* กำหนดความกว้างช่องค้นหาตามต้องการ */
+}
+
+.truck-search i {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+}
+
+.sub-text {
+    font-size: 0.9em;
+    color: #666;
+    margin: 5px 0;
+}
+
+.return-qty-control {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.qty-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.qty-input {
+    width: 80px;
+    text-align: center;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+/* Reuse styles from qty-btn if defined globally, otherwise: */
+.qty-btn {
+    width: 32px;
+    height: 32px;
+    /* [แก้ไข] สีปกติเป็นสีฟ้า */
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.qty-btn:hover {
+    background-color: #2563eb;
+    /* สีฟ้าเข้มขึ้นตอนเอาเมาส์ชี้ */
+}
+
+/* [แก้ไข] สีเทาเมื่อกดต่อไม่ได้ (Disabled) */
+.qty-btn:disabled {
+    background-color: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.qty-input {
+    /* ปรับแต่ง Input เพิ่มเติมให้ดูดีขึ้น */
+    width: 80px;
+    text-align: center;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1.1em;
+    font-weight: bold;
+    /* ลบ spinner ของ input type number (optional) */
+    -moz-appearance: textfield;
+}
+
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 </style>
