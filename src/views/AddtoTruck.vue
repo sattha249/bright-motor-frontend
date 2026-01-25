@@ -1,8 +1,8 @@
 <template>
     <div class="product-table-container">
-        <h2>รายการสินค้าในรถ</h2>
+        <h2 class="no-print">รายการสินค้าในรถ</h2>
 
-        <div class="top-controls">
+        <div class="top-controls no-print">
             <div class="truck-select-container">
                 <label for="truck-select">เลือกทะเบียนรถ:</label>
                 <select id="truck-select" v-model="selectedTruckId" @change="fetchTruckStocks(1)">
@@ -38,33 +38,10 @@
             </div>
         </div>
 
-        <div v-if="showRefillDateModal" class="modal-overlay" @click.self="closeRefillDateModal">
-            <div class="modal">
-                <div class="modal-header">
-                    <h3>เลือกช่วงเวลาที่ขาย</h3>
-                </div>
+        <div v-if="loading" class="no-print">กำลังโหลดข้อมูล...</div>
+        <div v-else-if="error" class="error-msg no-print">{{ error }}</div>
 
-                <div class="date-filter-container">
-                    <div class="form-group">
-                        <label>ตั้งแต่วันที่</label>
-                        <input type="date" v-model="refillStartDate" class="date-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>ถึงวันที่</label>
-                        <input type="date" v-model="refillEndDate" class="date-input" />
-                    </div>
-                    <div class="form-group button-wrapper">
-                        <button class="search-action-btn" @click="refillFromSoldProducts" :disabled="loading">
-                            <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-search'"></i> ค้นหา
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="loading">กำลังโหลดข้อมูล...</div>
-        <div v-else-if="error" class="error-msg">{{ error }}</div>
-        <div v-else>
+        <div v-else class="no-print">
             <table class="product-table" v-if="truckStocks.length > 0">
                 <thead>
                     <tr>
@@ -74,7 +51,6 @@
                         <th>ยี่ห้อ</th>
                         <th>จำนวน</th>
                         <th>หน่วย</th>
-                        <!-- <th>สถานะ</th> -->
                         <th>ดำเนินการ</th>
                     </tr>
                 </thead>
@@ -103,21 +79,6 @@
                                 ตีกลับโกดัง
                             </button>
                         </td>
-                        <!-- <td>
-                            <span v-if="stock.quantity === 0" class="stock-badge badge-low">
-                                หมด
-                            </span>
-                            <span v-else-if="stock.quantity < 5" class="stock-badge badge-low">
-                                ใกล้หมด
-                            </span>
-                            <span v-else-if="stock.quantity >= 5 && stock.quantity < 10"
-                                class="stock-badge badge-medium">
-                                ปานกลาง
-                            </span>
-                            <span v-else class="stock-badge badge-high">
-                                มาก
-                            </span>
-                        </td> -->
                     </tr>
                 </tbody>
             </table>
@@ -136,7 +97,7 @@
             </div>
         </div>
 
-        <div v-if="addedProducts.length > 0" class="added-summary">
+        <div v-if="addedProducts.length > 0" class="added-summary no-print">
             <h3>สินค้าที่จะย้ายเข้า รถ {{ selectedTruckPlate }}</h3>
             <table class="product-table">
                 <thead>
@@ -151,7 +112,7 @@
                 </thead>
                 <tbody>
                     <tr v-for="item in addedProducts" :key="item.productId">
-                        <td>{{ item.product_code }}</td>
+                        <td>SKU-{{ item.productId }}</td>
                         <td>{{ item.description }}</td>
                         <td>{{ item.quantity }}</td>
                         <td>{{ item.unit }}</td>
@@ -177,7 +138,7 @@
             </div>
         </div>
 
-        <div v-if="showAddModal" class="modal-overlay" @click.self="closeAddModal">
+        <div v-if="showAddModal" class="modal-overlay no-print" @click.self="closeAddModal">
             <div class="modal large-modal">
                 <h3>เลือกสินค้าในคลัง</h3>
                 <div class="search-box">
@@ -249,7 +210,7 @@
             </div>
         </div>
 
-        <div v-if="showSuccessModal" class="modal-overlay">
+        <div v-if="showSuccessModal" class="modal-overlay no-print">
             <div class="modal success-modal">
                 <div class="success-icon">
                     <i class="fas fa-check-circle"></i>
@@ -257,6 +218,11 @@
                 <h3>บันทึกข้อมูลสำเร็จ!</h3>
                 <p>ทำการเพิ่มสินค้าเข้าสู่รถเรียบร้อยแล้ว</p>
                 <div class="modal-buttons centered-buttons">
+                    <button class="print-btn" @click="printRefillNote"
+                        style="background-color: #607d8b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-print"></i> พิมพ์
+                    </button>
+
                     <button class="csv-btn" @click="downloadCSV">
                         <i class="fas fa-file-csv"></i> Download CSV
                     </button>
@@ -265,7 +231,7 @@
             </div>
         </div>
 
-        <div v-if="showReturnModal" class="modal-overlay">
+        <div v-if="showReturnModal" class="modal-overlay no-print">
             <div class="modal success-modal">
                 <h3>ยืนยันการตีสินค้ากลับโกดัง</h3>
                 <p>ระบุจำนวนที่ต้องการตีกลับโกดัง</p>
@@ -307,6 +273,80 @@
                 </div>
             </div>
         </div>
+
+        <div v-if="showRefillDateModal" class="modal-overlay no-print" @click.self="closeRefillDateModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>เลือกช่วงเวลาที่ขาย</h3>
+                </div>
+
+                <div class="date-filter-container">
+                    <div class="form-group">
+                        <label>ตั้งแต่วันที่</label>
+                        <input type="date" v-model="refillStartDate" class="date-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>ถึงวันที่</label>
+                        <input type="date" v-model="refillEndDate" class="date-input" />
+                    </div>
+                    <div class="form-group button-wrapper">
+                        <button class="search-action-btn" @click="refillFromSoldProducts" :disabled="loading">
+                            <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-search'"></i> ค้นหา
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="printable-area print-only receipt-layout">
+            <div class="receipt-header">
+                <h2>BRIGHT MOTOR STORE</h2>
+                <p>ใบเบิกสินค้า / ขนของขึ้นรถ</p>
+                <div class="dashed-line"></div>
+                <div class="receipt-info-row">
+                    <span>วันที่: {{ new Date().toLocaleDateString('th-TH') }}</span>
+                    <span>เวลา: {{ new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                        }}</span>
+                </div>
+                <div class="receipt-info-row">
+                    <span>รถขนส่ง: {{ selectedTruckPlate }}</span>
+                </div>
+                <div class="dashed-line"></div>
+            </div>
+
+            <div class="receipt-items">
+                <div v-for="item in addedProducts" :key="item.productId" class="receipt-item-row">
+                    <div class="item-name">
+                        <span>{{ item.description }}</span>
+                        <span class="item-zone" v-if="item.zone">จุดเก็บ : {{ item.zone }}</span>
+                    </div>
+                    <div class="item-calc">
+                        <span>{{ item.quantity }} {{ item.unit }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashed-line"></div>
+
+            <div class="receipt-footer">
+                <div class="receipt-total-row">
+                    <span>รวมจำนวนรายการ:</span>
+                    <span class="grand-total">{{ addedProducts.length }}</span>
+                </div>
+                <br><br>
+                <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                    <div style="text-align: center;">
+                        <p>.......................................</p>
+                        <p>ผู้เบิกสินค้า</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <p>.......................................</p>
+                        <p>ผู้ตรวจสอบ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </template>
 
@@ -315,6 +355,12 @@ import { ref, onMounted, computed, watch } from 'vue'
 import axios from '@/lib/axios'
 import * as XLSX from 'xlsx'
 import moment from 'moment'
+
+// [เพิ่ม] ฟังก์ชันสั่งพิมพ์
+const printRefillNote = () => {
+    console.log(addedProducts.value)
+    window.print()
+}
 
 const showRefillDateModal = ref(false)
 const refillStartDate = ref(moment().subtract(1, 'days').format('YYYY-MM-DD')) // Default เมื่อวาน
@@ -403,7 +449,7 @@ const truckStocksWithSoldQuantities = computed(() => {
         return {
             ...stock,
             soldQuantity: soldQty,
-            sku: `${stock.product_id}`,
+            sku: `SKU-${stock.product_id}`,
         }
     })
 })
@@ -508,6 +554,7 @@ const addProductToList = (item) => {
             description: item.product.description,
             quantity: quantity,
             unit: item.product.unit || '-',
+            zone: item.product.zone,
         })
     }
     addQuantities.value[item.id] = null
@@ -689,6 +736,7 @@ const refillFromSoldProducts = async () => {
                         description: warehouseItem.product.description,
                         quantity: quantityNeeded,
                         unit: warehouseItem.product.unit || '-',
+                        zone: warehouseItem.product.zone || '-',
                     })
                 }
             } catch (err) {
@@ -758,7 +806,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* (Styles เดิมทั้งหมดคงไว้) */
+/* (Styles เดิมทั้งหมด คงไว้ตามที่คุณส่งมา) */
 .refill-success {
     background-color: #28a745 !important;
     cursor: default !important;
@@ -1002,21 +1050,30 @@ onMounted(() => {
 }
 
 .qty-btn {
-    background-color: #4299e1;
+    background-color: #3b82f6;
     border: none;
     color: white;
     font-weight: 700;
     font-size: 20px;
     width: 28px;
     height: 28px;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     margin-right: 5px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qty-btn:hover {
+    background-color: #2563eb;
 }
 
 .qty-btn:disabled {
-    background-color: #a0c4ff;
+    background-color: #e5e7eb;
     cursor: not-allowed;
+    color: #9ca3af;
 }
 
 .quantity-control-cell {
@@ -1090,15 +1147,12 @@ onMounted(() => {
     color: white;
 }
 
-/* Styles for Success Modal */
 .success-modal {
     max-width: 400px;
     text-align: center;
     padding: 30px;
     margin-top: 15vh;
-    /* Center vertically relative to view */
     align-self: flex-start;
-    /* Reset align from container if needed */
 }
 
 .success-icon {
@@ -1162,7 +1216,6 @@ onMounted(() => {
     background-color: #1c6e2f;
 }
 
-/* Add styles for pagination (same as your other pages) */
 .pagination {
     display: flex;
     justify-content: center;
@@ -1188,7 +1241,6 @@ onMounted(() => {
 .top-controls {
     display: flex;
     justify-content: space-between;
-    /* ดันซ้ายสุด และ ขวาสุด */
     align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
@@ -1199,7 +1251,6 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 10px;
-    /* ระยะห่างระหว่างช่องค้นหากับปุ่ม */
 }
 
 .truck-search {
@@ -1211,7 +1262,6 @@ onMounted(() => {
     border: 1px solid #ddd;
     border-radius: 4px;
     width: 250px;
-    /* กำหนดความกว้างช่องค้นหาตามต้องการ */
 }
 
 .truck-search i {
@@ -1250,47 +1300,6 @@ onMounted(() => {
     border-radius: 4px;
     font-size: 1.1em;
     font-weight: bold;
-}
-
-/* Reuse styles from qty-btn if defined globally, otherwise: */
-.qty-btn {
-    width: 32px;
-    height: 32px;
-    /* [แก้ไข] สีปกติเป็นสีฟ้า */
-    background-color: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s;
-}
-
-.qty-btn:hover {
-    background-color: #2563eb;
-    /* สีฟ้าเข้มขึ้นตอนเอาเมาส์ชี้ */
-}
-
-/* [แก้ไข] สีเทาเมื่อกดต่อไม่ได้ (Disabled) */
-.qty-btn:disabled {
-    background-color: #e5e7eb;
-    color: #9ca3af;
-    cursor: not-allowed;
-}
-
-.qty-input {
-    /* ปรับแต่ง Input เพิ่มเติมให้ดูดีขึ้น */
-    width: 80px;
-    text-align: center;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1.1em;
-    font-weight: bold;
-    /* ลบ spinner ของ input type number (optional) */
     -moz-appearance: textfield;
 }
 
@@ -1303,7 +1312,6 @@ onMounted(() => {
 .date-filter-container {
     display: flex;
     align-items: flex-end;
-    /* จัดให้ปุ่มอยู่ระดับเดียวกับ input */
     gap: 15px;
     padding: 20px 0;
     justify-content: center;
@@ -1325,7 +1333,6 @@ onMounted(() => {
 
 .search-action-btn {
     padding: 9px 20px;
-    /* ปรับความสูงให้ใกล้เคียง input */
     background-color: #3b82f6;
     color: white;
     border: none;
@@ -1344,5 +1351,162 @@ onMounted(() => {
 .search-action-btn:disabled {
     background-color: #9ca3af;
     cursor: not-allowed;
+}
+
+/* ซ่อน print-only ในหน้าจอปกติ */
+.print-only {
+    display: none;
+}
+</style>
+
+<style>
+@media print {
+
+    /* 1. Reset พื้นที่กระดาษ */
+    @page {
+        size: auto;
+        margin: 0mm;
+    }
+
+    /* 2. สั่ง Body ให้หดตัวเท่าเนื้อหา */
+    html,
+    body {
+        width: 100%;
+        height: fit-content !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: white;
+        overflow: hidden !important;
+        font-family: 'Courier New', Courier, monospace;
+        /* Font แบบ PreOrder */
+        font-size: 12px;
+        color: #000;
+    }
+
+    /* 3. ซ่อนเนื้อหาอื่นแบบ Invisible */
+    body * {
+        visibility: hidden;
+        height: 0;
+        overflow: hidden;
+    }
+
+    /* 4. ดึงพื้นที่พิมพ์ออกมาแสดง */
+    .printable-area {
+        visibility: visible !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: fit-content !important;
+        background: white !important;
+        margin: 0 !important;
+        padding: 20px !important;
+        /* เพิ่ม Padding นิดหน่อย */
+        z-index: 999999 !important;
+        display: block !important;
+    }
+
+    /* 5. แสดงลูกหลานของพื้นที่พิมพ์ */
+    .printable-area * {
+        visibility: visible !important;
+        height: auto;
+    }
+
+    /* 6. Toggle View */
+    .no-print {
+        display: none !important;
+    }
+
+    .print-only {
+        display: block !important;
+    }
+
+    /* 7. Receipt Styling (Copy จาก PreOrder) */
+    .receipt-layout {
+        width: 100%;
+        max-width: 800px;
+        /* จำกัดความกว้างให้อ่านง่าย */
+        margin: 0 auto;
+    }
+
+    .receipt-header {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .receipt-header h2 {
+        font-size: 16px;
+        font-weight: bold;
+        margin: 0;
+    }
+
+    .receipt-header p {
+        font-size: 24px;
+        margin: 2px 0;
+    }
+
+    .receipt-info-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 24px;
+    }
+
+    .dashed-line {
+        border-top: 1px dashed #000;
+        margin: 5px 0;
+        width: 100%;
+        display: block;
+    }
+
+    .receipt-item-row {
+        margin-bottom: 5px;
+    }
+
+    .item-name {
+        display: flex;
+        justify-content: space-between;
+        /* ดันซ้าย-ขวา */
+        align-items: baseline;
+        /* จัดแนวบรรทัดให้สวยงาม */
+        font-size: 24px;
+        font-weight: bold;
+        width: 100%;
+        /* ให้กว้างเต็มพื้นที่ */
+    }
+
+    /* [เพิ่ม] ปรับขนาดตัวอักษรจุดเก็บให้เล็กลงนิดหน่อย (Optional) */
+    .item-zone {
+        font-size: 18px;
+        font-weight: normal;
+        margin-left: 10px;
+        /* เว้นระยะห่างเผื่อชื่อสินค้าสั้น */
+        white-space: nowrap;
+        /* ห้ามตัดบรรทัด */
+    }
+
+    .item-calc {
+        display: flex;
+        justify-content: space-between;
+        font-size: 24px;
+        padding-left: 10px;
+    }
+
+    .receipt-total-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 32px;
+        font-weight: bold;
+    }
+
+    .receipt-footer {
+        text-align: center;
+        margin-top: 10px;
+        font-size: 24px;
+    }
+}
+
+/* ซ่อนในหน้าจอปกติ */
+.print-only {
+    display: none;
 }
 </style>
