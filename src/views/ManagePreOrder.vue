@@ -158,6 +158,7 @@
                                     <th>สินค้า</th>
                                     <th width="120" class="text-center">จำนวน</th>
                                     <th class="text-right">ราคา</th>
+                                    <th width="150" class="text-right">ส่วนลด/หน่วย</th>
                                     <th class="text-right">รวม</th>
                                     <th class="text-center"></th>
                                 </tr>
@@ -169,8 +170,10 @@
                                         <input type="number" v-model.number="item.quantity" min="1" class="qty-input" />
                                     </td>
                                     <td class="text-right">฿{{ item.price.toLocaleString() }}</td>
+                                    <td class="text-right">฿{{ item.discount.toLocaleString() }}</td>
                                     <td class="text-right bold">
-                                        ฿{{ (item.quantity * item.price).toLocaleString() }}
+                                        ฿{{ (item.quantity * item.price - item.discount *
+                                            item.quantity).toLocaleString() }}
                                     </td>
                                     <td class="text-center">
                                         <button class="remove-btn" @click="removeItem(index)">&times;</button>
@@ -185,25 +188,58 @@
                         </table>
                     </div>
 
-                    <div class="sale-summary" v-if="items.length > 0">
-                        <div class="summary-row">
-                            <span>ยอดรวมสุทธิ:</span>
-                            <span class="total-amount">฿{{ totalSoldPrice.toLocaleString() }}</span>
+                    <div class="action-bar discount-controls-bar no-print" v-if="items.length > 0">
+                        <div v-if="!isEditing" class="discount-controls">
+                            <label>ส่วนลดรวม:</label>
+                            <div class="discount-btn-group">
+                                <button v-if="!isEditing" v-for="pct in [5, 10, 15]" :key="pct"
+                                    @click="applyDiscountPercentage(pct)" class="discount-btn"
+                                    :class="{ 'active': selectedDiscount === pct }">
+                                    {{ pct }}%
+                                </button>
+                            </div>
+                            <div class="discount-input-group">
+                                <input type="number" v-model.number="manualDiscountAmount" placeholder="ระบุจำนวนเงิน"
+                                    class="manual-discount-input" />
+                                <button @click="applyManualDiscount" class="discount-btn apply-manual-btn">
+                                    เฉลี่ยลด
+                                </button>
+                            </div>
                         </div>
-                        <div class="button-group">
-                            <button v-if="isEditing" class="cancel-edit-btn" @click="cancelEditMode">
-                                ยกเลิกการแก้ไข
-                            </button>
-                            <button class="save-btn" @click="submitPreOrder" :disabled="loading">
-                                <i class="fas fa-save"></i>
-                                {{
-                                    loading
-                                        ? 'กำลังบันทึก...'
-                                        : isEditing
-                                            ? 'บันทึกการแก้ไข'
-                                : 'บันทึกใบงานและตัดสต็อก'
-                                }}
-                            </button>
+                        <div v-else class="discount-controls"></div>
+
+                        <div class="sale-summary">
+                            <div class="summary-row">
+                                <span>รวมราคาสินค้า (ก่อนลด):</span>
+                                <span>฿{{ totalOriginalPrice.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                }) }}</span>
+                            </div>
+
+                            <div class="summary-row discount-text">
+                                <span>ส่วนลดรวม:</span>
+                                <span>-฿{{ totalDiscountAmount.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                }) }}</span>
+                            </div>
+
+                            <div class="summary-row grand-total-row">
+                                <span>ยอดรวมสุทธิ:</span>
+                                <span class="total-amount">฿{{ totalSalePrice.toLocaleString(undefined,
+                                    { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+                            </div>
+
+                            <div class="button-group">
+                                <button v-if="isEditing" class="cancel-edit-btn" @click="cancelEditMode">
+                                    ยกเลิกการแก้ไข
+                                </button>
+                                <button class="save-btn" @click="submitPreOrder" :disabled="loading">
+                                    <i class="fas fa-save"></i>
+                                    {{ loading ? 'กำลังบันทึก...' : isEditing ? 'บันทึกการแก้ไข' : 'บันทึกใบงาน' }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -250,7 +286,7 @@
                                 <label>สถานะ:</label>
                                 <span :class="['status-badge', selectedPreOrder?.status.toLowerCase()]">{{
                                     selectedPreOrder?.status
-                                    }}</span>
+                                }}</span>
                             </div>
                             <div class="info-box">
                                 <label>เครดิต:</label>
@@ -265,6 +301,7 @@
                                         <th>สินค้า</th>
                                         <th class="text-center">จำนวน</th>
                                         <th class="text-right">ราคา/หน่วย</th>
+                                        <th class="text-right">ส่วนลด</th>
                                         <th class="text-right">รวม</th>
                                     </tr>
                                 </thead>
@@ -274,7 +311,11 @@
                                         <td class="text-center">{{ item.quantity }}</td>
                                         <td class="text-right">฿{{ Number(item.price).toLocaleString() }}</td>
                                         <td class="text-right bold">
-                                            ฿{{ (item.quantity * item.price).toLocaleString() }}
+                                            ฿{{ item.discount.toLocaleString() }}
+                                        </td>
+                                        <td class="text-right bold">
+                                            ฿{{ (item.quantity * item.price - item.discount *
+                                                item.quantity).toLocaleString() }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -296,15 +337,10 @@
                             <p>ใบส่งของ / ใบแจ้งหนี้</p>
                             <div class="dashed-line"></div>
                             <div class="receipt-info-row">
-                                <span>Date:
-                                    {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}</span>
-                                <span>Time:
-                                    {{
-                                        new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                    })
+                                <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
                                     }}</span>
+                                <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
+                                    hour: '2-digit', minute: '2-digit' }) }}</span>
                             </div>
                             <div class="receipt-info-row">
                                 <span>No: {{ selectedPreOrder?.bill_no }}</span>
@@ -312,17 +348,32 @@
                             <div class="receipt-info-row">
                                 <span>Customer: {{ selectedPreOrder?.customer?.name }}</span>
                             </div>
+                            <div class="receipt-info-row" v-if="selectedPreOrder?.truck">
+                                <span>Truck: {{ selectedPreOrder?.truck?.plate_number }}</span>
+                            </div>
                             <div class="dashed-line"></div>
                         </div>
 
                         <div class="receipt-items">
-                            <div v-for="item in selectedPreOrder?.items" :key="item.id" class="receipt-item-row">
-                                <div class="item-name">{{ item.product?.description }}</div>
-                                <div class="item-calc">
-                                    <span>{{ item.quantity }} x {{ Number(item.price).toLocaleString() }}</span>
-                                    <span class="item-total">{{
-                                        (item.quantity * item.price).toLocaleString()
-                                        }}</span>
+                            <div v-for="item in selectedPreOrder?.items" :key="item.id" class="receipt-item-group">
+                                <div class="receipt-item-row">
+                                    <div class="item-name">{{ item.product?.description }}</div>
+                                </div>
+
+                                <div class="receipt-item-row">
+                                    <div class="item-calc"
+                                        style="padding-left: 10px; width: 100%; display: flex; justify-content: space-between;">
+                                        <span>{{ item.quantity }} x {{ Number(item.price).toLocaleString() }}</span>
+                                        <span>{{ (item.quantity * item.price).toLocaleString() }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="receipt-item-row" v-if="Number(item.discount) > 0">
+                                    <div class="item-calc"
+                                        style="padding-left: 10px; width: 100%; display: flex; justify-content: space-between; font-style: italic; font-size: 12px;">
+                                        <span>(ส่วนลด)</span>
+                                        <span>-{{ Number(item.discount).toLocaleString() }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -330,14 +381,24 @@
                         <div class="dashed-line"></div>
 
                         <div class="receipt-footer">
-                            <div class="receipt-total-row">
-                                <span>ยอดรวม:</span>
-                                <span class="grand-total">{{
-                                    Number(selectedPreOrder?.total_sold_price).toLocaleString()
-                                    }}</span>
+                            <div class="receipt-total-row" v-if="Number(selectedPreOrder?.total_discount) > 0"
+                                style="font-size: 14px; font-weight: normal; margin-bottom: 4px;">
+                                <span>รวมเป็นเงิน:</span>
+                                <span>{{ Number(selectedPreOrder?.total_price).toLocaleString() }}</span>
                             </div>
-                            <br />
-                            <p>ขอบคุณที่ใช้บริการ</p>
+
+                            <div class="receipt-total-row" v-if="Number(selectedPreOrder?.total_discount) > 0"
+                                style="font-size: 14px; font-weight: normal; margin-bottom: 4px;">
+                                <span>หักส่วนลด:</span>
+                                <span>-{{ Number(selectedPreOrder?.total_discount).toLocaleString() }}</span>
+                            </div>
+
+                            <div class="receipt-total-row"
+                                style="margin-top: 5px; border-top: 1px solid #000; padding-top: 5px;">
+                                <span style="font-weight: bold; font-size: 18px;">ยอดสุทธิ:</span>
+                                <span class="grand-total" style="font-weight: bold; font-size: 18px;">{{
+                                    Number(selectedPreOrder?.total_sold_price).toLocaleString() }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -427,6 +488,9 @@ const allCustomers = ref([])
 const warehouseStocks = ref([])
 const filterStatus = ref('')
 
+const selectedDiscount = ref(0)
+const manualDiscountAmount = ref(0)
+
 // State สำหรับ Pagination หน้า PreOrder
 const preOrderCurrentPage = ref(1)
 const preOrdersTotalPages = ref(1)
@@ -480,9 +544,64 @@ const filteredCustomers = computed(() => {
         .slice(0, 10)
 })
 
+const totalOriginalPrice = computed(() =>
+    items.value.reduce((sum, item) => sum + (item.quantity * item.price), 0)
+)
+
+const totalDiscountAmount = computed(() =>
+    items.value.reduce((sum, item) => sum + (item.quantity * (item.discount || 0)), 0)
+)
+
+const totalSalePrice = computed(() => {
+    const total = totalOriginalPrice.value - totalDiscountAmount.value
+    return total > 0 ? total : 0
+})
+
 const totalSoldPrice = computed(() => items.value.reduce((sum, i) => sum + i.quantity * i.price, 0))
 
 // --- Functions ---
+
+// [เพิ่ม] ฟังก์ชันคำนวณส่วนลดเป็น %
+const applyDiscountPercentage = (percent) => {
+    selectedDiscount.value = percent
+    const discountFactor = percent / 100
+
+    // คำนวณส่วนลดต่อหน่วย = ราคาขาย * %
+    items.value.forEach(item => {
+        item.discount = item.price * discountFactor
+    })
+
+    // Reset ช่องกรอกมือ
+    manualDiscountAmount.value = 0
+}
+
+// [เพิ่ม] ฟังก์ชันเฉลี่ยส่วนลดตามจำนวนเงิน (Manual Amount)
+const applyManualDiscount = () => {
+    selectedDiscount.value = 0
+    const discountTotal = parseFloat(manualDiscountAmount.value)
+
+    if (discountTotal < 0 || discountTotal > totalOriginalPrice.value) {
+        return Swal.fire('แจ้งเตือน', 'ส่วนลดต้องไม่เกินราคารวมทั้งหมด', 'warning')
+    }
+
+    if (items.value.length === 0) return
+
+    const totalOriginal = totalOriginalPrice.value
+
+    items.value.forEach(item => {
+        // 1. หามูลค่ารวมของสินค้านั้น (Quantity * Price)
+        const itemLineTotal = item.quantity * item.price
+
+        // 2. หาอัตราส่วนว่าสินค้านี้คิดเป็นกี่ % ของยอดรวม (Ratio)
+        const ratio = itemLineTotal / totalOriginal
+
+        // 3. คำนวณส่วนลดรวมของสินค้านั้น (Total Discount * Ratio)
+        const itemTotalDiscount = discountTotal * ratio
+
+        // 4. หารด้วยจำนวนชิ้น เพื่อให้ได้ส่วนลด "ต่อหน่วย" (Per Unit Discount)
+        item.discount = itemTotalDiscount / item.quantity
+    })
+}
 
 // [แก้ไข] รองรับ Pagination และ Search
 const fetchPreOrders = async (page = 1) => {
@@ -637,6 +756,7 @@ const addItem = (stock) => {
 
 const removeItem = (index) => {
     items.value.splice(index, 1)
+    manualDiscountAmount.value = 0 // Reset manual discount เพื่อให้กรอกใหม่
 }
 
 const editPreOrder = async (po) => {
@@ -668,9 +788,11 @@ const editPreOrder = async (po) => {
             quantity: i.quantity,
             price: Number(i.price),
             soldPrice: Number(i.sold_price),
-            discount: 0,
+            discount: Number(i.discount || 0),
             is_paid: true,
         }))
+        const currentTotalDiscount = items.value.reduce((sum, i) => sum + (i.quantity * i.discount), 0)
+        manualDiscountAmount.value = parseFloat(currentTotalDiscount.toFixed(2))
 
         isEditing.value = true
         editingId.value = po.id
@@ -691,6 +813,8 @@ const cancelEditMode = () => {
     customerId.value = null
     customerSearchTerm.value = ''
     currentTab.value = 'list'
+    manualDiscountAmount.value = 0
+    selectedDiscount.value = 0
 }
 
 const submitPreOrder = async () => {
@@ -704,16 +828,21 @@ const submitPreOrder = async () => {
         truckId: truckId.value,
         customerId: customerId.value,
         isCredit: isCredit.value ? creditType.value : null,
-        totalPrice: totalSoldPrice.value,
-        totalDiscount: 0,
-        totalSoldPrice: totalSoldPrice.value,
-        items: items.value.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            price: i.price,
-            soldPrice: i.price,
-            discount: '0.00',
-        })),
+        totalPrice: totalOriginalPrice.value, // ราคาก่อนลด
+        totalDiscount: totalDiscountAmount.value, // ส่วนลดรวม
+        totalSoldPrice: totalSalePrice.value, // ยอดสุทธิ
+        items: items.value.map((i) => {
+            // คำนวณราคาขายจริง (Net Price) = ราคา - ส่วนลด
+            const netPrice = i.price - (i.discount || 0);
+
+            return {
+                productId: i.productId,
+                quantity: i.quantity,
+                price: i.price,
+                soldPrice: netPrice > 0 ? netPrice : 0,
+                discount: i.discount || 0,
+            }
+        }),
     }
 
     try {
@@ -1443,6 +1572,122 @@ onMounted(() => {
 .page-info {
     font-weight: 700;
     color: #4a5568;
+}
+
+.discount-controls-bar {
+    display: flex;
+    justify-content: space-between;
+    /* ซ้ายปุ่มลด ขวาสรุปยอด */
+    align-items: flex-start;
+    padding-top: 1.5rem;
+    margin-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.discount-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.discount-controls label {
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.discount-btn-group {
+    display: flex;
+    gap: 8px;
+}
+
+.discount-btn {
+    background-color: #ecc94b;
+    /* สีเหลืองส้ม */
+    color: #744210;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.2s;
+}
+
+.discount-btn:hover {
+    background-color: #d69e2e;
+}
+
+.discount-btn.active {
+    background-color: #c05621;
+    /* สีส้มเข้มเมื่อเลือก */
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.4);
+}
+
+.discount-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 5px;
+}
+
+.manual-discount-input {
+    padding: 8px 12px;
+    width: 140px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    text-align: right;
+}
+
+.apply-manual-btn {
+    background-color: #4299e1;
+    /* สีฟ้า */
+    color: white;
+}
+
+.apply-manual-btn:hover {
+    background-color: #3182ce;
+}
+
+/* --- Summary --- */
+.sale-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    min-width: 300px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 1rem;
+    color: #4a5568;
+}
+
+.discount-text {
+    color: #e53e3e;
+    font-weight: 600;
+}
+
+.grand-total-row {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #e2e8f0;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--primary-color);
+}
+
+.button-group {
+    margin-top: 15px;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
 }
 
 @media (max-width: 1024px) {
