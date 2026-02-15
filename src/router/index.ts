@@ -71,6 +71,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/claim',
+      name: 'claim',
+      component: () => import('../views/Claim.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/report',
       name: 'report',
       component: () => import('../views/Report.vue'),

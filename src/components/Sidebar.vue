@@ -26,6 +26,11 @@
                     </router-link>
                 </li>
                 <li>
+                    <router-link to="/claim" active-class="active">
+                        <i class="fas fa-undo-alt"></i> รับคืนสินค้า
+                    </router-link>
+                </li>
+                <li>
                     <router-link to="/credit/report">
                         <i class="fas fa-chart-pie"></i> รายงานเครดิต
                     </router-link>
