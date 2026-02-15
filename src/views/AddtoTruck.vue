@@ -289,11 +289,16 @@
                         <label>ถึงวันที่</label>
                         <input type="date" v-model="refillEndDate" class="date-input" />
                     </div>
+                    <div>
+                        <input type="checkbox" id="includePreorders" v-model="includePreorder" />
+                        <label for="includePreorders">รวมสินค้าพรีออเดอร์</label>
+                    </div>
                     <div class="form-group button-wrapper">
                         <button class="search-action-btn" @click="refillFromSoldProducts" :disabled="loading">
                             <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-search'"></i> ค้นหา
                         </button>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -392,7 +397,7 @@ const searchKeyword = ref('')
 const currentPage = ref(1)
 const totalPages = ref(1)
 const addQuantities = ref({})
-
+const includePreorder = ref(false)
 const addedProducts = ref([])
 const saving = ref(false)
 
@@ -703,7 +708,7 @@ const refillFromSoldProducts = async () => {
 
         // แก้ไข URL string: เปลี่ยน ? ตัวที่ 2,3 เป็น &
         const response = await axios.get(
-            `/sell-logs?truck_id=${selectedTruckId.value}&start_date=${start}&end_date=${end}&limit=1000`,
+            `/sell-logs?truck_id=${selectedTruckId.value}&include_preorder=${includePreorder.value}&start_date=${start}&end_date=${end}&limit=1000`,
         )
         const soldQuantitiesMap = {}
 
