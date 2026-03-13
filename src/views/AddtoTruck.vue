@@ -114,13 +114,35 @@
                     <tr v-for="item in addedProducts" :key="item.productId">
                         <td>SKU-{{ item.productId }}</td>
                         <td>{{ item.description }}</td>
-                        <td>{{ item.quantity }}</td>
+                        <td class="quantity-control-cell"
+                            style="display: flex; gap: 5px; justify-content: center; align-items: center;">
+                            <button class="qty-btn" @click="decrementAddedQuantity(item)"
+                                :disabled="item.quantity <= 0">
+                                -
+                            </button>
+
+                            <input type="number" min="0" :max="item.maxQuantity" v-model.number="item.quantity"
+                                @input="checkSufficiency(item)" @blur="validateAddedQuantity(item)"
+                                style="width: 70px; text-align: center" />
+
+                            <button class="qty-btn" @click="incrementAddedQuantity(item)"
+                                :disabled="item.quantity >= item.maxQuantity">
+                                +
+                            </button>
+                        </td>
                         <td>{{ item.unit }}</td>
                         <td>
-                            <span v-if="insufficientProducts.includes(item.productId)" class="insufficient-indicator">
+                            <span v-if="item.quantity === 0" class="excluded-indicator"
+                                style="color: #d97706; font-weight: bold;">
+                                🟡 ยกเว้นการเติม
+                            </span>
+                            <span v-else-if="insufficientProducts.includes(item.productId)"
+                                class="insufficient-indicator" style="color: #e53e3e; font-weight: bold;">
                                 🔴 ไม่พอ
                             </span>
-                            <span v-else class="sufficient-indicator"> 🟢 พอ </span>
+                            <span v-else class="sufficient-indicator" style="color: #38a169; font-weight: bold;">
+                                🟢 พอ
+                            </span>
                         </td>
                         <td>
                             <button class="remove-btn" @click="removeProductFromList(item.productId)" title="ลบสินค้า">
@@ -552,12 +574,14 @@ const addProductToList = (item) => {
     const existIndex = addedProducts.value.findIndex((p) => p.productId === item.product_id)
     if (existIndex !== -1) {
         addedProducts.value[existIndex].quantity += quantity
+        checkSufficiency(addedProducts.value[existIndex])
     } else {
         addedProducts.value.push({
             productId: item.product_id,
             product_code: item.product.product_code,
             description: item.product.description,
             quantity: quantity,
+            maxQuantity: item.quantity,
             unit: item.product.unit || '-',
             zone: item.product.zone,
         })
@@ -619,10 +643,12 @@ const saveRefillData = async () => {
     try {
         const payload = {
             truckId: selectedTruckId.value,
-            products: addedProducts.value.map((item) => ({
-                productId: item.productId,
-                quantity: item.quantity,
-            })),
+            products: addedProducts.value
+                .filter(item => item.quantity > 0) // [แก้ไข] กรองเอาเฉพาะที่ > 0 ส่งไป Backend
+                .map((item) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                })),
         }
         await axios.post('/warehouse-stocks/move-to-truck', payload)
 
@@ -740,6 +766,7 @@ const refillFromSoldProducts = async () => {
                         productId: warehouseItem.product_id,
                         description: warehouseItem.product.description,
                         quantity: quantityNeeded,
+                        maxQuantity: warehouseItem.quantity,
                         unit: warehouseItem.product.unit || '-',
                         zone: warehouseItem.product.zone || '-',
                     })
@@ -802,6 +829,45 @@ const validateReturnInput = () => {
         returnQuantity.value = max
     } else if (returnQuantity.value < 1) {
         returnQuantity.value = 1
+    }
+}
+
+// --- [เพิ่ม] ฟังก์ชันจัดการจำนวนสินค้าที่จะเติมเข้ารถ ---
+
+const decrementAddedQuantity = (item) => {
+    if (item.quantity > 0) { // [แก้ไข] เปลี่ยนจาก > 1 เป็น > 0
+        item.quantity--;
+        checkSufficiency(item);
+    }
+}
+
+const incrementAddedQuantity = (item) => {
+    // ดักไว้อีกชั้น: ให้บวกได้ก็ต่อเมื่อจำนวนยังน้อยกว่าในคลัง
+    if (item.quantity < item.maxQuantity) {
+        item.quantity++;
+        checkSufficiency(item);
+    }
+}
+
+const validateAddedQuantity = (item) => {
+    if (item.quantity === '' || item.quantity < 0) {
+        item.quantity = 0;
+    }
+    if (item.quantity > item.maxQuantity) {
+        item.quantity = item.maxQuantity;
+    }
+    checkSufficiency(item);
+}
+
+const checkSufficiency = (item) => {
+    const currentQty = item.quantity || 0;
+
+    if (currentQty > item.maxQuantity) {
+        if (!insufficientProducts.value.includes(item.productId)) {
+            insufficientProducts.value.push(item.productId);
+        }
+    } else {
+        insufficientProducts.value = insufficientProducts.value.filter(id => id !== item.productId);
     }
 }
 
