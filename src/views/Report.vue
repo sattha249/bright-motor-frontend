@@ -67,8 +67,8 @@
                                 <td>
                                     <button class="toggle-btn" @click="toggleDetails(report.id)">
                                         <i :class="expandedRows.includes(report.id)
-                                                ? 'fas fa-chevron-up'
-                                                : 'fas fa-chevron-down'
+                                            ? 'fas fa-chevron-up'
+                                            : 'fas fa-chevron-down'
                                             "></i>
                                     </button>
                                 </td>
@@ -169,8 +169,8 @@ const fetchReports = async (page = 1) => {
     try {
         const params = {
             page,
-            start_date: filters.value.startDate,
-            end_date: filters.value.endDate,
+            start_date: filters.value.startDate ? `${filters.value.startDate} 00:00:00` : '',
+            end_date: filters.value.endDate ? `${filters.value.endDate} 23:59:59` : '',
             truck_id: filters.value.truckId,
             search: searchKeyword.value, // [แก้ไข] แนบ params search ไปด้วย
         }
@@ -187,8 +187,8 @@ const fetchReports = async (page = 1) => {
 const fetchSummary = async () => {
     try {
         const params = {
-            start_date: filters.value.startDate,
-            end_date: filters.value.endDate,
+            start_date: filters.value.startDate ? `${filters.value.startDate} 00:00:00` : '',
+            end_date: filters.value.endDate ? `${filters.value.endDate} 23:59:59` : '',
             truck_id: filters.value.truckId,
             search: searchKeyword.value, // [แก้ไข] แนบ params search ให้ summary ด้วยเพื่อให้ยอดตรงกัน
         }
