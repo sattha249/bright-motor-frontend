@@ -6,7 +6,7 @@
         <nav class="sidebar-nav">
             <ul>
                 <li>
-                    <router-link to="/" active-class="active">
+                    <router-link to="/" active-class="active" :class="{ disabled: userRole !== 'admin' }">
                         <i class="fas fa-home"></i> หน้าหลัก
                     </router-link>
                 </li>
@@ -61,7 +61,7 @@
                     </router-link>
                 </li>
                 <li>
-                    <router-link to="/report" active-class="active">
+                    <router-link to="/report" active-class="active" :class="{ disabled: userRole !== 'admin' }">
                         <i class="fa-solid fa-file-invoice-dollar"></i> รายงานการขาย
                     </router-link>
                 </li>

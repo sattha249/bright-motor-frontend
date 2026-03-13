@@ -21,21 +21,35 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { loginUser } from '@/services/auth';
-
+import axios from '../lib/axios';
 const username = ref('');
 const password = ref('');
 const router = useRouter();
-
+const userRole = ref('');
 const login = async () => {
     try {
         const success = await loginUser(username.value, password.value);
         if (success) {
-            router.push('/');
+            await getProfile();
+            if (userRole.value === 'admin') {
+                router.push('/');
+            } else {
+                router.push('/customer');
+            }
         }
     } catch (error) {
         alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
     }
 };
+
+const getProfile = async () => {
+    try {
+        const response = await axios.get('/profile');
+        userRole.value = response.data.role;
+    } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+    }
+}
 </script>
 
 <style scoped>
