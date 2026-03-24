@@ -189,12 +189,11 @@
                     </div>
 
                     <div class="action-bar discount-controls-bar no-print" v-if="items.length > 0">
-                        <div v-if="!isEditing" class="discount-controls">
+                        <div class="discount-controls">
                             <label>ส่วนลดรวม:</label>
                             <div class="discount-btn-group">
-                                <button v-if="!isEditing" v-for="pct in [5, 10, 15]" :key="pct"
-                                    @click="applyDiscountPercentage(pct)" class="discount-btn"
-                                    :class="{ 'active': selectedDiscount === pct }">
+                                <button v-for="pct in [5, 10, 15]" :key="pct" @click="applyDiscountPercentage(pct)"
+                                    class="discount-btn" :class="{ 'active': selectedDiscount === pct }">
                                     {{ pct }}%
                                 </button>
                             </div>
@@ -206,7 +205,6 @@
                                 </button>
                             </div>
                         </div>
-                        <div v-else class="discount-controls"></div>
 
                         <div class="sale-summary">
                             <div class="summary-row">
@@ -286,7 +284,7 @@
                                 <label>สถานะ:</label>
                                 <span :class="['status-badge', selectedPreOrder?.status.toLowerCase()]">{{
                                     selectedPreOrder?.status
-                                }}</span>
+                                    }}</span>
                             </div>
                             <div class="info-box">
                                 <label>เครดิต:</label>
@@ -338,9 +336,10 @@
                             <div class="dashed-line"></div>
                             <div class="receipt-info-row">
                                 <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
-                                    }}</span>
+                                }}</span>
                                 <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
-                                    hour: '2-digit', minute: '2-digit' }) }}</span>
+                                    hour: '2-digit', minute: '2-digit'
+                                }) }}</span>
                             </div>
                             <div class="receipt-info-row">
                                 <span>No: {{ selectedPreOrder?.bill_no }}</span>
