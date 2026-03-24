@@ -167,7 +167,13 @@
                                 <tr v-for="(item, index) in items" :key="item.productId">
                                     <td class="bold">{{ item.description }}</td>
                                     <td class="text-center">
-                                        <input type="number" v-model.number="item.quantity" min="1" class="qty-input" />
+                                        <input type="number" v-model.number="item.quantity" min="1"
+                                            :max="item.maxAllowed" @change="validateItemQuantity(item)"
+                                            class="qty-input" />
+                                        <div v-if="item.maxAllowed !== undefined"
+                                            style="font-size: 0.75rem; color: #718096; margin-top: 4px;">
+                                            (สูงสุด: {{ item.maxAllowed }})
+                                        </div>
                                     </td>
                                     <td class="text-right">฿{{ item.price.toLocaleString() }}</td>
                                     <td class="text-right">฿{{ item.discount.toLocaleString() }}</td>
@@ -284,7 +290,7 @@
                                 <label>สถานะ:</label>
                                 <span :class="['status-badge', selectedPreOrder?.status.toLowerCase()]">{{
                                     selectedPreOrder?.status
-                                    }}</span>
+                                }}</span>
                             </div>
                             <div class="info-box">
                                 <label>เครดิต:</label>
@@ -336,7 +342,7 @@
                             <div class="dashed-line"></div>
                             <div class="receipt-info-row">
                                 <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
-                                }}</span>
+                                    }}</span>
                                 <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
                                     hour: '2-digit', minute: '2-digit'
                                 }) }}</span>
@@ -729,6 +735,11 @@ const addItem = (stock) => {
     const existing = items.value.find((i) => i.productId === stock.product_id)
 
     if (existing) {
+        const totalRequested = existing.quantity + qty
+        if (existing.maxAllowed !== undefined && totalRequested > existing.maxAllowed) {
+            Swal.fire('แจ้งเตือน', `สินค้าในโกดังมีไม่พอ (เพิ่มได้สูงสุด ${existing.maxAllowed} ชิ้น)`, 'warning')
+            return
+        }
         existing.quantity += qty
     } else {
         items.value.push({
@@ -736,6 +747,8 @@ const addItem = (stock) => {
             category: stock.product.category,
             description: stock.product.description,
             quantity: qty,
+            originalQuantity: 0,
+            maxAllowed: stock.quantity,
             price: parseFloat(stock.product.sell_price),
             discount: 0,
             soldPrice: parseFloat(stock.product.sell_price),
@@ -751,6 +764,23 @@ const addItem = (stock) => {
         showConfirmButton: false,
         timer: 1000,
     })
+}
+
+const validateItemQuantity = (item) => {
+    // ป้องกันการใส่ค่าว่างหรือติดลบ
+    if (item.quantity < 1 || !item.quantity) {
+        item.quantity = 1
+    }
+
+    // ป้องกันใส่เกินสต็อก
+    if (item.maxAllowed !== undefined && item.quantity > item.maxAllowed) {
+        Swal.fire('แจ้งเตือน', `มีสินค้าในโกดังไม่พอ (สามารถระบุได้สูงสุด ${item.maxAllowed} ชิ้น)`, 'warning')
+        item.quantity = item.maxAllowed
+    }
+
+    // รีเซ็ตส่วนลดท้ายบิลเมื่อมีการเปลี่ยนจำนวน เพื่อให้ผู้ใช้คำนวณใหม่
+    manualDiscountAmount.value = 0
+    selectedDiscount.value = 0
 }
 
 const removeItem = (index) => {
@@ -785,11 +815,24 @@ const editPreOrder = async (po) => {
             productId: i.product_id,
             description: i.product?.description || 'สินค้า',
             quantity: i.quantity,
+            originalQuantity: i.quantity,
+            maxAllowed: i.quantity,
             price: Number(i.price),
             soldPrice: Number(i.sold_price),
             discount: Number(i.discount || 0),
             is_paid: true,
         }))
+        for (let item of items.value) {
+            try {
+                const stockRes = await axios.get(`/warehouse-stocks/${item.productId}`)
+                const stockData = stockRes.data.find(s => s.product_id === item.productId)
+                const currentStock = stockData ? stockData.quantity : 0
+                item.maxAllowed = item.originalQuantity + currentStock
+            } catch (error) {
+                console.log(error)
+                console.error('ไม่สามารถดึงสต็อกโกดังสำหรับ:', item.description)
+            }
+        }
         const currentTotalDiscount = items.value.reduce((sum, i) => sum + (i.quantity * i.discount), 0)
         manualDiscountAmount.value = parseFloat(currentTotalDiscount.toFixed(2))
 
