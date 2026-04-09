@@ -290,7 +290,7 @@
                                 <label>สถานะ:</label>
                                 <span :class="['status-badge', selectedPreOrder?.status.toLowerCase()]">{{
                                     selectedPreOrder?.status
-                                    }}</span>
+                                }}</span>
                             </div>
                             <div class="info-box">
                                 <label>เครดิต:</label>
@@ -342,7 +342,7 @@
                             <div class="dashed-line"></div>
                             <div class="receipt-info-row">
                                 <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH')
-                                }}</span>
+                                    }}</span>
                                 <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
                                     hour: '2-digit', minute: '2-digit'
                                 }) }}</span>
@@ -643,7 +643,7 @@ const changePreOrderPage = (page) => {
 
 const fetchInitialData = async () => {
     try {
-        const [tRes, cRes] = await Promise.all([axios.get('/trucks?perPage=100'), axios.get('/customers')])
+        const [tRes, cRes] = await Promise.all([axios.get('/trucks', { params: { perPage: 100 } }), axios.get('/customers')])
         trucks.value = tRes.data.data
         allCustomers.value = cRes.data.data
     } catch (e) {

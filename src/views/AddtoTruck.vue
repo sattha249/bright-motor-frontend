@@ -333,7 +333,7 @@
                 <div class="receipt-info-row">
                     <span>วันที่: {{ new Date().toLocaleDateString('th-TH') }}</span>
                     <span>เวลา: {{ new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                    }}</span>
+                        }}</span>
                 </div>
                 <div class="receipt-info-row">
                     <span>รถขนส่ง: {{ selectedTruckPlate }}</span>
@@ -490,7 +490,7 @@ watch(selectedTruckId, () => {
 
 const fetchTrucks = async () => {
     try {
-        const res = await axios.get('/trucks?perPage=100')
+        const res = await axios.get('/trucks', { params: { perPage: 100 } })
         trucks.value = res.data.data
     } catch (err) {
         error.value = 'โหลดข้อมูลรถไม่สำเร็จ'
