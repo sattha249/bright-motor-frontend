@@ -16,19 +16,19 @@
                     <button class="settings-btn">แก้ไข</button>
                 </router-link>
             </div>
-            <!-- <div class="setting-card">
-                <h3>การแจ้งเตือน</h3>
-                <p>ตั้งค่าการแจ้งเตือนสินค้าใกล้หมด</p>
-                <router-link to="/qrcode" active-class="active">
-                <button class="settings-btn">ตั้งค่า</button>
-                </router-link>
-            </div> -->
+            <div class="setting-card">
+                <h3>แอปพลิเคชันสำหรับพนักงานขับรถ</h3>
+                <p>โหลดแอพพลิเคชั่น (Android)</p>
+                <a :href="androidAppUrl" target="_blank">
+                    <button class="settings-btn">ดาวน์โหลด</button>
+                </a>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
-// ไม่ต้องมีโค้ด JavaScript ที่นี่
+const androidAppUrl = import.meta.env.VITE_ANDROID_APP_URL || '#';
 </script>
 
 <style scoped>
