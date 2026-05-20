@@ -66,6 +66,16 @@
             <div v-if="loading" class="loading-indicator">
                 กำลังโหลดข้อมูล...
             </div>
+
+            <div class="pagination" v-if="totalPages > 1">
+                <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">
+                    ก่อนหน้า
+                </button>
+                <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
+                <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">
+                    ถัดไป
+                </button>
+            </div>
         </div>
 
         <div v-if="showViewModal" class="modal-overlay" @click.self="closeViewModal">
@@ -152,17 +162,27 @@ const router = useRouter();
 
 const purchaseOrders = ref([]);
 const loading = ref(false);
+const currentPage = ref(1);
+const totalPages = ref(1);
+const perPage = ref(20);
 
 // State สำหรับ Modal ดูรายละเอียด
 const showViewModal = ref(false);
 const selectedPO = ref(null);
 const viewLoading = ref(false);
 
-const fetchPurchaseOrders = async () => {
+const fetchPurchaseOrders = async (page = currentPage.value) => {
     loading.value = true;
+    currentPage.value = page;
     try {
-        const res = await axios.get('/purchase-orders');
+        const res = await axios.get('/purchase-orders', {
+            params: {
+                page: currentPage.value,
+                perPage: perPage.value
+            }
+        });
         purchaseOrders.value = res.data.data || res.data; // เผื่อโครงสร้าง api ต่างกัน
+        totalPages.value = res.data.meta?.last_page || 1;
     } catch (error) {
         Swal.fire('Error', 'ไม่สามารถโหลดข้อมูล PO ได้', 'error');
         console.error("Fetch PO Error:", error);
@@ -171,7 +191,15 @@ const fetchPurchaseOrders = async () => {
     }
 };
 
-onMounted(fetchPurchaseOrders);
+const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        fetchPurchaseOrders(page);
+    }
+};
+
+onMounted(() => {
+    fetchPurchaseOrders();
+});
 
 // --- View Details Logic ---
 const openViewModal = async (id) => {
@@ -542,5 +570,33 @@ const openCancelModal = (po) => {
 .total-row {
     font-weight: bold;
     background-color: #f8f9fa;
+}
+
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    align-items: center;
+}
+
+.pagination button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+    background-color: #f0f0f0;
+}
+
+.pagination button:disabled {
+    background: #f5f5f5;
+    color: #ccc;
+    cursor: not-allowed;
 }
 </style>
