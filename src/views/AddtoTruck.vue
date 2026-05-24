@@ -312,7 +312,7 @@
                         <input type="date" v-model="refillEndDate" class="date-input" />
                     </div>
                     <div>
-                        <input type="checkbox" id="includePreorders" v-model="includePreorder" />
+                        <input type="checkbox" id="includePreorders" v-model="includePreorder" true-value="all" false-value="except-preorder" />
                         <label for="includePreorders">รวมสินค้าพรีออเดอร์</label>
                     </div>
                     <div class="form-group button-wrapper">
@@ -419,7 +419,7 @@ const searchKeyword = ref('')
 const currentPage = ref(1)
 const totalPages = ref(1)
 const addQuantities = ref({})
-const includePreorder = ref(false)
+const includePreorder = ref('except-preorder')
 const addedProducts = ref([])
 const saving = ref(false)
 
@@ -731,7 +731,6 @@ const refillFromSoldProducts = async () => {
         // จัด Format วันที่ให้ครอบคลุมทั้งวัน (00:00:00 - 23:59:59)
         const start = moment(refillStartDate.value).format('YYYY-MM-DD 00:00:00')
         const end = moment(refillEndDate.value).format('YYYY-MM-DD 23:59:59')
-
         // แก้ไข URL string: เปลี่ยน ? ตัวที่ 2,3 เป็น &
         const response = await axios.get(
             `/sell-logs?truck_id=${selectedTruckId.value}&include_preorder=${includePreorder.value}&start_date=${start}&end_date=${end}&limit=1000`,

@@ -29,6 +29,14 @@
                     <i class="fas fa-search search-icon"></i>
                 </div>
             </div>
+            <div class="filter-group">
+                <label>ประเภทออเดอร์:</label>
+                <select v-model="include_preorder" @change="(fetchReports(1), fetchSummary())">
+                    <option value="all">รวมทั้งสองแบบ</option>
+                    <option value="only-preorder">เฉพาะ preorder</option>
+                    <option value="except-preorder">ไม่รวม preorder</option>
+                </select>
+            </div>
             <div class="filter-actions">
                 <button class="export-btn" @click="exportToExcel" :disabled="reports.length === 0">
                     <i class="fas fa-file-excel"></i> Export Excel
@@ -145,6 +153,7 @@ const summary = ref(null)
 
 // [เพิ่ม] ตัวแปร searchKeyword
 const searchKeyword = ref('')
+const include_preorder = ref('all')
 
 const filters = ref({
     startDate: '',
@@ -173,6 +182,7 @@ const fetchReports = async (page = 1) => {
             end_date: filters.value.endDate ? `${filters.value.endDate} 23:59:59` : '',
             truck_id: filters.value.truckId,
             search: searchKeyword.value, // [แก้ไข] แนบ params search ไปด้วย
+            include_preorder: include_preorder.value,
         }
         const res = await axios.get('/sell-logs', { params })
         reports.value = res.data.data
@@ -191,6 +201,7 @@ const fetchSummary = async () => {
             end_date: filters.value.endDate ? `${filters.value.endDate} 23:59:59` : '',
             truck_id: filters.value.truckId,
             search: searchKeyword.value, // [แก้ไข] แนบ params search ให้ summary ด้วยเพื่อให้ยอดตรงกัน
+            include_preorder: include_preorder.value,
         }
         const res = await axios.get('/sell-logs/summary', { params })
         summary.value = res.data
