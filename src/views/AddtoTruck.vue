@@ -482,6 +482,7 @@ const truckStocksWithSoldQuantities = computed(() => {
 })
 
 watch(selectedTruckId, () => {
+    includePreorder.value = 'except-preorder'
     isRefillConfirmed.value = false
     isRefillInsufficient.value = false
     addedProducts.value = []
