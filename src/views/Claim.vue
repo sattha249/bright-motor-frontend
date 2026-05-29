@@ -63,8 +63,8 @@
                                 </span>
                             </td>
                             <td class="text-center">
-                                <span v-if="hasReturn(log)" class="status-badge returned">
-                                    มีการรับคืน
+                                <span v-if="hasReturn(log)" class="status-badge returned" @click.stop="openReprintModal(log)" style="cursor: pointer;" title="คลิกเพื่อพิมพ์ใบรับคืนสินค้าอีกครั้ง">
+                                    มีการรับคืน <i class="fas fa-print" style="margin-left: 3px; font-size: 0.85em;"></i>
                                 </span>
                                 <span v-else class="status-badge completed">
                                     ปกติ
@@ -95,7 +95,7 @@
             </div>
         </div>
 
-        <ReturnModal :show="showReturnModal" :sell-log="selectedSellLog" @close="showReturnModal = false"
+        <ReturnModal :show="showReturnModal" :sell-log="selectedSellLog" :is-reprint="isReprintMode" @close="showReturnModal = false"
             @refresh="fetchSellLogs(currentPage)" />
     </div>
 </template>
@@ -174,6 +174,8 @@ const changePage = (page) => {
     }
 }
 
+const isReprintMode = ref(false)
+
 // เช็คว่าบิลนี้เคยมีการคืนของไปบ้างหรือยัง (ดูจาก items)
 const hasReturn = (log) => {
     if (!log.items) return false
@@ -182,6 +184,13 @@ const hasReturn = (log) => {
 
 const openReturnModal = (log) => {
     selectedSellLog.value = log
+    isReprintMode.value = false
+    showReturnModal.value = true
+}
+
+const openReprintModal = (log) => {
+    selectedSellLog.value = log
+    isReprintMode.value = true
     showReturnModal.value = true
 }
 

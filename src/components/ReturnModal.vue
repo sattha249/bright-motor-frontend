@@ -167,7 +167,8 @@ import Swal from 'sweetalert2'
 
 const props = defineProps({
     show: Boolean,
-    sellLog: Object
+    sellLog: Object,
+    isReprint: Boolean
 })
 
 const emit = defineEmits(['close', 'refresh'])
@@ -197,19 +198,39 @@ const initData = () => {
         returning_qty: 0,
         returned_quantity: item.returned_quantity || 0
     }))
-    showSuccess.value = false
-    lastReturnedItems.value = []
-    lastSellLog.value = null
+
+    if (props.isReprint) {
+        lastReturnedItems.value = props.sellLog.items
+            .filter(item => item.returned_quantity > 0)
+            .map(item => ({
+                ...item,
+                returning_qty: item.returned_quantity
+            }))
+        lastSellLog.value = props.sellLog
+        returnReason.value = 'รับคืนสินค้า'
+        showSuccess.value = true
+    } else {
+        showSuccess.value = false
+        lastReturnedItems.value = []
+        lastSellLog.value = null
+    }
 }
 
 watch(() => props.show, (newVal) => {
     if (newVal) {
         initData()
-        returnReason.value = ''
+        if (!props.isReprint) {
+            returnReason.value = ''
+        }
     }
 })
 
 const totalRefundAmount = computed(() => {
+    if (props.isReprint) {
+        return itemsToReturn.value.reduce((sum, item) => {
+            return sum + (item.returned_quantity * item.sold_price)
+        }, 0)
+    }
     return itemsToReturn.value.reduce((sum, item) => {
         return sum + (item.returning_qty * item.sold_price)
     }, 0)

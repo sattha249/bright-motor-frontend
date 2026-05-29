@@ -76,7 +76,10 @@
                                 <input type="number" v-model.number="item.quantity" min="1" class="qty-input" />
                             </td>
                             <td>฿{{ parseFloat(item.price).toFixed(2) }}</td>
-                            <td class="discount-cell">฿{{ parseFloat(item.discount || 0).toFixed(2) }}</td>
+                            <td class="discount-cell">
+                                <input type="number" v-model.number="item.discount" min="0" :max="item.price"
+                                    class="qty-input discount-input" @input="validateItemDiscount(item)" />
+                            </td>
                             <td>฿{{ (item.quantity * (item.price - item.discount)).toFixed(2) }}</td>
                             <td>
                                 <button class="remove-item-btn" @click="removeItem(item.productId)">
@@ -348,6 +351,20 @@ const applyDiscountPercentage = (percent) => {
     manualDiscountAmount.value = 0;
 };
 
+const validateItemDiscount = (item) => {
+    if (item.discount === '' || item.discount === null || isNaN(item.discount)) {
+        item.discount = 0;
+        return;
+    }
+    if (item.discount < 0) {
+        item.discount = 0;
+    }
+    if (item.discount > item.price) {
+        item.discount = item.price;
+    }
+    selectedDiscount.value = 0; // ล้างไฮไลท์ปุ่มส่วนลดรวม
+};
+
 const applyManualDiscount = () => {
     selectedDiscount.value = 0;
     if (manualDiscountAmount.value < 0 || manualDiscountAmount.value > totalOriginalPrice.value) {
@@ -360,7 +377,7 @@ const applyManualDiscount = () => {
     items.value.forEach(item => {
         const itemOriginalPrice = item.quantity * item.price;
         const ratio = itemOriginalPrice / totalOriginal;
-        item.discount = discountTotal * ratio;
+        item.discount = (discountTotal * ratio) / item.quantity; // [แก้ไข] หารด้วยจำนวนสินค้าเพื่อให้ได้ส่วนลดต่อหน่วยที่ถูกต้อง
     });
 };
 
@@ -592,6 +609,10 @@ onMounted(() => {
     text-align: center;
     border: 1px solid var(--border-color);
     border-radius: 4px;
+}
+
+.discount-input {
+    width: 80px;
 }
 
 .remove-item-btn {

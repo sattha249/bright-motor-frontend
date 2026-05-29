@@ -176,7 +176,10 @@
                                         </div>
                                     </td>
                                     <td class="text-right">฿{{ item.price.toLocaleString() }}</td>
-                                    <td class="text-right">฿{{ item.discount.toLocaleString() }}</td>
+                                     <td class="text-right">
+                                         <input type="number" v-model.number="item.discount" min="0" :max="item.price"
+                                             class="qty-input discount-input" @input="validateItemDiscount(item)" />
+                                     </td>
                                     <td class="text-right bold">
                                         ฿{{ (item.quantity * item.price - item.discount *
                                             item.quantity).toLocaleString() }}
@@ -565,6 +568,20 @@ const totalSalePrice = computed(() => {
 const totalSoldPrice = computed(() => items.value.reduce((sum, i) => sum + i.quantity * i.price, 0))
 
 // --- Functions ---
+
+const validateItemDiscount = (item) => {
+    if (item.discount === '' || item.discount === null || isNaN(item.discount)) {
+        item.discount = 0
+        return
+    }
+    if (item.discount < 0) {
+        item.discount = 0
+    }
+    if (item.discount > item.price) {
+        item.discount = item.price
+    }
+    selectedDiscount.value = 0 // ล้างไฮไลท์ปุ่มส่วนลดรวม
+}
 
 // [เพิ่ม] ฟังก์ชันคำนวณส่วนลดเป็น %
 const applyDiscountPercentage = (percent) => {
@@ -1218,6 +1235,10 @@ onMounted(() => {
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     font-weight: 700;
+}
+
+.discount-input {
+    width: 80px;
 }
 
 .remove-btn {
