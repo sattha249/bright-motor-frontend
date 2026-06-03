@@ -26,27 +26,8 @@
 </template>
 
 <script setup>
-import axios from '@/lib/axios'
-
-async function downloadApp() {
-    try {
-        const response = await axios.get('/settings/download-app', {
-            responseType: 'blob',
-        })
-
-        const blob = response.data
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.setAttribute('download', 'bright-motor.apk')
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-    } catch (error) {
-        console.error('Download failed:', error)
-        alert('เกิดข้อผิดพลาดในการดาวน์โหลดแอปพลิเคชัน')
-    }
+function downloadApp() {
+    window.location.href = '/api/settings/download-app'
 }
 </script>
 
