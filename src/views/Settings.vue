@@ -19,16 +19,35 @@
             <div class="setting-card">
                 <h3>แอปพลิเคชันสำหรับพนักงานขับรถ</h3>
                 <p>โหลดแอพพลิเคชั่น (Android)</p>
-                <a :href="androidAppUrl" target="_blank">
-                    <button class="settings-btn">ดาวน์โหลด</button>
-                </a>
+                <button class="settings-btn" @click="downloadApp">ดาวน์โหลด</button>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-const androidAppUrl = import.meta.env.VITE_ANDROID_APP_URL || '#';
+import axios from '@/lib/axios'
+
+async function downloadApp() {
+    try {
+        const response = await axios.get('/settings/download-app', {
+            responseType: 'blob',
+        })
+
+        const blob = response.data
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', 'bright-motor.apk')
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+    } catch (error) {
+        console.error('Download failed:', error)
+        alert('เกิดข้อผิดพลาดในการดาวน์โหลดแอปพลิเคชัน')
+    }
+}
 </script>
 
 <style scoped>
