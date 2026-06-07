@@ -347,7 +347,9 @@ const selectedDiscount = ref(0);
 const applyDiscountPercentage = (percent) => {
     selectedDiscount.value = percent;
     const discountFactor = percent / 100;
-    items.value.forEach(item => { item.discount = item.price * discountFactor; });
+    items.value.forEach(item => {
+        item.discount = Math.round((item.price * discountFactor) * 100) / 100;
+    });
     manualDiscountAmount.value = 0;
 };
 
@@ -362,7 +364,75 @@ const validateItemDiscount = (item) => {
     if (item.discount > item.price) {
         item.discount = item.price;
     }
+    item.discount = Math.round(item.discount * 100) / 100;
     selectedDiscount.value = 0; // ล้างไฮไลท์ปุ่มส่วนลดรวม
+};
+
+const distributeDiscount = (itemsList, discountTotal) => {
+    if (itemsList.length === 0) return;
+    const totalOriginal = itemsList.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    if (totalOriginal === 0) return;
+
+    let allocatedTotal = 0;
+    const itemsWithAllocation = itemsList.map(item => {
+        const itemLineTotal = item.quantity * item.price;
+        const ratio = itemLineTotal / totalOriginal;
+        const itemTotalDiscount = discountTotal * ratio;
+        const rawUnitDiscount = itemTotalDiscount / item.quantity;
+        const roundedUnitDiscount = Math.round(rawUnitDiscount * 100) / 100;
+        const finalUnitDiscount = Math.min(item.price, Math.max(0, roundedUnitDiscount));
+        allocatedTotal += finalUnitDiscount * item.quantity;
+        return {
+            item,
+            unitDiscount: finalUnitDiscount,
+            quantity: item.quantity,
+            price: item.price
+        };
+    });
+
+    let diff = discountTotal - allocatedTotal;
+    const sortedAllocations = [...itemsWithAllocation].sort((a, b) => a.quantity - b.quantity);
+    diff = Math.round(diff * 100) / 100;
+
+    if (diff > 0) {
+        for (const alloc of sortedAllocations) {
+            while (diff >= (alloc.quantity * 0.01) && alloc.unitDiscount + 0.01 <= alloc.price) {
+                alloc.unitDiscount = Math.round((alloc.unitDiscount + 0.01) * 100) / 100;
+                diff = Math.round((diff - (alloc.quantity * 0.01)) * 100) / 100;
+            }
+        }
+        if (diff > 0) {
+            for (const alloc of sortedAllocations) {
+                const step = alloc.quantity * 0.01;
+                if (Math.abs(diff - step) < Math.abs(diff) && alloc.unitDiscount + 0.01 <= alloc.price) {
+                    alloc.unitDiscount = Math.round((alloc.unitDiscount + 0.01) * 100) / 100;
+                    diff = Math.round((diff - step) * 100) / 100;
+                    break;
+                }
+            }
+        }
+    } else if (diff < 0) {
+        for (const alloc of sortedAllocations) {
+            while (diff <= -(alloc.quantity * 0.01) && alloc.unitDiscount - 0.01 >= 0) {
+                alloc.unitDiscount = Math.round((alloc.unitDiscount - 0.01) * 100) / 100;
+                diff = Math.round((diff + (alloc.quantity * 0.01)) * 100) / 100;
+            }
+        }
+        if (diff < 0) {
+            for (const alloc of sortedAllocations) {
+                const step = alloc.quantity * 0.01;
+                if (Math.abs(diff + step) < Math.abs(diff) && alloc.unitDiscount - 0.01 >= 0) {
+                    alloc.unitDiscount = Math.round((alloc.unitDiscount - 0.01) * 100) / 100;
+                    diff = Math.round((diff + step) * 100) / 100;
+                    break;
+                }
+            }
+        }
+    }
+
+    itemsWithAllocation.forEach(alloc => {
+        alloc.item.discount = alloc.unitDiscount;
+    });
 };
 
 const applyManualDiscount = () => {
@@ -372,13 +442,8 @@ const applyManualDiscount = () => {
         return;
     }
     if (items.value.length === 0) return;
-    const totalOriginal = totalOriginalPrice.value;
-    const discountTotal = manualDiscountAmount.value;
-    items.value.forEach(item => {
-        const itemOriginalPrice = item.quantity * item.price;
-        const ratio = itemOriginalPrice / totalOriginal;
-        item.discount = (discountTotal * ratio) / item.quantity; // [แก้ไข] หารด้วยจำนวนสินค้าเพื่อให้ได้ส่วนลดต่อหน่วยที่ถูกต้อง
-    });
+    distributeDiscount(items.value, manualDiscountAmount.value);
+    manualDiscountAmount.value = parseFloat(totalDiscountAmount.value.toFixed(2));
 };
 
 const openModal = () => {
