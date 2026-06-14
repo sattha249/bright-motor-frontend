@@ -158,7 +158,7 @@
                                     <th>สินค้า</th>
                                     <th width="120" class="text-center">จำนวน</th>
                                     <th class="text-right">ราคา</th>
-                                    <th width="150" class="text-right">ส่วนลด/หน่วย</th>
+                                    <th width="150" class="text-right">ส่วนลดรวม</th>
                                     <th class="text-right">รวม</th>
                                     <th class="text-center"></th>
                                 </tr>
@@ -177,7 +177,7 @@
                                     </td>
                                     <td class="text-right">฿{{ item.price.toLocaleString() }}</td>
                                      <td class="text-right">
-                                         <input type="number" v-model.number="item.discount" min="0" :max="item.price"
+                                         <input type="number" v-model.number="item.totalDiscount" min="0" :max="item.quantity * item.price"
                                              class="qty-input discount-input" @input="validateItemDiscount(item)" />
                                      </td>
                                     <td class="text-right bold">
@@ -570,17 +570,19 @@ const totalSoldPrice = computed(() => items.value.reduce((sum, i) => sum + i.qua
 // --- Functions ---
 
 const validateItemDiscount = (item) => {
-    if (item.discount === '' || item.discount === null || isNaN(item.discount)) {
-        item.discount = 0
+    if (item.totalDiscount === '' || item.totalDiscount === null || isNaN(item.totalDiscount)) {
+        item.totalDiscount = 0
         return
     }
-    if (item.discount < 0) {
-        item.discount = 0
+    if (item.totalDiscount < 0) {
+        item.totalDiscount = 0
     }
-    if (item.discount > item.price) {
-        item.discount = item.price
+    const maxDiscount = item.quantity * item.price
+    if (item.totalDiscount > maxDiscount) {
+        item.totalDiscount = maxDiscount
     }
-    item.discount = Math.round(item.discount * 100) / 100
+    item.totalDiscount = Math.round(item.totalDiscount * 100) / 100
+    item.discount = Math.round((item.totalDiscount / item.quantity) * 100) / 100
     selectedDiscount.value = 0 // ล้างไฮไลท์ปุ่มส่วนลดรวม
 }
 
@@ -592,6 +594,7 @@ const applyDiscountPercentage = (percent) => {
     // คำนวณส่วนลดต่อหน่วย = ราคาขาย * % (ปัดเศษ 2 ตำแหน่ง)
     items.value.forEach(item => {
         item.discount = Math.round((item.price * discountFactor) * 100) / 100
+        item.totalDiscount = Math.round((item.discount * item.quantity) * 100) / 100
     })
 
     // Reset ช่องกรอกมือ
@@ -662,6 +665,7 @@ const distributeDiscount = (itemsList, discountTotal) => {
 
     itemsWithAllocation.forEach(alloc => {
         alloc.item.discount = alloc.unitDiscount
+        alloc.item.totalDiscount = Math.round((alloc.unitDiscount * alloc.item.quantity) * 100) / 100
     })
 }
 
@@ -813,6 +817,7 @@ const addItem = (stock) => {
             return
         }
         existing.quantity += qty
+        existing.totalDiscount = Math.round((existing.discount * existing.quantity) * 100) / 100
     } else {
         items.value.push({
             productId: stock.product_id,
@@ -823,6 +828,7 @@ const addItem = (stock) => {
             maxAllowed: stock.quantity,
             price: parseFloat(stock.product.sell_price),
             discount: 0,
+            totalDiscount: 0,
             soldPrice: parseFloat(stock.product.sell_price),
             isPaid: true,
         })
@@ -849,6 +855,8 @@ const validateItemQuantity = (item) => {
         Swal.fire('แจ้งเตือน', `มีสินค้าในโกดังไม่พอ (สามารถระบุได้สูงสุด ${item.maxAllowed} ชิ้น)`, 'warning')
         item.quantity = item.maxAllowed
     }
+
+    item.totalDiscount = Math.round((item.discount * item.quantity) * 100) / 100
 
     // รีเซ็ตส่วนลดท้ายบิลเมื่อมีการเปลี่ยนจำนวน เพื่อให้ผู้ใช้คำนวณใหม่
     manualDiscountAmount.value = 0
@@ -883,17 +891,22 @@ const editPreOrder = async (po) => {
         isCredit.value = !!data.is_credit
         if (data.is_credit) creditType.value = data.is_credit
 
-        items.value = data.items.map((i) => ({
-            productId: i.product_id,
-            description: i.product?.description || 'สินค้า',
-            quantity: i.quantity,
-            originalQuantity: i.quantity,
-            maxAllowed: i.quantity,
-            price: Number(i.price),
-            soldPrice: Number(i.sold_price),
-            discount: Number(i.discount || 0),
-            is_paid: true,
-        }))
+        items.value = data.items.map((i) => {
+            const discount = Number(i.discount || 0);
+            const quantity = i.quantity;
+            return {
+                productId: i.product_id,
+                description: i.product?.description || 'สินค้า',
+                quantity: quantity,
+                originalQuantity: quantity,
+                maxAllowed: quantity,
+                price: Number(i.price),
+                soldPrice: Number(i.sold_price),
+                discount: discount,
+                totalDiscount: Math.round((discount * quantity) * 100) / 100,
+                is_paid: true,
+            };
+        })
         for (let item of items.value) {
             try {
                 const stockRes = await axios.get(`/warehouse-stocks/${item.productId}`)
