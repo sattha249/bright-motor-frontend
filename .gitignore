@@ -31,3 +31,7 @@ package-lock.json
 
 .env
 .env.*
+
+# Local Agent Context
+.agents/
+AGENTS.md
