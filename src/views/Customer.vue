@@ -88,12 +88,12 @@
             </div>
 
             <div class="pagination-controls">
-                <button :disabled="!pagination.previous_page_url" @click="fetchCustomers(pagination.current_page - 1)"
+                <button :disabled="!pagination.previous_page_url" @click="fetchCustomers(pagination.current_page - 1, searchQuery)"
                     class="pagination-btn">
                     Previous
                 </button>
                 <span>Page {{ pagination.current_page }} of {{ pagination.last_page }}</span>
-                <button :disabled="!pagination.next_page_url" @click="fetchCustomers(pagination.current_page + 1)"
+                <button :disabled="!pagination.next_page_url" @click="fetchCustomers(pagination.current_page + 1, searchQuery)"
                     class="pagination-btn">
                     Next
                 </button>
@@ -153,7 +153,7 @@ watch(searchQuery, (newQuery) => {
     debouncedFetchCustomers(newQuery);
 });
 
-async function fetchCustomers(page = 1, search = '') {
+async function fetchCustomers(page = 1, search = searchQuery.value) {
     try {
         const response = await axios.get('/customers', {
             params: {
