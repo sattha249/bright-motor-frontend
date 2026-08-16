@@ -67,9 +67,10 @@
                             <th>ชื่อสินค้า</th>
                             <th>จำนวน</th>
                             <th>ราคาต่อหน่วย</th>
-                            <th>ราคารวม</th>
-                            <th>ส่วนลด</th>
+                            <th>ส่วนลด/หน่วย</th>
                             <th>ราคาหลังหักส่วนลด</th>
+                            <th>ราคารวม</th>
+                            <th>ราคาสุทธิ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,9 +79,10 @@
                             <td>{{ item.product?.description || '-' }}</td>
                             <td>{{ item.quantity }}</td>
                             <td>{{ formatCurrency(item.price) }}</td>
-                            <td>{{ formatCurrency(item.total_price) }}</td>
                             <td style="color:#F00000;">{{ formatCurrency(item.discount) }}</td>
                             <td style="color:#00D000;">{{ formatCurrency(item.sold_price) }}</td>
+                            <td>{{ formatCurrency(item.total_price) }}</td>
+                            <td style="color:#00D000; font-weight: bold;">{{ formatCurrency(item.quantity * item.sold_price) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -235,8 +237,10 @@ function formatDate(dateStr) {
 .modal {
     background: white;
     padding: 20px;
-    width: 600px;
-    max-width: 90%;
+    width: 850px;
+    max-width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
     border-radius: 10px;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
 }
