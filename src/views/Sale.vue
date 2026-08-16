@@ -57,7 +57,7 @@
                             <th>ประเภท</th>
                             <th>จำนวน</th>
                             <th>ราคา/หน่วย</th>
-                            <th>ส่วนลดรวม</th>
+                            <th>ส่วนลด/หน่วย</th>
                             <th>รวมสุทธิ</th>
                             <th>ลบ</th>
                         </tr>
@@ -73,11 +73,11 @@
                             <td>{{ item.description }}</td>
                             <td>{{ item.category }}</td>
                             <td>
-                                <input type="number" v-model.number="item.quantity" min="1" class="qty-input" @change="handleQuantityChange(item)" />
+                                <input type="number" v-model.number="item.quantity" min="1" class="qty-input" />
                             </td>
                             <td>฿{{ parseFloat(item.price).toFixed(2) }}</td>
                             <td class="discount-cell">
-                                <input type="number" v-model.number="item.totalDiscount" min="0" :max="item.quantity * item.price"
+                                <input type="number" v-model.number="item.discount" min="0" :max="item.price"
                                     class="qty-input discount-input" @input="validateItemDiscount(item)" />
                             </td>
                             <td>฿{{ (item.quantity * (item.price - item.discount)).toFixed(2) }}</td>
@@ -349,31 +349,22 @@ const applyDiscountPercentage = (percent) => {
     const discountFactor = percent / 100;
     items.value.forEach(item => {
         item.discount = Math.round((item.price * discountFactor) * 100) / 100;
-        item.totalDiscount = Math.round((item.discount * item.quantity) * 100) / 100;
     });
     manualDiscountAmount.value = 0;
 };
 
-const handleQuantityChange = (item) => {
-    if (item.quantity < 1 || !item.quantity) {
-        item.quantity = 1;
-    }
-    item.totalDiscount = Math.round((item.discount * item.quantity) * 100) / 100;
-};
-
 const validateItemDiscount = (item) => {
-    if (item.totalDiscount === '' || item.totalDiscount === null || isNaN(item.totalDiscount)) {
-        item.totalDiscount = 0;
+    if (item.discount === '' || item.discount === null || isNaN(item.discount)) {
+        item.discount = 0;
+        return;
     }
-    if (item.totalDiscount < 0) {
-        item.totalDiscount = 0;
+    if (item.discount < 0) {
+        item.discount = 0;
     }
-    const maxDiscount = item.quantity * item.price;
-    if (item.totalDiscount > maxDiscount) {
-        item.totalDiscount = maxDiscount;
+    if (item.discount > item.price) {
+        item.discount = item.price;
     }
-    item.totalDiscount = Math.round(item.totalDiscount * 100) / 100;
-    item.discount = Math.round((item.totalDiscount / item.quantity) * 100) / 100;
+    item.discount = Math.round(item.discount * 100) / 100;
     selectedDiscount.value = 0; // ล้างไฮไลท์ปุ่มส่วนลดรวม
 };
 
@@ -441,7 +432,6 @@ const distributeDiscount = (itemsList, discountTotal) => {
 
     itemsWithAllocation.forEach(alloc => {
         alloc.item.discount = alloc.unitDiscount;
-        alloc.item.totalDiscount = Math.round((alloc.unitDiscount * alloc.item.quantity) * 100) / 100;
     });
 };
 
@@ -475,7 +465,6 @@ const addItemToSale = (stockItem) => {
 
     if (existingItem) {
         existingItem.quantity += quantity;
-        existingItem.totalDiscount = Math.round((existingItem.discount * existingItem.quantity) * 100) / 100;
     } else {
         items.value.push({
             productId: stockItem.product_id,
@@ -484,7 +473,6 @@ const addItemToSale = (stockItem) => {
             quantity: quantity,
             price: parseFloat(stockItem.product.sell_price),
             discount: 0,
-            totalDiscount: 0,
             is_paid: !isCredit.value
         });
     }
