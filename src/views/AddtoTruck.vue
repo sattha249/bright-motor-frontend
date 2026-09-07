@@ -5,7 +5,7 @@
         <div class="top-controls no-print">
             <div class="truck-select-container">
                 <label for="truck-select">เลือกทะเบียนรถ:</label>
-                <select id="truck-select" v-model="selectedTruckId" @change="fetchTruckStocks(1)">
+                <select id="truck-select" v-model="selectedTruckId" @change="onTruckChange">
                     <option value="" disabled>-- เลือกรถ --</option>
                     <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
                         {{ truck.plate_number }} - {{ truck?.user?.fullname || 'ยังไม่ได้มอบหมาย' }}
@@ -50,6 +50,8 @@
                         <th>หมวดหมู่</th>
                         <th>ยี่ห้อ</th>
                         <th>จำนวน</th>
+                        <th>จำนวน(preorder)</th>
+                        <th>จำนวนที่ขายได้</th>
                         <th>หน่วย</th>
                         <th>ดำเนินการ</th>
                     </tr>
@@ -64,6 +66,19 @@
                             {{ stock.quantity }}
                             <span v-if="stock.soldQuantity > 0" class="sold-quantity">
                                 (+{{ stock.soldQuantity }})
+                            </span>
+                        </td>
+                        <td>
+                            <span :class="{ 'preorder-quantity': stock.preOrderQuantity > 0 }">
+                                {{ stock.preOrderQuantity || 0 }}
+                            </span>
+                        </td>
+                        <td>
+                            <span :class="{
+                                'negative-quantity': stock.availableQuantity < 0,
+                                'positive-quantity': stock.availableQuantity > 0,
+                            }">
+                                {{ stock.availableQuantity }}
                             </span>
                         </td>
                         <td>{{ stock.product.unit || '-' }}</td>
@@ -408,6 +423,11 @@ const isRefillInitiated = ref(false)
 
 const selectedProduct = ref({})
 
+// Pre-order State
+const preOrders = ref([])
+const preOrderItems = ref([])
+const preOrderLoading = ref(false)
+
 // Truck Stock Pagination State
 const truckPage = ref(1)
 const truckTotalPages = ref(1)
@@ -450,43 +470,58 @@ watch(hasInsufficientStockComputed, (newVal) => {
     isRefillConfirmed.value = !newVal
 })
 
-const truckStocksWithSoldQuantities = computed(() => {
-    if (soldProducts.value.length === 0) {
-        return truckStocks.value.map((stock) => ({
-            ...stock,
-            soldQuantity: 0,
-            sku: `${stock.product.product_code}`,
-        }))
-    }
-
-    const soldProductsMap = new Map()
-    soldProducts.value.forEach((soldItem) => {
-        if (soldProductsMap.has(soldItem.productId)) {
-            soldProductsMap.set(
-                soldItem.productId,
-                soldProductsMap.get(soldItem.productId) + soldItem.quantity,
-            )
-        } else {
-            soldProductsMap.set(soldItem.productId, soldItem.quantity)
+const preOrderQuantitiesMap = computed(() => {
+    const map = new Map()
+    preOrderItems.value.forEach((item) => {
+        const pId = item.product_id || item.productId
+        const qty = Number(item.quantity) || 0
+        if (pId) {
+            map.set(Number(pId), (map.get(Number(pId)) || 0) + qty)
         }
     })
+    return map
+})
+
+const truckStocksWithSoldQuantities = computed(() => {
+    const poQtyMap = preOrderQuantitiesMap.value
+
+    const soldProductsMap = new Map()
+    if (soldProducts.value.length > 0) {
+        soldProducts.value.forEach((soldItem) => {
+            const pId = soldItem.productId || soldItem.product_id
+            if (pId) {
+                soldProductsMap.set(
+                    pId,
+                    (soldProductsMap.get(pId) || 0) + soldItem.quantity,
+                )
+            }
+        })
+    }
 
     return truckStocks.value.map((stock) => {
         const soldQty = soldProductsMap.get(stock.product_id) || 0
+        const preOrderQty = poQtyMap.get(Number(stock.product_id)) || 0
+        const availableQty = (Number(stock.quantity) || 0) - preOrderQty
         return {
             ...stock,
             soldQuantity: soldQty,
-            sku: `SKU-${stock.product_id}`,
+            preOrderQuantity: preOrderQty,
+            availableQuantity: availableQty,
+            sku: stock.product?.product_code || `SKU-${stock.product_id}`,
         }
     })
 })
 
-watch(selectedTruckId, () => {
+watch(selectedTruckId, (newVal) => {
     includePreorder.value = 'except-preorder'
     isRefillConfirmed.value = false
     isRefillInsufficient.value = false
     addedProducts.value = []
     isRefillInitiated.value = false
+    if (!newVal) {
+        preOrders.value = []
+        preOrderItems.value = []
+    }
 })
 
 const fetchTrucks = async () => {
@@ -497,6 +532,57 @@ const fetchTrucks = async () => {
         error.value = 'โหลดข้อมูลรถไม่สำเร็จ'
         console.error(err)
     }
+}
+
+// Fetch Pre-orders for selected truck
+const fetchPreOrders = async (status = 'Pending') => {
+    if (!selectedTruckId.value) {
+        preOrders.value = []
+        preOrderItems.value = []
+        return
+    }
+    preOrderLoading.value = true
+    try {
+        const params = {
+            truckId: selectedTruckId.value,
+            limit: 100,
+        }
+        if (status) {
+            params.status = status
+        }
+        const res = await axios.get('/pre-orders', { params })
+        preOrders.value = res.data.data || []
+        console.log('📦 Fetched pre-orders for truck:', selectedTruckId.value, preOrders.value)
+
+        // Loop เพื่อเอา item ของแต่ละรายการออกมา (ผ่าน /pre-orders/:id)
+        if (preOrders.value.length > 0) {
+            const detailResults = await Promise.allSettled(
+                preOrders.value.map((po) => axios.get(`/pre-orders/${po.id}`))
+            )
+            const allItems = []
+            detailResults.forEach((result) => {
+                if (result.status === 'fulfilled' && result.value?.data) {
+                    const poData = result.value.data
+                    if (Array.isArray(poData.items)) {
+                        allItems.push(...poData.items)
+                    }
+                }
+            })
+            preOrderItems.value = allItems
+            console.log('📦 Fetched pre-order items:', preOrderItems.value)
+        } else {
+            preOrderItems.value = []
+        }
+    } catch (err) {
+        console.error('โหลดข้อมูล Pre-order ไม่สำเร็จ:', err)
+    } finally {
+        preOrderLoading.value = false
+    }
+}
+
+const onTruckChange = () => {
+    fetchTruckStocks(1)
+    fetchPreOrders()
 }
 
 // Updated fetchTruckStocks with pagination
@@ -892,6 +978,21 @@ onMounted(() => {
     color: #28a745;
     font-weight: bold;
     margin-left: 5px;
+}
+
+.preorder-quantity {
+    color: #2563eb;
+    font-weight: bold;
+}
+
+.negative-quantity {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.positive-quantity {
+    color: #28a745;
+    font-weight: bold;
 }
 
 .insufficient-indicator {
