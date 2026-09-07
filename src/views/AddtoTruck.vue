@@ -545,7 +545,7 @@ const fetchPreOrders = async (status = 'Pending') => {
     try {
         const params = {
             truckId: selectedTruckId.value,
-            limit: 100,
+            limit: 1000,
         }
         if (status) {
             params.status = status
