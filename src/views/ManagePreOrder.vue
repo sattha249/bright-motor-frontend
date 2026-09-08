@@ -336,77 +336,79 @@
             </div>
         </div>
 
-        <!-- Printable receipt at root level -->
-        <div v-if="showDetailModal && selectedPreOrder" class="printable-area print-only receipt-layout">
-            <div class="receipt-header">
-                <h2>BRIGHT MOTOR STORE</h2>
-                <p>ใบส่งของ / ใบแจ้งหนี้</p>
-                <div class="dashed-line"></div>
-                <div class="receipt-info-row">
-                    <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}</span>
-                    <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
-                        hour: '2-digit', minute: '2-digit'
-                    }) }}</span>
-                </div>
-                <div class="receipt-info-row">
-                    <span>No: {{ selectedPreOrder?.bill_no }}</span>
-                </div>
-                <div class="receipt-info-row">
-                    <span>Customer: {{ selectedPreOrder?.customer?.name }}</span>
-                </div>
-                <div class="receipt-info-row" v-if="selectedPreOrder?.truck">
-                    <span>Truck: {{ selectedPreOrder?.truck?.plate_number }}</span>
-                </div>
-                <div class="dashed-line"></div>
-            </div>
-
-            <div class="receipt-items">
-                <div v-for="item in selectedPreOrder?.items" :key="item.id" class="receipt-item-group">
-                    <div class="receipt-item-row">
-                        <div class="item-name">{{ item.product?.description }}</div>
+        <!-- Printable receipt at root level (Teleported to body to eliminate blank pages 2-3) -->
+        <Teleport to="body">
+            <div v-if="showDetailModal && selectedPreOrder" class="printable-area print-only receipt-layout">
+                <div class="receipt-header">
+                    <h2>BRIGHT MOTOR STORE</h2>
+                    <p>ใบส่งของ / ใบแจ้งหนี้</p>
+                    <div class="dashed-line"></div>
+                    <div class="receipt-info-row">
+                        <span>Date: {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}</span>
+                        <span>Time: {{ new Date(selectedPreOrder?.created_at).toLocaleTimeString('th-TH', {
+                            hour: '2-digit', minute: '2-digit'
+                        }) }}</span>
                     </div>
+                    <div class="receipt-info-row">
+                        <span>No: {{ selectedPreOrder?.bill_no }}</span>
+                    </div>
+                    <div class="receipt-info-row">
+                        <span>Customer: {{ selectedPreOrder?.customer?.name }}</span>
+                    </div>
+                    <div class="receipt-info-row" v-if="selectedPreOrder?.truck">
+                        <span>Truck: {{ selectedPreOrder?.truck?.plate_number }}</span>
+                    </div>
+                    <div class="dashed-line"></div>
+                </div>
 
-                    <div class="receipt-item-row">
-                        <div class="item-calc"
-                            style="padding-left: 10px; width: 100%; display: flex; justify-content: space-between;">
-                            <span>{{ item.quantity }} x {{ Number(item.price).toLocaleString() }}</span>
-                            <span>{{ (item.quantity * item.price).toLocaleString() }}</span>
+                <div class="receipt-items">
+                    <div v-for="item in selectedPreOrder?.items" :key="item.id" class="receipt-item-group">
+                        <div class="receipt-item-row">
+                            <div class="item-name">{{ item.product?.description }}</div>
+                        </div>
+
+                        <div class="receipt-item-row">
+                            <div class="item-calc"
+                                style="padding-left: 10px; width: 100%; display: flex; justify-content: space-between;">
+                                <span>{{ item.quantity }} x {{ Number(item.price).toLocaleString() }}</span>
+                                <span>{{ (item.quantity * item.price).toLocaleString() }}</span>
+                            </div>
+                        </div>
+
+                        <div class="receipt-item-row" v-if="Number(item.discount) > 0">
+                            <div class="item-calc"
+                                style="padding-left: 10px; width: 100%; display: flex; justify-content: space-between; font-style: italic; font-size: 12px;">
+                                <span>(ส่วนลด{{ item.quantity > 1 ? ` @${Number(item.discount).toLocaleString()}` : '' }})</span>
+                                <span>-{{ (Number(item.discount) * item.quantity).toLocaleString() }}</span>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="receipt-item-row" v-if="Number(item.discount) > 0">
-                        <div class="item-calc"
-                            style="padding-left: 10px; width: 100%; display: flex; justify-content: space-between; font-style: italic; font-size: 12px;">
-                            <span>(ส่วนลด{{ item.quantity > 1 ? ` @${Number(item.discount).toLocaleString()}` : '' }})</span>
-                            <span>-{{ (Number(item.discount) * item.quantity).toLocaleString() }}</span>
-                        </div>
+                <div class="dashed-line"></div>
+
+                <div class="receipt-footer">
+                    <div class="receipt-total-row" v-if="Number(selectedPreOrder?.total_discount) > 0"
+                        style="font-size: 14px; font-weight: normal; margin-bottom: 4px;">
+                        <span>รวมเป็นเงิน:</span>
+                        <span>{{ Number(selectedPreOrder?.total_price).toLocaleString() }}</span>
+                    </div>
+
+                    <div class="receipt-total-row" v-if="Number(selectedPreOrder?.total_discount) > 0"
+                        style="font-size: 14px; font-weight: normal; margin-bottom: 4px;">
+                        <span>หักส่วนลด:</span>
+                        <span>-{{ Number(selectedPreOrder?.total_discount).toLocaleString() }}</span>
+                    </div>
+
+                    <div class="receipt-total-row"
+                        style="margin-top: 5px; border-top: 1px solid #000; padding-top: 5px;">
+                        <span style="font-weight: bold; font-size: 18px;">ยอดสุทธิ:</span>
+                        <span class="grand-total" style="font-weight: bold; font-size: 18px;">{{
+                            Number(selectedPreOrder?.total_sold_price).toLocaleString() }}</span>
                     </div>
                 </div>
             </div>
-
-            <div class="dashed-line"></div>
-
-            <div class="receipt-footer">
-                <div class="receipt-total-row" v-if="Number(selectedPreOrder?.total_discount) > 0"
-                    style="font-size: 14px; font-weight: normal; margin-bottom: 4px;">
-                    <span>รวมเป็นเงิน:</span>
-                    <span>{{ Number(selectedPreOrder?.total_price).toLocaleString() }}</span>
-                </div>
-
-                <div class="receipt-total-row" v-if="Number(selectedPreOrder?.total_discount) > 0"
-                    style="font-size: 14px; font-weight: normal; margin-bottom: 4px;">
-                    <span>หักส่วนลด:</span>
-                    <span>-{{ Number(selectedPreOrder?.total_discount).toLocaleString() }}</span>
-                </div>
-
-                <div class="receipt-total-row"
-                    style="margin-top: 5px; border-top: 1px solid #000; padding-top: 5px;">
-                    <span style="font-weight: bold; font-size: 18px;">ยอดสุทธิ:</span>
-                    <span class="grand-total" style="font-weight: bold; font-size: 18px;">{{
-                        Number(selectedPreOrder?.total_sold_price).toLocaleString() }}</span>
-                </div>
-            </div>
-        </div>
+        </Teleport>
 
         <div v-if="showModal" class="modal-overlay no-print" @click.self="closeStockModal">
             <div class="modal large-modal">

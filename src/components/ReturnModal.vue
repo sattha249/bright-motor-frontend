@@ -104,60 +104,62 @@
     </div>
 
     <!-- Printable area at the root level -->
-    <div v-if="show && showSuccess" class="printable-area print-only receipt-layout">
-        <div class="receipt-header">
-            <h2>BRIGHT MOTOR STORE</h2>
-            <p>ใบรับสินค้าคืน</p>
+    <Teleport to="body">
+        <div v-if="show && showSuccess" class="printable-area print-only receipt-layout">
+            <div class="receipt-header">
+                <h2>BRIGHT MOTOR STORE</h2>
+                <p>ใบรับสินค้าคืน</p>
+                <div class="dashed-line"></div>
+                <div class="receipt-info-row">
+                    <span>วันที่: {{ new Date().toLocaleDateString('th-TH') }}</span>
+                    <span>เวลา: {{ new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                        }}</span>
+                </div>
+                <div class="receipt-info-row">
+                    <span>รถขนส่ง: {{ lastSellLog?.truck?.plate_number || 'โกดังหลัก' }}</span>
+                </div>
+                <div class="receipt-info-row">
+                    <span>เหตุผล: {{ returnReason }}</span>
+                </div>
+                <div class="dashed-line"></div>
+            </div>
+
+            <div class="receipt-items">
+                <div v-for="item in lastReturnedItems" :key="item.id" class="receipt-item-row">
+                    <div class="item-name">
+                        <span>{{ item.product?.description }}</span>
+                    </div>
+                    <div class="item-calc">
+                        <span>{{ item.returning_qty }} {{ item.product?.unit || 'ชิ้น' }}</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="dashed-line"></div>
-            <div class="receipt-info-row">
-                <span>วันที่: {{ new Date().toLocaleDateString('th-TH') }}</span>
-                <span>เวลา: {{ new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                    }}</span>
-            </div>
-            <div class="receipt-info-row">
-                <span>รถขนส่ง: {{ lastSellLog?.truck?.plate_number || 'โกดังหลัก' }}</span>
-            </div>
-            <div class="receipt-info-row">
-                <span>เหตุผล: {{ returnReason }}</span>
-            </div>
-            <div class="dashed-line"></div>
-        </div>
 
-        <div class="receipt-items">
-            <div v-for="item in lastReturnedItems" :key="item.id" class="receipt-item-row">
-                <div class="item-name">
-                    <span>{{ item.product?.description }}</span>
+            <div class="receipt-footer">
+                <div class="receipt-total-row">
+                    <span>รวมจำนวนรายการ:</span>
+                    <span class="grand-total">{{ lastReturnedItems.length }}</span>
                 </div>
-                <div class="item-calc">
-                    <span>{{ item.returning_qty }} {{ item.product?.unit || 'ชิ้น' }}</span>
+                <div class="receipt-total-row" style="margin-top: 5px;">
+                    <span>ยอดคืนเงินรวม:</span>
+                    <span class="grand-total">฿{{ totalRefundAmount.toLocaleString() }}</span>
                 </div>
-            </div>
-        </div>
-
-        <div class="dashed-line"></div>
-
-        <div class="receipt-footer">
-            <div class="receipt-total-row">
-                <span>รวมจำนวนรายการ:</span>
-                <span class="grand-total">{{ lastReturnedItems.length }}</span>
-            </div>
-            <div class="receipt-total-row" style="margin-top: 5px;">
-                <span>ยอดคืนเงินรวม:</span>
-                <span class="grand-total">฿{{ totalRefundAmount.toLocaleString() }}</span>
-            </div>
-            <br><br>
-            <div style="display: flex; justify-content: space-between; margin-top: 30px;">
-                <div style="text-align: center;">
-                    <p>.......................................</p>
-                    <p>ผู้คืนสินค้า</p>
-                </div>
-                <div style="text-align: center;">
-                    <p>.......................................</p>
-                    <p>ผู้รับคืน</p>
+                <br><br>
+                <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                    <div style="text-align: center;">
+                        <p>.......................................</p>
+                        <p>ผู้คืนสินค้า</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <p>.......................................</p>
+                        <p>ผู้รับคืน</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </Teleport>
 </template>
 
 <script setup>

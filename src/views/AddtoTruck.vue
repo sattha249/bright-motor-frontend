@@ -337,54 +337,56 @@
             </div>
         </div>
 
-        <div class="printable-area print-only receipt-layout">
-            <div class="receipt-header">
-                <h2>BRIGHT MOTOR STORE</h2>
-                <p>ใบเบิกสินค้า / ขนของขึ้นรถ</p>
+        <Teleport to="body">
+            <div class="printable-area print-only receipt-layout">
+                <div class="receipt-header">
+                    <h2>BRIGHT MOTOR STORE</h2>
+                    <p>ใบเบิกสินค้า / ขนของขึ้นรถ</p>
+                    <div class="dashed-line"></div>
+                    <div class="receipt-info-row">
+                        <span>วันที่: {{ new Date().toLocaleDateString('th-TH') }}</span>
+                        <span>เวลา: {{ new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                            }}</span>
+                    </div>
+                    <div class="receipt-info-row">
+                        <span>รถขนส่ง: {{ selectedTruckPlate }}</span>
+                    </div>
+                    <div class="dashed-line"></div>
+                </div>
+
+                <div class="receipt-items">
+                    <div v-for="item in addedProducts" :key="item.productId" class="receipt-item-row">
+                        <div class="item-name">
+                            <span>{{ item.description }}</span>
+                            <span class="item-zone" v-if="item.zone">จุดเก็บ : {{ item.zone }}</span>
+                        </div>
+                        <div class="item-calc">
+                            <span>{{ item.quantity }} {{ item.unit }}</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="dashed-line"></div>
-                <div class="receipt-info-row">
-                    <span>วันที่: {{ new Date().toLocaleDateString('th-TH') }}</span>
-                    <span>เวลา: {{ new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                        }}</span>
-                </div>
-                <div class="receipt-info-row">
-                    <span>รถขนส่ง: {{ selectedTruckPlate }}</span>
-                </div>
-                <div class="dashed-line"></div>
-            </div>
 
-            <div class="receipt-items">
-                <div v-for="item in addedProducts" :key="item.productId" class="receipt-item-row">
-                    <div class="item-name">
-                        <span>{{ item.description }}</span>
-                        <span class="item-zone" v-if="item.zone">จุดเก็บ : {{ item.zone }}</span>
+                <div class="receipt-footer">
+                    <div class="receipt-total-row">
+                        <span>รวมจำนวนรายการ:</span>
+                        <span class="grand-total">{{ addedProducts.length }}</span>
                     </div>
-                    <div class="item-calc">
-                        <span>{{ item.quantity }} {{ item.unit }}</span>
+                    <br><br>
+                    <div class="signature-row">
+                        <div class="text-center">
+                            <p>.......................................</p>
+                            <p>ผู้เบิกสินค้า</p>
+                        </div>
+                        <div class="text-center">
+                            <p>.......................................</p>
+                            <p>ผู้ตรวจสอบ</p>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <div class="dashed-line"></div>
-
-            <div class="receipt-footer">
-                <div class="receipt-total-row">
-                    <span>รวมจำนวนรายการ:</span>
-                    <span class="grand-total">{{ addedProducts.length }}</span>
-                </div>
-                <br><br>
-                <div class="signature-row">
-                    <div class="text-center">
-                        <p>.......................................</p>
-                        <p>ผู้เบิกสินค้า</p>
-                    </div>
-                    <div class="text-center">
-                        <p>.......................................</p>
-                        <p>ผู้ตรวจสอบ</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </Teleport>
 
     </div>
 </template>
