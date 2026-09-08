@@ -1,78 +1,150 @@
 <template>
     <div class="manage-user-tab">
-        <div v-if="loading" class="loading-state">กำลังโหลดข้อมูลผู้ใช้งาน...</div>
-        <div v-else-if="error" class="error-state">{{ error }}</div>
+        <div v-if="loading && filteredUsers.length === 0" class="empty-table-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>กำลังโหลดข้อมูลผู้ใช้งาน...</p>
+        </div>
+        <div v-else-if="error" class="empty-table-state text-danger">
+            <i class="fas fa-exclamation-circle"></i>
+            <p>{{ error }}</p>
+        </div>
         <div v-else>
+            <!-- Search Bar -->
             <div class="search-and-filter">
-                <input type="text" v-model="searchQuery" placeholder="ค้นหาผู้ใช้งาน..." class="search-input" />
+                <div class="search-input-wrap">
+                    <i class="fas fa-search search-icon"></i>
+                    <input
+                        type="text"
+                        v-model="searchQuery"
+                        placeholder="ค้นหาชื่อผู้ใช้งาน, ชื่อ-นามสกุล..."
+                        class="form-control with-icon"
+                    />
+                </div>
             </div>
 
-            <table class="user-table">
-                <thead>
-                    <tr>
-                        <th>ชื่อผู้ใช้งาน</th>
-                        <th>ชื่อ-นามสกุล</th>
-                        <th>เบอร์โทรศัพท์</th>
-                        <th>สิทธิ์</th>
-                        <th>ดำเนินการ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="user in filteredUsers" :key="user.id">
-                        <td>{{ user.username }}</td>
-                        <td>{{ user.fullname }}</td>
-                        <td>{{ user.tel || '-' }}</td>
-                        <td><span :class="['role-badge', user.role]">{{ user.role }}</span></td>
-                        <td>
-                            <button class="action-btn edit-btn" @click="openEditModal(user)">
-                                <i class="fas fa-pen"></i>
-                            </button>
+            <!-- Table Card -->
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 160px;">ชื่อผู้ใช้งาน</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th style="width: 150px;">เบอร์โทรศัพท์</th>
+                            <th style="width: 130px;">สิทธิ์การใช้งาน</th>
+                            <th class="text-center" style="width: 110px;">ดำเนินการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="user in filteredUsers" :key="user.id">
+                            <td>
+                                <div class="user-cell">
+                                    <div class="user-avatar-initial">
+                                        {{ user.fullname?.charAt(0) || user.username?.charAt(0) }}
+                                    </div>
+                                    <span class="font-bold text-primary">{{ user.username }}</span>
+                                </div>
+                            </td>
+                            <td class="font-medium">{{ user.fullname }}</td>
+                            <td class="tabular-nums text-secondary">{{ user.tel || '-' }}</td>
+                            <td>
+                                <span :class="['role-pill', user.role]">
+                                    <i class="fas" :class="user.role === 'admin' ? 'fa-user-shield' : (user.role === 'warehouse' ? 'fa-warehouse' : 'fa-truck')"></i>
+                                    {{ user.role }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group-actions">
+                                    <button class="btn-icon-action edit" @click="openEditModal(user)" title="แก้ไขข้อมูล">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
 
-                            <button v-if="user.username !== userStore.userData.username" class="action-btn delete-btn"
-                                @click="confirmDelete(user)"> <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                                    <button
+                                        v-if="user.username !== userStore.userData.username"
+                                        class="btn-icon-action delete"
+                                        @click="confirmDelete(user)"
+                                        title="ลบผู้ใช้งาน"
+                                    >
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-            <div class="pagination" v-if="totalPages > 1">
-                <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">ก่อนหน้า</button>
-                <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
-                <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">ถัดไป</button>
+            <!-- Pagination -->
+            <div class="pagination-wrapper" v-if="totalPages > 1">
+                <button
+                    class="btn btn-secondary btn-sm"
+                    @click="changePage(currentPage - 1)"
+                    :disabled="currentPage === 1"
+                >
+                    <i class="fas fa-chevron-left"></i> ก่อนหน้า
+                </button>
+                <div class="page-indicator">
+                    หน้า <span class="font-bold tabular-nums">{{ currentPage }}</span> จาก <span class="tabular-nums">{{ totalPages }}</span>
+                </div>
+                <button
+                    class="btn btn-secondary btn-sm"
+                    @click="changePage(currentPage + 1)"
+                    :disabled="currentPage === totalPages"
+                >
+                    ถัดไป <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
         </div>
-    </div>
 
-    <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
-        <div class="modal edit-modal">
-            <h3>แก้ไขข้อมูลผู้ใช้งาน: {{ selectedUser.fullname }}</h3>
-            <form @submit.prevent="updateUser">
-                <div class="form-group">
-                    <label>ชื่อผู้ใช้งาน</label>
-                    <input type="text" v-model="selectedUser.username" required />
+        <!-- Edit Modal -->
+        <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
+            <div class="modal modal-md">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-user-edit"></i>
+                        </div>
+                        <div>
+                            <h3>แก้ไขข้อมูลผู้ใช้งาน</h3>
+                            <span class="modal-subtitle">{{ selectedUser.fullname }}</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeEditModal">&times;</button>
                 </div>
-                <div class="form-group">
-                    <label>ชื่อ-นามสกุล</label>
-                    <input type="text" v-model="selectedUser.fullname" required />
-                </div>
-                <div class="form-group">
-                    <label>เบอร์โทรศัพท์</label>
-                    <input type="tel" v-model="selectedUser.tel" />
-                </div>
-                <div class="form-group">
-                    <label>สิทธิ์</label>
-                    <select v-model="selectedUser.role" required>
-                        <option value="admin">Admin</option>
-                        <option value="warehouse">Warehouse</option>
-                        <option value="truck">Truck</option>
-                    </select>
-                </div>
-                <div class="modal-buttons">
-                    <button type="button" class="modal-cancel-btn" @click="closeEditModal">ยกเลิก</button>
-                    <button type="submit" class="modal-confirm-btn" :disabled="loading">บันทึก</button>
-                </div>
-            </form>
+                <form @submit.prevent="updateUser">
+                    <div class="modal-body">
+                        <div class="form-grid-modal">
+                            <div class="form-group">
+                                <label class="form-label">ชื่อผู้ใช้งาน</label>
+                                <input type="text" class="form-control" v-model="selectedUser.username" required />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">ชื่อ-นามสกุล</label>
+                                <input type="text" class="form-control" v-model="selectedUser.fullname" required />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">เบอร์โทรศัพท์</label>
+                                <input type="tel" class="form-control" v-model="selectedUser.tel" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">สิทธิ์การใช้งาน</label>
+                                <select class="form-control" v-model="selectedUser.role" required>
+                                    <option value="admin">Admin</option>
+                                    <option value="warehouse">Warehouse</option>
+                                    <option value="truck">Truck</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="closeEditModal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary" :disabled="loading">
+                            <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+                            <i v-else class="fas fa-save"></i>
+                            <span>บันทึกการเปลี่ยนแปลง</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </template>
@@ -226,186 +298,158 @@ onMounted(async () => {
 
 <style scoped>
 .manage-user-tab {
-    padding: 1rem;
+    padding: 0.5rem 0;
 }
 
 .search-and-filter {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
 }
 
-.search-input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 16px;
+.search-input-wrap {
+    position: relative;
+    max-width: 380px;
 }
 
-.user-table {
-    width: 100%;
-    border-collapse: collapse;
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    pointer-events: none;
 }
 
-.user-table th,
-.user-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border-color);
-    text-align: left;
+.form-control.with-icon {
+    padding-left: 36px;
 }
 
-.user-table th {
-    background-color: var(--secondary-color);
+/* User cell with avatar initial */
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-avatar-initial {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(99, 102, 241, 0.2));
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border: 1px solid rgba(37, 99, 235, 0.25);
+    text-transform: uppercase;
+}
+
+/* Role Pills */
+.role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
     font-weight: 600;
+    text-transform: capitalize;
 }
 
-.action-btn {
-    background-color: transparent;
-    border: none;
+.role-pill.admin {
+    background: rgba(124, 58, 237, 0.1);
+    color: #7c3aed;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.role-pill.warehouse {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.role-pill.truck {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* Action buttons */
+.btn-group-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-icon-action {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
     cursor: pointer;
-    font-size: 18px;
-    margin-right: 10px;
-    transition: color 0.3s;
+    font-size: 0.85rem;
+    transition: all var(--transition-fast);
 }
 
-.edit-btn {
-    color: #4299e1;
+.btn-icon-action.edit {
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, 0.2);
 }
 
-.edit-btn:hover {
-    color: #2b6cb0;
-}
-
-.delete-btn {
-    color: #e53e3e;
-}
-
-.delete-btn:hover {
-    color: #c53030;
-}
-
-.role-badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+.btn-icon-action.edit:hover {
+    background: var(--primary);
     color: white;
 }
 
-.role-badge.admin {
-    background-color: #e53e3e;
+.btn-icon-action.delete {
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.2);
 }
 
-.role-badge.warehouse {
-    background-color: #3182ce;
+.btn-icon-action.delete:hover {
+    background: var(--danger);
+    color: white;
 }
 
-.role-badge.truck {
-    background-color: #f6ad55;
+/* Form modal grid */
+.form-grid-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
-.delete-confirm-btn {
-    background-color: #e53e3e !important;
-}
-
-.delete-confirm-btn:hover {
-    background-color: #c53030 !important;
-}
-
-/* Pagination Styles */
-.pagination {
+/* Pagination */
+.pagination-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 15px;
-    margin-top: 2rem;
-}
-
-.pagination button {
-    background-color: var(--secondary-color);
-    color: #4a5568;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.pagination button:hover:not(:disabled) {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.pagination button:disabled {
-    background-color: #e2e8f0;
-    cursor: not-allowed;
-    color: #a0aec0;
-}
-
-.pagination span {
-    font-weight: 600;
-    color: #4a5568;
-}
-
-/* Edit Modal Specific Styles */
-.edit-modal {
-    background: white;
-    padding: 2rem;
-    border-radius: 12px;
-    text-align: left;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    width: 90%;
-    max-width: 500px;
-}
-
-.edit-modal h3 {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    color: var(--text-color-primary);
-}
-
-.edit-modal .form-group {
-    margin-bottom: 1rem;
-}
-
-.edit-modal .form-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    display: block;
-    color: var(--text-color-secondary);
-}
-
-.edit-modal .form-group input,
-.edit-modal .form-group select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 16px;
-    background-color: var(--bg-color);
-    color: var(--text-color-primary);
-    transition: border-color 0.3s;
-}
-
-.edit-modal .form-group input:focus,
-.edit-modal .form-group select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-.edit-modal .modal-buttons {
-    display: flex;
-    justify-content: flex-end;
     gap: 1rem;
-    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
 }
 
-.modal {
-    max-width: 400px;
+.page-indicator {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.empty-table-state {
+    padding: 3rem 1rem;
     text-align: center;
+    color: var(--text-muted);
 }
 
-.modal p {
-    margin-bottom: 1.5rem;
-    color: #555;
+.empty-table-state i {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
 }
 </style>

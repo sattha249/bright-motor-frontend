@@ -1,94 +1,183 @@
 <template>
     <div class="manage-truck-tab">
-        <div v-if="loading" class="loading-state">กำลังโหลดข้อมูลรถ...</div>
-        <div v-else-if="error" class="error-state">{{ error }}</div>
+        <div v-if="loading && trucks.length === 0" class="empty-table-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>กำลังโหลดข้อมูลรถ...</p>
+        </div>
+        <div v-else-if="error" class="empty-table-state text-danger">
+            <i class="fas fa-exclamation-circle"></i>
+            <p>{{ error }}</p>
+        </div>
         <div v-else>
+            <!-- Search Bar -->
             <div class="search-and-filter">
-                <input type="text" v-model="searchQuery" placeholder="ค้นหาทะเบียนรถ..." class="search-input" />
+                <div class="search-input-wrap">
+                    <i class="fas fa-search search-icon"></i>
+                    <input
+                        type="text"
+                        v-model="searchQuery"
+                        placeholder="ค้นหาทะเบียนรถ, รุ่นรถ..."
+                        class="form-control with-icon"
+                    />
+                </div>
             </div>
 
-            <table class="truck-table">
-                <thead>
-                    <tr>
-                        <th>ทะเบียนรถ</th>
-                        <th>จังหวัด</th>
-                        <th>รุ่นรถ</th>
-                        <th>ความจุ (กก.)</th>
-                        <th>คนขับ</th>
-                        <th>ดำเนินการ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="truck in trucks" :key="truck.id">
-                        <td>{{ truck.plate_number }}</td>
-                        <td>{{ truck.plate_province || '-' }}</td>
-                        <td>{{ truck.model || '-' }}</td>
-                        <td>{{ truck.load_capacity || '-' }}</td>
-                        <td>{{ truck.user ? truck.user.fullname : 'ยังไม่ได้มอบหมาย' }}</td>
-                        <td>
-                            <button class="action-btn edit-btn" @click="openEditModal(truck)">
-                                <i class="fas fa-pen"></i>
-                            </button>
-                            <button class="action-btn delete-btn" @click="openDeleteModal(truck)">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <!-- Truck Table Card -->
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 170px;">ทะเบียนรถ</th>
+                            <th>จังหวัดป้ายทะเบียน</th>
+                            <th>รุ่นรถ</th>
+                            <th class="text-right" style="width: 140px;">ความจุ (กก.)</th>
+                            <th>ผู้รับผิดชอบ (คนขับ)</th>
+                            <th class="text-center" style="width: 110px;">ดำเนินการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="truck in trucks" :key="truck.id">
+                            <td>
+                                <div class="truck-plate-cell">
+                                    <div class="truck-icon-badge">
+                                        <i class="fas fa-truck"></i>
+                                    </div>
+                                    <span class="font-bold text-primary tabular-nums">{{ truck.plate_number }}</span>
+                                </div>
+                            </td>
+                            <td>{{ truck.plate_province || '-' }}</td>
+                            <td class="font-medium">{{ truck.model || '-' }}</td>
+                            <td class="text-right tabular-nums font-semibold">{{ truck.load_capacity ? truck.load_capacity.toLocaleString() : '-' }}</td>
+                            <td>
+                                <span v-if="truck.user" class="driver-badge assigned">
+                                    <i class="fas fa-user-check"></i>
+                                    {{ truck.user.fullname }}
+                                </span>
+                                <span v-else class="driver-badge unassigned">
+                                    <i class="fas fa-user-clock"></i>
+                                    ยังไม่มอบหมาย
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group-actions">
+                                    <button class="btn-icon-action edit" @click="openEditModal(truck)" title="แก้ไขข้อมูลรถ">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <button class="btn-icon-action delete" @click="openDeleteModal(truck)" title="ลบข้อมูลรถ">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-            <div class="pagination" v-if="totalPages > 1">
-                <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">ก่อนหน้า</button>
-                <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
-                <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">ถัดไป</button>
+            <!-- Pagination -->
+            <div class="pagination-wrapper" v-if="totalPages > 1">
+                <button
+                    class="btn btn-secondary btn-sm"
+                    @click="changePage(currentPage - 1)"
+                    :disabled="currentPage === 1"
+                >
+                    <i class="fas fa-chevron-left"></i> ก่อนหน้า
+                </button>
+                <div class="page-indicator">
+                    หน้า <span class="font-bold tabular-nums">{{ currentPage }}</span> จาก <span class="tabular-nums">{{ totalPages }}</span>
+                </div>
+                <button
+                    class="btn btn-secondary btn-sm"
+                    @click="changePage(currentPage + 1)"
+                    :disabled="currentPage === totalPages"
+                >
+                    ถัดไป <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
         </div>
-    </div>
 
-    <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
-        <div class="modal edit-modal">
-            <h3>แก้ไขข้อมูลรถ: {{ selectedTruck.plate_number }}</h3>
-            <form @submit.prevent="updateTruck">
-                <div class="form-group">
-                    <label>ทะเบียนรถ</label>
-                    <input type="text" v-model="selectedTruck.plate_number" required />
+        <!-- Edit Modal -->
+        <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
+            <div class="modal modal-md">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-edit"></i>
+                        </div>
+                        <div>
+                            <h3>แก้ไขข้อมูลรถ</h3>
+                            <span class="modal-subtitle">ทะเบียน: {{ selectedTruck.plate_number }}</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeEditModal">&times;</button>
                 </div>
-                <div class="form-group">
-                    <label>จังหวัดป้ายทะเบียน</label>
-                    <input type="text" v-model="selectedTruck.plate_province" />
-                </div>
-                <div class="form-group">
-                    <label>รุ่นรถ</label>
-                    <input type="text" v-model="selectedTruck.model" />
-                </div>
-                <div class="form-group">
-                    <label>ความจุ (กก.)</label>
-                    <input type="number" v-model.number="selectedTruck.load_capacity" />
-                </div>
-                <div class="form-group">
-                    <label>คนขับ</label>
-                    <select v-model="selectedTruck.user_id">
-                        <option :value="null">-- ยังไม่ได้มอบหมาย --</option>
-                        <option v-for="driver in drivers" :key="driver.id" :value="driver.id">
-                            {{ driver.fullname }} ({{ driver.username }})
-                        </option>
-                    </select>
-                </div>
-                <div class="modal-buttons">
-                    <button type="button" class="modal-cancel-btn" @click="closeEditModal">ยกเลิก</button>
-                    <button type="submit" class="modal-confirm-btn" :disabled="loading">บันทึก</button>
-                </div>
-            </form>
+                <form @submit.prevent="updateTruck">
+                    <div class="modal-body">
+                        <div class="form-grid-modal">
+                            <div class="form-group">
+                                <label class="form-label">ทะเบียนรถ <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" v-model="selectedTruck.plate_number" required />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">จังหวัดป้ายทะเบียน</label>
+                                <input type="text" class="form-control" v-model="selectedTruck.plate_province" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">รุ่นรถ</label>
+                                <input type="text" class="form-control" v-model="selectedTruck.model" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">ความจุบรรทุก (กก.)</label>
+                                <input type="number" class="form-control" v-model.number="selectedTruck.load_capacity" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">ผู้รับผิดชอบ (คนขับ)</label>
+                                <select class="form-control" v-model="selectedTruck.user_id">
+                                    <option :value="null">-- ยังไม่ได้มอบหมาย --</option>
+                                    <option v-for="driver in drivers" :key="driver.id" :value="driver.id">
+                                        {{ driver.fullname }} ({{ driver.username }})
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="closeEditModal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary" :disabled="loading">
+                            <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+                            <i v-else class="fas fa-save"></i>
+                            <span>บันทึกการเปลี่ยนแปลง</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
-        <div class="modal">
-            <h3>ยืนยันการลบรถ</h3>
-            <p>คุณแน่ใจหรือไม่ที่จะลบรถทะเบียน **{{ selectedTruck.plate_number }}**?</p>
-            <div class="modal-buttons">
-                <button class="modal-cancel-btn" @click="closeDeleteModal">ยกเลิก</button>
-                <button class="modal-confirm-btn delete-confirm-btn" @click="deleteTruck">ยืนยัน</button>
+        <!-- Delete Modal -->
+        <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <h3>ยืนยันการลบรถ</h3>
+                            <span class="modal-subtitle">การกระทำนี้ไม่สามารถย้อนกลับได้</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeDeleteModal">&times;</button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="confirm-prompt-text">
+                        คุณแน่ใจหรือไม่ที่จะลบรถทะเบียน <strong class="text-danger">{{ selectedTruck.plate_number }}</strong> ออกจากระบบ?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeDeleteModal">ยกเลิก</button>
+                    <button class="btn btn-danger" @click="deleteTruck" :disabled="loading">
+                        <i class="fas fa-trash-alt"></i> ลบข้อมูลรถ
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -245,154 +334,156 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ใช้ Style เดิมได้เลย หรือจะปรับแต่งเพิ่มตามต้องการ */
 .manage-truck-tab {
-    padding: 1rem;
+    padding: 0.5rem 0;
 }
 
 .search-and-filter {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
 }
 
-.search-input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 16px;
+.search-input-wrap {
+    position: relative;
+    max-width: 380px;
 }
 
-.truck-table {
-    width: 100%;
-    border-collapse: collapse;
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    pointer-events: none;
 }
 
-.truck-table th,
-.truck-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border-color);
-    text-align: left;
+.form-control.with-icon {
+    padding-left: 36px;
 }
 
-.truck-table th {
-    background-color: var(--secondary-color);
-    font-weight: 600;
-}
-
-.action-btn {
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 18px;
-    margin-right: 10px;
-    transition: color 0.3s;
-}
-
-.edit-btn {
-    color: #4299e1;
-}
-
-.edit-btn:hover {
-    color: #2b6cb0;
-}
-
-.delete-btn {
-    color: #e53e3e;
-}
-
-.delete-btn:hover {
-    color: #c53030;
-}
-
-/* Pagination Styles */
-.pagination {
+/* Truck plate cell */
+.truck-plate-cell {
     display: flex;
-    justify-content: center;
     align-items: center;
-    gap: 15px;
-    margin-top: 2rem;
+    gap: 0.75rem;
 }
 
-.pagination button {
-    background-color: var(--secondary-color);
-    color: #4a5568;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 600;
+.truck-icon-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(99, 102, 241, 0.18));
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+/* Driver badges */
+.driver-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.driver-badge.assigned {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.driver-badge.unassigned {
+    background: var(--bg-main);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+/* Action buttons */
+.btn-group-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-icon-action {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
     cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
+    font-size: 0.85rem;
+    transition: all var(--transition-fast);
 }
 
-.pagination button:hover:not(:disabled) {
-    background-color: var(--primary-color);
+.btn-icon-action.edit {
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, 0.2);
+}
+
+.btn-icon-action.edit:hover {
+    background: var(--primary);
     color: white;
 }
 
-.pagination button:disabled {
-    background-color: #e2e8f0;
-    cursor: not-allowed;
-    color: #a0aec0;
+.btn-icon-action.delete {
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.2);
 }
 
-.pagination span {
-    font-weight: 600;
-    color: #4a5568;
+.btn-icon-action.delete:hover {
+    background: var(--danger);
+    color: white;
 }
 
-.modal {
-    max-width: 400px;
+/* Form modal grid */
+.form-grid-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Pagination */
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+}
+
+.page-indicator {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.confirm-prompt-text {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    padding: 1rem 0;
+}
+
+.empty-table-state {
+    padding: 3rem 1rem;
     text-align: center;
+    color: var(--text-muted);
 }
 
-.edit-modal {
-    max-width: 500px;
-    text-align: left;
-}
-
-.modal p {
-    margin-bottom: 1.5rem;
-    color: #555;
-}
-
-.edit-modal .modal-buttons {
-    justify-content: flex-end;
-}
-
-.delete-confirm-btn {
-    background-color: #e53e3e !important;
-}
-
-.delete-confirm-btn:hover {
-    background-color: #c53030 !important;
-}
-
-.form-group {
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--text-color-secondary);
-}
-
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 16px;
-    background-color: var(--bg-color);
-    color: var(--text-color-primary);
-    transition: border-color 0.3s;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: var(--primary-color);
+.empty-table-state i {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
 }
 </style>

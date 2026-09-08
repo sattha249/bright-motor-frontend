@@ -1,41 +1,109 @@
 <template>
     <div class="add-truck-tab">
-        <form @submit.prevent="openConfirmModal">
-            <div class="form-group">
-                <label for="plateNumber">ทะเบียนรถ *</label>
-                <input type="text" id="plateNumber" v-model="formData.plateNumber" required
-                    placeholder="เช่น 1กข 1234" />
+        <div class="form-header-box">
+            <div class="form-icon-circle">
+                <i class="fas fa-truck"></i>
             </div>
-            <div class="form-group">
-                <label for="plateProvince">จังหวัดป้ายทะเบียน *</label>
-                <input type="text" id="plateProvince" v-model="formData.plateProvince" required
-                    placeholder="เช่น กรุงเทพมหานคร" />
+            <div>
+                <h3 class="form-title">เพิ่มข้อมูลรถขนส่งใหม่</h3>
+                <p class="form-desc">กรอกรายละเอียดรถขนส่ง ทะเบียน และความจุในการบรรทุก</p>
             </div>
-            <div class="form-group">
-                <label for="model">รุ่นรถ *</label>
-                <input type="text" id="model" v-model="formData.model" required placeholder="เช่น Isuzu D-Max" />
+        </div>
+
+        <form @submit.prevent="openConfirmModal" class="truck-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="plateNumber" class="form-label">
+                        <i class="fas fa-id-card"></i> ทะเบียนรถ <span class="required">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="plateNumber"
+                        class="form-control"
+                        v-model="formData.plateNumber"
+                        required
+                        placeholder="เช่น 1กข 1234"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="plateProvince" class="form-label">
+                        <i class="fas fa-map-marker-alt"></i> จังหวัดป้ายทะเบียน <span class="required">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="plateProvince"
+                        class="form-control"
+                        v-model="formData.plateProvince"
+                        required
+                        placeholder="เช่น กรุงเทพมหานคร"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="model" class="form-label">
+                        <i class="fas fa-truck-pickup"></i> รุ่นรถ <span class="required">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="model"
+                        class="form-control"
+                        v-model="formData.model"
+                        required
+                        placeholder="เช่น Isuzu D-Max"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="loadCapacity" class="form-label">
+                        <i class="fas fa-weight-hanging"></i> ความจุบรรทุก (กก.) <span class="required">*</span>
+                    </label>
+                    <input
+                        type="number"
+                        id="loadCapacity"
+                        class="form-control"
+                        v-model.number="formData.loadCapacity"
+                        required
+                        placeholder="เช่น 2000"
+                    />
+                </div>
             </div>
-            <div class="form-group">
-                <label for="loadCapacity">ความจุ (กก.) *</label>
-                <input type="number" id="loadCapacity" v-model.number="formData.loadCapacity" required
-                    placeholder="เช่น 2000" />
-            </div>
-            <div class="button-group">
-                <button type="submit" class="save-btn" :disabled="loading">
-                    <span v-if="loading">กำลังเพิ่ม...</span>
-                    <span v-else>เพิ่มรถใหม่</span>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" :disabled="loading">
+                    <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+                    <i v-else class="fas fa-plus-circle"></i>
+                    <span>{{ loading ? 'กำลังเพิ่ม...' : 'เพิ่มรถใหม่' }}</span>
                 </button>
             </div>
         </form>
-    </div>
 
-    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-        <div class="modal">
-            <h3>ยืนยันการเพิ่มรถ</h3>
-            <p>คุณต้องการเพิ่มรถทะเบียน **{{ formData.plateNumber }}** ใช่หรือไม่?</p>
-            <div class="modal-buttons">
-                <button class="modal-cancel-btn" @click="closeModal">ยกเลิก</button>
-                <button class="modal-confirm-btn" @click="addTruck">ยืนยัน</button>
+        <!-- Confirmation Modal -->
+        <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <div>
+                            <h3>ยืนยันการเพิ่มรถ</h3>
+                            <span class="modal-subtitle">ตรวจสอบข้อมูลก่อนบันทึก</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeModal">&times;</button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="confirm-prompt-text">
+                        คุณต้องการเพิ่มรถทะเบียน <strong class="text-primary">{{ formData.plateNumber }}</strong> เข้าสู่ระบบใช่หรือไม่?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeModal">ยกเลิก</button>
+                    <button class="btn btn-primary" @click="addTruck">
+                        <i class="fas fa-check"></i> ยืนยัน
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -92,52 +160,66 @@ const addTruck = async () => {
 </script>
 
 <style scoped>
-/* Form styles similar to other components */
 .add-truck-tab {
-    padding: 1rem;
+    padding: 0.5rem 0;
 }
 
-.form-group {
-    margin-bottom: 1.2rem;
+.form-header-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
 }
 
-.form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--text-color-secondary);
+.form-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(99, 102, 241, 0.15));
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
-.form-group input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 16px;
-    background-color: var(--bg-color);
-    color: var(--text-color-primary);
-    transition: border-color 0.3s;
+.form-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
 }
 
-.form-group input:focus {
-    outline: none;
-    border-color: var(--primary-color);
+.form-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0.2rem 0 0 0;
 }
 
-.button-group {
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
+
+.required {
+    color: var(--danger);
+}
+
+.form-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
     margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
 }
 
-.modal {
-    max-width: 400px;
-    text-align: center;
-}
-
-.modal p {
-    margin-bottom: 1.5rem;
-    color: #555;
+.confirm-prompt-text {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    padding: 1rem 0;
 }
 </style>

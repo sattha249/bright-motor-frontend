@@ -1,53 +1,135 @@
 <template>
-    <div class="manage-user-tab">
-        <h2><i class="fas fa-user-plus"></i> เพิ่มผู้ใช้งานใหม่</h2>
-        <br></br>
-        <form @submit.prevent="openConfirmModal">
-            <div class="form-group">
-                <label for="username">ชื่อผู้ใช้งาน (Username) *</label>
-                <input type="text" id="username" v-model="formData.username" required />
+    <div class="add-user-container">
+        <div class="form-header-box">
+            <div class="form-icon-circle">
+                <i class="fas fa-user-plus"></i>
             </div>
-            <div class="form-group">
-                <label for="email">อีเมล (Email)</label>
-                <input type="email" id="email" v-model="formData.email" />
+            <div>
+                <h3 class="form-title">สร้างบัญชีผู้ใช้งานใหม่</h3>
+                <p class="form-desc">กรอกข้อมูลผู้ใช้งานและกำหนดระดับสิทธิ์การเข้าถึงระบบ</p>
             </div>
-            <div class="form-group">
-                <label for="password">รหัสผ่าน (Password) *</label>
-                <input type="password" id="password" v-model="formData.password" required />
+        </div>
+
+        <form @submit.prevent="openConfirmModal" class="user-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="username" class="form-label">
+                        <i class="fas fa-user"></i> ชื่อผู้ใช้งาน (Username) <span class="required">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="username"
+                        class="form-control"
+                        placeholder="เช่น somchai_k"
+                        v-model="formData.username"
+                        required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="fullname" class="form-label">
+                        <i class="fas fa-id-card"></i> ชื่อ-นามสกุล (Full Name) <span class="required">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="fullname"
+                        class="form-control"
+                        placeholder="เช่น สมชาย ใจดี"
+                        v-model="formData.fullname"
+                        required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="email" class="form-label">
+                        <i class="fas fa-envelope"></i> อีเมล (Email)
+                    </label>
+                    <input
+                        type="email"
+                        id="email"
+                        class="form-control"
+                        placeholder="เช่น somchai@example.com"
+                        v-model="formData.email"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="tel" class="form-label">
+                        <i class="fas fa-phone"></i> เบอร์โทรศัพท์ (Telephone) <span class="required">*</span>
+                    </label>
+                    <input
+                        type="tel"
+                        id="tel"
+                        class="form-control"
+                        placeholder="เช่น 0812345678"
+                        v-model="formData.tel"
+                        required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <i class="fas fa-lock"></i> รหัสผ่าน (Password) <span class="required">*</span>
+                    </label>
+                    <input
+                        type="password"
+                        id="password"
+                        class="form-control"
+                        placeholder="กำหนดรหัสผ่านเข้าสู่ระบบ"
+                        v-model="formData.password"
+                        required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="role" class="form-label">
+                        <i class="fas fa-shield-alt"></i> สิทธิ์การใช้งาน (Role) <span class="required">*</span>
+                    </label>
+                    <select id="role" class="form-control" v-model="formData.role" required>
+                        <option value="admin">Admin (ผู้ดูแลระบบ)</option>
+                        <option value="warehouse">Warehouse (เจ้าหน้าที่คลัง)</option>
+                        <option value="truck">Truck (พนักงานประจำรถขนส่ง)</option>
+                    </select>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="fullname">ชื่อ-นามสกุล (Full Name) *</label>
-                <input type="text" id="fullname" v-model="formData.fullname" required />
-            </div>
-            <div class="form-group">
-                <label for="tel">เบอร์โทรศัพท์ (Telephone)</label>
-                <input type="tel" id="tel" v-model="formData.tel" required />
-            </div>
-            <div class="form-group">
-                <label for="role">สิทธิ์การใช้งาน (Role) *</label>
-                <select id="role" v-model="formData.role" required>
-                    <option value="admin">Admin</option>
-                    <option value="warehouse">Warehouse</option>
-                    <option value="truck">Truck</option>
-                </select>
-            </div>
-            <div class="button-group">
-                <button type="submit" class="save-btn" :disabled="loading">
-                    <span v-if="loading">กำลังสร้าง...</span>
-                    <span v-else>สร้างผู้ใช้งาน</span>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" @click="resetForm">
+                    <i class="fas fa-undo"></i> รีเซ็ตฟอร์ม
                 </button>
-                <button type="button" class="cancel-btn" @click="resetForm">ยกเลิก</button>
+                <button type="submit" class="btn btn-primary" :disabled="loading">
+                    <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+                    <i v-else class="fas fa-check-circle"></i>
+                    <span>{{ loading ? 'กำลังสร้าง...' : 'สร้างผู้ใช้งาน' }}</span>
+                </button>
             </div>
         </form>
 
-
+        <!-- Confirmation Modal -->
         <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-            <div class="modal">
-                <h3>ยืนยันการสร้างผู้ใช้งาน</h3>
-                <p>คุณต้องการสร้างผู้ใช้งานชื่อ **{{ formData.fullname }}** ใช่หรือไม่?</p>
-                <div class="modal-buttons">
-                    <button class="modal-cancel-btn" @click="closeModal">ยกเลิก</button>
-                    <button class="modal-confirm-btn" @click="registerUser">ยืนยัน</button>
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div>
+                            <h3>ยืนยันการสร้างผู้ใช้งาน</h3>
+                            <span class="modal-subtitle">โปรดตรวจสอบความถูกต้อง</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeModal">&times;</button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="confirm-prompt-text">
+                        คุณต้องการสร้างผู้ใช้งานชื่อ <strong class="text-primary">{{ formData.fullname }}</strong> ในระบบใช่หรือไม่?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeModal">ยกเลิก</button>
+                    <button class="btn btn-primary" @click="registerUser">
+                        <i class="fas fa-check"></i> ยืนยัน
+                    </button>
                 </div>
             </div>
         </div>
@@ -122,70 +204,66 @@ const registerUser = async () => {
 
 <style scoped>
 .add-user-container {
-    max-width: 600px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: var(--card-bg);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
+    padding: 0.5rem 0;
 }
 
-.add-user-container h2 {
-    text-align: center;
+.form-header-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
     margin-bottom: 1.5rem;
-    color: var(--text-color-primary);
-    font-size: 28px;
+    border-bottom: 1px solid var(--border);
 }
 
-.form-card {
-    padding: 1.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
+.form-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(99, 102, 241, 0.15));
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
-.form-group {
-    margin-bottom: 1.2rem;
+.form-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
 }
 
-.form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--text-color-secondary);
+.form-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0.2rem 0 0 0;
 }
 
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 16px;
-    background-color: var(--bg-color);
-    color: var(--text-color-primary);
-    transition: border-color 0.3s;
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
 }
 
-.form-group input:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: var(--primary-color);
+.required {
+    color: var(--danger);
 }
 
-.button-group {
+.form-actions {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
 }
 
-.modal {
-    max-width: 400px;
-    text-align: center;
-}
-
-.modal p {
-    margin-bottom: 1.5rem;
-    color: #555;
+.confirm-prompt-text {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    padding: 1rem 0;
 }
 </style>
