@@ -1,184 +1,312 @@
 <template>
-    <div class="product-table-container">
-        <h2>รายการสินค้าในคลัง</h2>
-        <br>
+    <div class="warehouse-page">
+        <div class="table-card">
+            <!-- Header & Actions -->
+            <div class="page-header-row">
+                <div class="header-title-box">
+                    <div class="header-icon-badge">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <div>
+                        <h2 class="section-title">สินค้าในคลังหลัก</h2>
+                        <p class="section-subtitle">ตรวจสอบสต็อกสินค้าคงคลัง จุดจัดเก็บ และสถานะความพร้อมจำหน่าย</p>
+                    </div>
+                </div>
 
-        <div class="action-header">
-            <div class="search-wrapper">
-                <i class="fas fa-search search-icon-main"></i>
-                <input type="text" v-model="tableSearchTerm" @input="handleTableSearch"
-                    placeholder="ค้นหารหัส, ชื่อสินค้า..." class="main-search-input" />
+                <div class="action-header">
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon-main"></i>
+                        <input
+                            type="text"
+                            v-model="tableSearchTerm"
+                            @input="handleTableSearch"
+                            placeholder="ค้นหารหัส, ชื่อสินค้า, หมวดหมู่..."
+                            class="main-search-input"
+                        />
+                    </div>
+
+                    <div class="buttons-wrapper">
+                        <button class="btn btn-primary" @click="openModal">
+                            <i class="fas fa-plus"></i>
+                            <span>เพิ่มสินค้าเข้าคลัง</span>
+                        </button>
+                        <button class="btn btn-info" @click="openExcelModal">
+                            <i class="fas fa-file-excel"></i>
+                            <span>นำเข้าจาก Excel</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div class="buttons-wrapper">
-                <button class="add-product-btn" @click="openModal">
-                    <i class="fas fa-plus"></i> เพิ่มสินค้าเข้าคลัง
+            <!-- Table -->
+            <div class="table-responsive">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>รหัสสินค้า</th>
+                            <th>ชื่อสินค้า</th>
+                            <th>หมวดหมู่</th>
+                            <th>ยี่ห้อ</th>
+                            <th class="text-right">จำนวนคงคลัง</th>
+                            <th>หน่วย</th>
+                            <th class="text-right">ราคาจำหน่าย</th>
+                            <th>จุดจัดเก็บ</th>
+                            <th class="text-center">สถานะสต็อก</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, index) in warehouseStock" :key="item.id">
+                            <td class="text-muted text-sm">{{ (page - 1) * perPage + index + 1 }}</td>
+                            <td>
+                                <span class="sku-chip">{{ item.product?.product_code || '-' }}</span>
+                            </td>
+                            <td class="font-medium">{{ item.product?.description || 'ไม่ระบุ' }}</td>
+                            <td>
+                                <span class="category-chip">{{ item.product?.category || '-' }}</span>
+                            </td>
+                            <td class="text-muted">{{ item.product?.brand || '-' }}</td>
+                            <td class="text-right tabular-nums font-bold" :class="item.quantity === 0 ? 'text-danger' : ''">
+                                {{ item.quantity.toLocaleString() }}
+                            </td>
+                            <td class="text-muted text-sm">{{ item.product?.unit || '-' }}</td>
+                            <td class="text-right tabular-nums font-medium">฿{{ item.product?.sell_price?.toLocaleString() || '0' }}</td>
+                            <td>
+                                <span class="zone-badge" v-if="item.product?.zone">
+                                    <i class="fas fa-location-dot"></i>
+                                    {{ item.product?.zone }}
+                                </span>
+                                <span v-else class="text-muted text-sm">-</span>
+                            </td>
+                            <td class="text-center">
+                                <span v-if="item.quantity === 0" class="stock-pill pill-empty">
+                                    <i class="fas fa-circle-xmark"></i> หมด
+                                </span>
+                                <span v-else-if="(item.quantity / item.product.max_quantity * 100) < 20" class="stock-pill pill-low">
+                                    <i class="fas fa-triangle-exclamation"></i> ใกล้หมด
+                                </span>
+                                <span v-else-if="(item.quantity / item.product.max_quantity * 100) >= 20 && (item.quantity / item.product.max_quantity * 100) < 50" class="stock-pill pill-medium">
+                                    <i class="fas fa-circle-check"></i> ปานกลาง
+                                </span>
+                                <span v-else class="stock-pill pill-high">
+                                    <i class="fas fa-circle-check"></i> มาก
+                                </span>
+                            </td>
+                        </tr>
+                        <tr v-if="warehouseStock.length === 0">
+                            <td colspan="10" class="empty-state">
+                                <i class="fas fa-boxes-packing"></i>
+                                <p>{{ tableSearchTerm ? 'ไม่พบข้อมูลตรงกับคำค้นหา' : 'ไม่มีข้อมูลสินค้าในคลัง' }}</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" v-if="totalPages > 1">
+                <button @click="goToPage(page - 1)" :disabled="page === 1" class="page-btn">
+                    <i class="fas fa-chevron-left"></i>
+                    <span>ก่อนหน้า</span>
                 </button>
-                <button class="import-excel-btn" @click="openExcelModal">
-                    <i class="fas fa-file-excel"></i> นำเข้าจาก Excel
+                <span>หน้า {{ page }} / {{ totalPages }}</span>
+                <button @click="goToPage(page + 1)" :disabled="page === totalPages" class="page-btn">
+                    <span>ถัดไป</span>
+                    <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
         </div>
 
-        <table class="product-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>รหัสสินค้า</th>
-                    <th>ชื่อสินค้า</th>
-                    <th>หมวดหมู่</th>
-                    <th>ยี่ห้อ</th>
-                    <th>จำนวน</th>
-                    <th>หน่วย</th>
-                    <th>ราคา</th>
-                    <th>จุดเก็บ</th>
-                    <th>สถานะ</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(item, index) in warehouseStock" :key="item.id">
-                    <td>{{ (page - 1) * perPage + index + 1 }}</td>
-                    <td>{{ item.product?.product_code || '-' }}</td>
-                    <td>{{ item.product?.description || 'ไม่ระบุ' }}</td>
-                    <td>{{ item.product?.category || '-' }}</td>
-                    <td>{{ item.product?.brand || '-' }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ item.product?.unit || '-' }}</td>
-                    <td>฿{{ item.product?.sell_price?.toLocaleString() || '0' }}</td>
-                    <td>{{ item.product?.zone || 'ไม่ระบุ' }}</td>
-                    <td>
-                        <span v-if="item.quantity === 0" class="stock-badge badge-empty">หมด</span>
-                        <span v-else-if="(item.quantity / item.product.max_quantity * 100) < 20"
-                            class="stock-badge badge-low">
-                            ใกล้หมด
-                        </span>
-                        <span
-                            v-else-if="(item.quantity / item.product.max_quantity * 100) >= 20 && (item.quantity / item.product.max_quantity * 100) < 50"
-                            class="stock-badge badge-medium">
-                            ปานกลาง
-                        </span>
-                        <span v-else class="stock-badge badge-high">
-                            มาก
-                        </span>
-                    </td>
-                </tr>
-                <tr v-if="warehouseStock.length === 0">
-                    <td colspan="9" style="text-align:center">
-                        {{ tableSearchTerm ? 'ไม่พบข้อมูลที่ค้นหา' : 'ไม่มีข้อมูลในคลัง' }}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div class="pagination">
-            <button @click="goToPage(page - 1)" :disabled="page === 1">ก่อนหน้า</button>
-            <span>หน้า {{ page }} / {{ totalPages }}</span>
-            <button @click="goToPage(page + 1)" :disabled="page === totalPages">ถัดไป</button>
-        </div>
-
+        <!-- Manual Import Modal -->
         <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-            <div class="modal-content">
-                <h3>เพิ่มสินค้าเข้าคลัง</h3>
+            <div class="modal modal-md">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <div>
+                            <h3>เพิ่มสินค้าเข้าคลัง</h3>
+                            <span class="modal-subtitle">บันทึกสต็อกสินค้าใหม่เข้าโกดังหลัก</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeModal">&times;</button>
+                </div>
 
-                <div class="form-group">
-                    <label>ค้นหาสินค้า</label>
-                    <input type="text" v-model="searchTerm" placeholder="พิมพ์เพื่อค้นหา..." @input="handleSearchInput"
-                        autocomplete="off" />
-                    <div class="dropdown" v-if="searchResults.length">
-                        <div class="dropdown-item" v-for="product in searchResults" :key="product.id"
-                            @click="selectProduct(product)">
-                            {{ product.description }} - {{ product.category }} ({{ product.brand || '-' }})
+                <div class="modal-body">
+                    <div class="form-group search-dropdown-group">
+                        <label>
+                            <i class="fas fa-magnifying-glass"></i>
+                            <span>ค้นหาสินค้าในระบบ</span>
+                        </label>
+                        <div class="input-icon-wrap">
+                            <input
+                                type="text"
+                                v-model="searchTerm"
+                                placeholder="พิมพ์รหัสสินค้า หรือชื่อสินค้า..."
+                                @input="handleSearchInput"
+                                autocomplete="off"
+                                class="form-control"
+                            />
+                        </div>
+                        <div class="dropdown-list" v-if="searchResults.length">
+                            <div
+                                class="dropdown-item"
+                                v-for="product in searchResults"
+                                :key="product.id"
+                                @click="selectProduct(product)"
+                            >
+                                <div class="item-main">{{ product.description }}</div>
+                                <div class="item-sub">
+                                    <span class="sku-tag">{{ product.product_code }}</span>
+                                    <span>หมวดหมู่: {{ product.category }}</span>
+                                    <span v-if="product.brand">| ยี่ห้อ: {{ product.brand }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group quantity-box-row">
+                        <label>จำนวนที่ต้องการเพิ่ม</label>
+                        <div class="quantity-stepper-wrap">
+                            <div class="stepper-controls">
+                                <button type="button" class="step-btn" @click="quantity = Math.max(1, quantity - 1)">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <input type="number" v-model.number="quantity" min="1" class="step-input tabular-nums" />
+                                <button type="button" class="step-btn" @click="quantity++">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <button class="btn btn-primary push-add-btn" type="button" @click="addToImportList">
+                                <i class="fas fa-plus"></i>
+                                <span>เพิ่มลงรายการ</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="importList.length" class="summary-box">
+                        <div class="summary-title">
+                            <i class="fas fa-list-check"></i>
+                            <span>รายการที่จะนำเข้า ({{ importList.length }} รายการ)</span>
+                        </div>
+                        <div class="summary-table-wrap">
+                            <table class="product-table modal-inner-table">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อสินค้า</th>
+                                        <th class="text-right">จำนวน</th>
+                                        <th class="text-center" style="width: 70px;">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(item, idx) in importList" :key="idx">
+                                        <td class="font-medium">{{ item.productName }}</td>
+                                        <td class="text-right tabular-nums font-bold">{{ item.quantity }}</td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn-icon-del" @click="removeFromImportList(idx)" title="ลบ">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group quantity-group">
-                    <label>จำนวน</label>
-                    <button type="button" @click="quantity = Math.max(1, quantity - 1)">-</button>
-                    <input type="number" v-model.number="quantity" min="1" />
-                    <button type="button" @click="quantity++">+</button>
-                    <button class="push-btn" type="button" @click="addToImportList">เพิ่ม</button>
-                </div>
-
-                <div v-if="importList.length" class="summary">
-                    <h4>สรุปรายการที่จะเพิ่ม</h4>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ชื่อสินค้า</th>
-                                <th>จำนวน</th>
-                                <th>ลบ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(item, idx) in importList" :key="idx">
-                                <td>{{ item.productName }}</td>
-                                <td>{{ item.quantity }}</td>
-                                <td>
-                                    <button type="button" @click="removeFromImportList(idx)">ลบ</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" @click="saveImport">บันทึก</button>
-                    <button type="button" @click="closeModal">ยกเลิก</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="closeModal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary" @click="saveImport" :disabled="!importList.length">
+                        <i class="fas fa-check"></i>
+                        <span>บันทึกเข้าคลัง</span>
+                    </button>
                 </div>
             </div>
         </div>
 
+        <!-- Excel Modal -->
         <div v-if="showExcelModal" class="modal-overlay" @click.self="closeExcelModal">
-            <div class="modal-content excel-modal">
-                <h3>นำเข้าสินค้าจาก CSV</h3>
-
-                <div class="excel-actions">
-                    <input type="file" ref="fileInput" accept=".xlsx, .xls, .csv" style="display: none;"
-                        @change="handleFileUpload" />
-
-                    <button class="excel-btn upload-btn" @click="triggerFileUpload">
-                        <i class="fas fa-upload"></i> อัพโหลดไฟล์
-                    </button>
-                    <button class="excel-btn download-btn" @click="downloadSampleFile">
-                        <i class="fas fa-download"></i> โหลดไฟล์ตัวอย่าง
-                    </button>
+            <div class="modal modal-lg">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge excel">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <div>
+                            <h3>นำเข้าสินค้าจากไฟล์ Excel / CSV</h3>
+                            <span class="modal-subtitle">อัปโหลดไฟล์ข้อมูลสต็อกเพื่อนำเข้าพร้อมกันทีละหลายรายการ</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeExcelModal">&times;</button>
                 </div>
 
-                <div class="excel-preview" v-if="excelData.length">
-                    <h4>ตัวอย่างข้อมูล ({{ excelData.length }} รายการ)</h4>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>รหัสสินค้า</th>
-                                    <th>ชื่อสินค้า</th>
-                                    <th>จำนวน</th>
-                                    <th>หน่วย</th>
-                                    <th>สถานะ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(row, idx) in excelData" :key="idx">
-                                    <td>{{ row.product_code }}</td>
-                                    <td>{{ row.product_name || '-' }}</td>
-                                    <td>{{ row.quantity }}</td>
-                                    <td>{{ row.unit || '-' }}</td>
-                                    <td :class="{ 'text-red': !row.valid }">
-                                        {{ row.valid ? 'พร้อม' : 'ข้อมูลไม่ครบ' }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <div class="modal-body">
+                    <div class="excel-actions-card">
+                        <input
+                            type="file"
+                            ref="fileInput"
+                            accept=".xlsx, .xls, .csv"
+                            style="display: none;"
+                            @change="handleFileUpload"
+                        />
+
+                        <div class="upload-dropzone" @click="triggerFileUpload">
+                            <i class="fas fa-cloud-arrow-up drop-icon"></i>
+                            <p class="drop-text">คลิกเพื่อเลือกไฟล์ <strong>.xlsx</strong> หรือ <strong>.csv</strong></p>
+                            <span class="drop-hint">ระบบจะทำการตรวจสอบรหัสสินค้าและความถูกต้องโดยอัตโนมัติ</span>
+                        </div>
+
+                        <button class="btn btn-secondary sample-btn" @click="downloadSampleFile">
+                            <i class="fas fa-download"></i>
+                            <span>ดาวน์โหลดไฟล์ตัวอย่าง CSV</span>
+                        </button>
+                    </div>
+
+                    <div class="excel-preview" v-if="excelData.length">
+                        <div class="preview-header">
+                            <span class="preview-title">
+                                <i class="fas fa-table-list"></i>
+                                ตัวอย่างข้อมูล ({{ excelData.length }} รายการ)
+                            </span>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="product-table modal-inner-table">
+                                <thead>
+                                    <tr>
+                                        <th>รหัสสินค้า</th>
+                                        <th>ชื่อสินค้า</th>
+                                        <th class="text-right">จำนวน</th>
+                                        <th>หน่วย</th>
+                                        <th class="text-center">สถานะ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(row, idx) in excelData" :key="idx">
+                                        <td>
+                                            <span class="sku-chip">{{ row.product_code }}</span>
+                                        </td>
+                                        <td class="font-medium">{{ row.product_name || '-' }}</td>
+                                        <td class="text-right tabular-nums font-bold">{{ row.quantity }}</td>
+                                        <td class="text-muted">{{ row.unit || '-' }}</td>
+                                        <td class="text-center">
+                                            <span :class="['stock-pill', row.valid ? 'pill-high' : 'pill-empty']">
+                                                {{ row.valid ? 'พร้อมนำเข้า' : 'ข้อมูลไม่ครบ' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-                <div v-else class="empty-state">
-                    <p>ยังไม่ได้เลือกไฟล์ หรือไฟล์ไม่มีข้อมูล</p>
-                </div>
 
-                <div class="modal-actions">
-                    <button type="button" @click="saveExcelImport" :disabled="!excelData.length">บันทึก</button>
-                    <button type="button" @click="closeExcelModal">ยกเลิก</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="closeExcelModal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary" @click="saveExcelImport" :disabled="!excelData.length">
+                        <i class="fas fa-file-import"></i>
+                        <span>ยืนยันการนำเข้าข้อมูล</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -540,320 +668,557 @@ onMounted(fetchWarehouseStock)
 </script>
 
 <style scoped>
-.product-table-container h2 {
-    margin-bottom: 0;
-    display: inline-block;
+.warehouse-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
-/* Action Header Layout (Updated) */
-.action-header {
+/* Page Header & Action Bar */
+.page-header-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    margin-top: 1rem;
     flex-wrap: wrap;
-    /* รองรับหน้าจอเล็ก */
-    gap: 15px;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
-/* Search Wrapper Styles */
+.header-title-box {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.header-icon-badge {
+    width: 46px;
+    height: 46px;
+    background: #ecfeff;
+    color: #0891b2;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.section-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 2px 0 0 0;
+}
+
+.action-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
 .search-wrapper {
     position: relative;
-    width: 300px;
+    width: 320px;
     max-width: 100%;
 }
 
 .main-search-input {
     width: 100%;
-    padding: 10px 10px 10px 40px;
-    /* เว้นที่ให้ icon */
-    border: 1px solid var(--border-color, #e2e8f0);
-    border-radius: 8px;
-    font-size: 16px;
-    outline: none;
-    transition: border-color 0.2s;
+    padding: 10px 14px 10px 38px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-family: inherit;
+    background: #f8fafc;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
 }
 
 .main-search-input:focus {
+    outline: none;
     border-color: var(--primary-color);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .search-icon-main {
     position: absolute;
-    left: 12px;
+    left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    color: #a0aec0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
     pointer-events: none;
 }
 
 .buttons-wrapper {
     display: flex;
+    align-items: center;
     gap: 10px;
 }
 
-/* Buttons */
-.add-product-btn {
-    background-color: var(--primary-color);
-    color: var(--white-color);
-    border: none;
-    padding: 10px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
+/* Data Table Tags & Chips */
+.sku-chip {
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    background: var(--primary-light);
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+}
+
+.category-chip {
+    font-size: 0.78rem;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.zone-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #0369a1;
+    background: #e0f2fe;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.zone-badge i {
+    font-size: 0.7rem;
+}
+
+/* Status Pills */
+.stock-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+}
+
+.pill-empty {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.pill-low {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+
+.pill-medium {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+.pill-high {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.font-medium {
+    font-weight: 500;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-danger {
+    color: #dc2626;
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.text-sm {
+    font-size: 0.82rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px 16px !important;
+    color: #94a3b8;
+}
+
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+    color: #cbd5e1;
+}
+
+/* Modals */
+.modal-md {
+    max-width: 600px;
+    width: 95%;
+}
+
+.modal-lg {
+    max-width: 850px;
+    width: 95%;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title-box {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 14px;
 }
 
-.add-product-btn:hover {
-    background-color: #2c7a7b;
-}
-
-.import-excel-btn {
-    background-color: #3182ce;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.import-excel-btn:hover {
-    background-color: #2b6cb0;
-}
-
-/* Modal Styles */
-
-.modal-content {
-    background: white;
-    padding: 25px;
+.modal-icon-badge {
+    width: 44px;
+    height: 44px;
+    background: var(--primary-light);
+    color: var(--primary-color);
     border-radius: 12px;
-    width: 600px;
-    max-width: 90%;
-    box-shadow: var(--shadow);
-    position: relative;
-    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.modal-icon-badge.excel {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.modal-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.modal-close-x {
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    color: #94a3b8;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.modal-close-x:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+.modal-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: calc(85vh - 140px);
     overflow-y: auto;
 }
 
-.modal-content h3 {
-    margin-bottom: 20px;
-}
-
-.form-group {
-    margin-bottom: 15px;
+.search-dropdown-group {
     position: relative;
 }
 
 .form-group label {
-    display: block;
-    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.84rem;
     font-weight: 600;
-    color: #444;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
 }
 
-.form-group input[type="text"],
-.form-group input[type="number"] {
-    width: 100%;
-    padding: 10px 12px;
+.form-group label i {
+    color: var(--primary-color);
+}
+
+.dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: var(--radius-md);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 50;
+    box-shadow: var(--shadow-lg);
+    margin-top: 4px;
 }
 
-.quantity-group {
+.dropdown-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover {
+    background: #f8fafc;
+}
+
+.item-main {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+}
+
+.item-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.sku-tag {
+    background: var(--primary-light);
+    color: var(--primary-color);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* Stepper Quantity */
+.quantity-stepper-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.stepper-controls {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.step-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: #f8fafc;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.step-btn:hover {
+    background: #e2e8f0;
+}
+
+.step-input {
+    width: 60px;
+    height: 40px;
+    border: none;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.push-add-btn {
+    height: 40px;
+    padding: 0 18px;
+}
+
+.summary-box {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+}
+
+.summary-title {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.summary-table-wrap {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.btn-icon-del {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+
+.btn-icon-del:hover {
+    background: #fef2f2;
+}
+
+/* Excel dropzone */
+.excel-actions-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.upload-dropzone {
+    border: 2px dashed #93c5fd;
+    background: #eff6ff;
+    border-radius: var(--radius-md);
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upload-dropzone:hover {
+    border-color: #2563eb;
+    background: #dbeafe;
+}
+
+.drop-icon {
+    font-size: 2.4rem;
+    color: #2563eb;
+    margin-bottom: 10px;
+}
+
+.drop-text {
+    font-size: 0.95rem;
+    color: #1e293b;
+    margin: 0 0 4px 0;
+}
+
+.drop-hint {
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+.sample-btn {
+    align-self: center;
+    font-size: 0.85rem;
+}
+
+.excel-preview {
+    margin-top: 10px;
+}
+
+.preview-header {
+    margin-bottom: 10px;
+}
+
+.preview-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.quantity-group button {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 18px;
-    user-select: none;
-    transition: background-color 0.3s;
-}
-
-.quantity-group button:hover {
-    background-color: #2c7a7b;
-}
-
-.quantity-group input[type="number"] {
-    width: 80px;
-    text-align: center;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    font-size: 16px;
-}
-
-.push-btn {
-    background-color: #38a169;
-    padding: 8px 16px;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.3s;
-}
-
-.push-btn:hover {
-    background-color: #2f855a;
-}
-
-.dropdown {
-    position: absolute;
-    background: white;
-    border: 1px solid #ccc;
-    max-height: 180px;
+.table-wrapper {
+    max-height: 260px;
     overflow-y: auto;
-    width: 100%;
-    z-index: 10;
-    border-radius: 6px;
-    box-shadow: 0 4px 6px rgb(0 0 0 / 0.1);
-}
-
-.dropdown-item {
-    padding: 8px 12px;
-    cursor: pointer;
-}
-
-.dropdown-item:hover {
-    background-color: #f0f0f0;
-}
-
-.summary,
-.excel-preview {
-    margin-top: 20px;
-    margin-bottom: 20px;
-}
-
-.summary table,
-.excel-preview table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.summary th,
-.summary td,
-.excel-preview th,
-.excel-preview td {
     border: 1px solid var(--border-color);
-    padding: 10px 12px;
-    text-align: left;
+    border-radius: var(--radius-md);
 }
 
-.summary th,
-.excel-preview th {
-    background-color: var(--secondary-color);
-}
-
-.modal-actions {
-    margin-top: 20px;
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
 }
 
-.modal-actions button {
-    background-color: var(--primary-color);
-    color: var(--white-color);
-    border: none;
-    padding: 10px 18px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
-}
+@media (max-width: 768px) {
+    .page-header-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
-.modal-actions button:last-child {
-    background-color: #999;
-}
+    .action-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
-.modal-actions button:hover {
-    background-color: #2c7a7b;
-}
+    .search-wrapper {
+        width: 100%;
+    }
 
-.modal-actions button:last-child:hover {
-    background-color: #666;
-}
+    .buttons-wrapper {
+        flex-direction: column;
+    }
 
-/* Excel Modal Specifics */
-.excel-actions {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-bottom: 20px;
-}
+    .buttons-wrapper button {
+        width: 100%;
+        justify-content: center;
+    }
 
-.excel-btn {
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    border: 1px solid #ccc;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s;
-}
+    .quantity-stepper-wrap {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
-.upload-btn {
-    background-color: #ebf8ff;
-    color: #3182ce;
-    border-color: #3182ce;
-}
-
-.upload-btn:hover {
-    background-color: #bee3f8;
-}
-
-.download-btn {
-    background-color: #f0fff4;
-    color: #38a169;
-    border-color: #38a169;
-}
-
-.download-btn:hover {
-    background-color: #c6f6d5;
-}
-
-.table-wrapper {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-}
-
-.empty-state {
-    text-align: center;
-    color: #718096;
-    padding: 30px;
-    background: #f7fafc;
-    border-radius: 8px;
-    border: 1px dashed #cbd5e0;
-}
-
-.text-red {
-    color: #e53e3e;
-    font-weight: bold;
-}
-
-.badge-empty {
-    background-color: #f56565;
-    color: white;
+    .push-add-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 </style>

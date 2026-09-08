@@ -1,342 +1,525 @@
 <template>
-    <div class="product-table-container">
-        <h2 class="no-print">รายการสินค้าในรถ</h2>
-
-        <div class="top-controls no-print">
-            <div class="truck-select-container">
-                <label for="truck-select">เลือกทะเบียนรถ:</label>
-                <select id="truck-select" v-model="selectedTruckId" @change="onTruckChange">
-                    <option value="" disabled>-- เลือกรถ --</option>
-                    <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
-                        {{ truck.plate_number }} - {{ truck?.user?.fullname || 'ยังไม่ได้มอบหมาย' }}
-                    </option>
-                </select>
-            </div>
-
-            <div class="right-actions">
-                <div class="search-box truck-search">
-                    <input type="text" placeholder="ค้นหาสินค้าในรถ..." v-model="truckSearchKeyword"
-                        @input="debouncedTruckSearch" :disabled="!selectedTruckId" />
-                    <i class="fas fa-search"></i>
-                </div>
-
-                <div class="button-group">
-                    <button class="add-stock-btn" @click="openAddModal" :disabled="!selectedTruckId">
-                        <i class="fas fa-plus"></i> เพิ่มสินค้า
-                    </button>
-                    <button :class="[
-                        'refill-btn',
-                        { 'refill-success': isRefillConfirmed, 'refill-error': isRefillInsufficient },
-                    ]" @click="openRefillDateModal" :disabled="!selectedTruckId || loading || isRefillInitiated">
-                        <span v-if="isRefillInsufficient">
-                            <i class="fas fa-exclamation-triangle"></i> สินค้าไม่พอ
-                        </span>
-                        <span v-else-if="isRefillConfirmed"> <i class="fas fa-check"></i> พร้อมยืนยัน </span>
-                        <span v-else> <i class="fas fa-sync-alt"></i> เติมสินค้าจากยอดที่ขายไป </span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="loading" class="no-print">กำลังโหลดข้อมูล...</div>
-        <div v-else-if="error" class="error-msg no-print">{{ error }}</div>
-
-        <div v-else class="no-print">
-            <table class="product-table" v-if="truckStocks.length > 0">
-                <thead>
-                    <tr>
-                        <th>รหัส</th>
-                        <th>ชื่อสินค้า</th>
-                        <th>หมวดหมู่</th>
-                        <th>ยี่ห้อ</th>
-                        <th>จำนวน</th>
-                        <th>จำนวน(preorder)</th>
-                        <th>จำนวนที่ขายได้</th>
-                        <th>หน่วย</th>
-                        <th>ดำเนินการ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="stock in truckStocksWithSoldQuantities" :key="stock.id">
-                        <td>{{ stock.sku }}</td>
-                        <td>{{ stock.product.description }}</td>
-                        <td>{{ stock.product.category }}</td>
-                        <td>{{ stock.product.brand || '-' }}</td>
-                        <td>
-                            {{ stock.quantity }}
-                            <span v-if="stock.soldQuantity > 0" class="sold-quantity">
-                                (+{{ stock.soldQuantity }})
-                            </span>
-                        </td>
-                        <td>
-                            <span :class="{ 'preorder-quantity': stock.preOrderQuantity > 0 }">
-                                {{ stock.preOrderQuantity || 0 }}
-                            </span>
-                        </td>
-                        <td>
-                            <span :class="{
-                                'negative-quantity': stock.availableQuantity < 0,
-                                'positive-quantity': stock.availableQuantity > 0,
-                            }">
-                                {{ stock.availableQuantity }}
-                            </span>
-                        </td>
-                        <td>{{ stock.product.unit || '-' }}</td>
-
-                        <td v-if="stock.quantity > 0">
-                            <button class="return-btn" @click="openReturnModal(stock)" title="return-btn">
-                                ตีกลับโกดัง
-                            </button>
-                        </td>
-                        <td v-else>
-                            <button disabled class="return-btn disabled-btn" @click="openReturnModal(stock)"
-                                title="return-btn">
-                                ตีกลับโกดัง
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <div v-else>
-                <p>ไม่มีข้อมูลสินค้าในรถคันนี้</p>
-            </div>
-
-            <div class="pagination" v-if="truckStocks.length > 0">
-                <button @click="changeTruckPage(truckPage - 1)" :disabled="truckPage === 1">
-                    ก่อนหน้า
-                </button>
-                <span>หน้า {{ truckPage }} / {{ truckTotalPages }}</span>
-                <button @click="changeTruckPage(truckPage + 1)" :disabled="truckPage === truckTotalPages">
-                    ถัดไป
-                </button>
-            </div>
-        </div>
-
-        <div v-if="addedProducts.length > 0" class="added-summary no-print">
-            <h3>สินค้าที่จะย้ายเข้า รถ {{ selectedTruckPlate }}</h3>
-            <table class="product-table">
-                <thead>
-                    <tr>
-                        <th>รหัส</th>
-                        <th>ชื่อสินค้า</th>
-                        <th>จำนวน</th>
-                        <th>หน่วย</th>
-                        <th>สถานะ</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item in addedProducts" :key="item.productId">
-                        <td>SKU-{{ item.productId }}</td>
-                        <td>{{ item.description }}</td>
-                        <td class="quantity-control-cell quantity-control-centered">
-                            <button class="qty-btn" @click="decrementAddedQuantity(item)"
-                                :disabled="item.quantity <= 0">
-                                -
-                            </button>
-
-                            <input type="number" min="0" :max="item.maxQuantity" v-model.number="item.quantity"
-                                @input="checkSufficiency(item)" @blur="validateAddedQuantity(item)"
-                                class="qty-inline-input" />
-
-                            <button class="qty-btn" @click="incrementAddedQuantity(item)"
-                                :disabled="item.quantity >= item.maxQuantity">
-                                +
-                            </button>
-                        </td>
-                        <td>{{ item.unit }}</td>
-                        <td>
-                            <span v-if="item.quantity === 0" class="excluded-indicator">
-                                🟡 ยกเว้นการเติม
-                            </span>
-                            <span v-else-if="insufficientProducts.includes(item.productId)"
-                                class="insufficient-indicator">
-                                🔴 ไม่พอ
-                            </span>
-                            <span v-else class="sufficient-indicator">
-                                🟢 พอ
-                            </span>
-                        </td>
-                        <td>
-                            <button class="remove-btn" @click="removeProductFromList(item.productId)" title="ลบสินค้า">
-                                &times;
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="summary-buttons">
-                <button class="cancel-btn" @click="cancelRefill">ยกเลิก</button>
-                <button class="save-btn" @click="saveRefillData" :disabled="saving || hasInsufficientStockComputed">
-                    {{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}
-                </button>
-            </div>
-        </div>
-
-        <div v-if="showAddModal" class="modal-overlay no-print" @click.self="closeAddModal">
-            <div class="modal large-modal">
-                <h3>เลือกสินค้าในคลัง</h3>
-                <div class="search-box">
-                    <input type="text" placeholder="ค้นหาสินค้าในคลัง..." v-model="searchKeyword"
-                        @input="debouncedFetchWarehouseStocks" />
-                    <i class="fas fa-search"></i>
-                </div>
-
-                <table class="product-table">
-                    <thead>
-                        <tr>
-                            <th>รหัส</th>
-                            <th>ชื่อสินค้า</th>
-                            <th>หมวดหมู่</th>
-                            <th>ยี่ห้อ</th>
-                            <th>จำนวนในคลัง</th>
-                            <th>หน่วย</th>
-                            <th>เพิ่มจำนวน</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="item in warehouseStocks" :key="item.id">
-                            <td>{{ item.product.product_code }}</td>
-                            <td>{{ item.product.description }}</td>
-                            <td>{{ item.product.category }}</td>
-                            <td>{{ item.product.brand || '-' }}</td>
-                            <td>{{ item.quantity }}</td>
-                            <td>{{ item.product.unit || '-' }}</td>
-                            <td class="quantity-control-cell">
-                                <button class="qty-btn" @click="decrementQuantity(item.id)"
-                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] <= 1">
-                                    -
-                                </button>
-                                <input type="number" min="1" :max="item.quantity"
-                                    v-model.number="addQuantities[item.id]" class="qty-inline-input" />
-                                <button class="qty-btn" @click="incrementQuantity(item.id, item.quantity)"
-                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] >= item.quantity">
-                                    +
-                                </button>
-
-                                <button v-if="addQuantities[item.id] > item.quantity" class="add-btn not-enough-btn"
-                                    disabled>
-                                    ไม่พอ
-                                </button>
-                                <button v-else class="add-btn"
-                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] < 1"
-                                    @click="addProductToList(item)">
-                                    Add
-                                </button>
-                            </td>
-                        </tr>
-                        <tr v-if="warehouseStocks.length === 0">
-                            <td colspan="7" class="text-center">ไม่พบสินค้าที่ค้นหา</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="pagination">
-                    <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">
-                        ก่อนหน้า
-                    </button>
-                    <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
-                    <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">
-                        ถัดไป
-                    </button>
-                </div>
-
-                <button class="close-btn" @click="closeAddModal">ปิด</button>
-            </div>
-        </div>
-
-        <div v-if="showSuccessModal" class="modal-overlay no-print">
-            <div class="modal success-modal">
-                <div class="success-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <h3>บันทึกข้อมูลสำเร็จ!</h3>
-                <p>ทำการเพิ่มสินค้าเข้าสู่รถเรียบร้อยแล้ว</p>
-                <div class="modal-buttons centered-buttons">
-                    <button class="print-btn" @click="printRefillNote">
-                        <i class="fas fa-print"></i> พิมพ์
-                    </button>
-
-                    <button class="csv-btn" @click="downloadCSV">
-                        <i class="fas fa-file-csv"></i> Download CSV
-                    </button>
-                    <button class="modal-cancel-btn" @click="closeSuccessModal">ปิด</button>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="showReturnModal" class="modal-overlay no-print">
-            <div class="modal success-modal">
-                <h3>ยืนยันการตีสินค้ากลับโกดัง</h3>
-                <p>ระบุจำนวนที่ต้องการตีกลับโกดัง</p>
-                <br />
-
-                <div class="product-detail text-center">
-                    <p>
-                        <strong>{{ selectedProduct?.product.description }}</strong>
-                    </p>
-                    <p class="sub-text">รหัส: {{ selectedProduct?.product.product_code }}</p>
-                    <p class="sub-text">
-                        จำนวนทั้งหมดในรถ: {{ selectedProduct?.quantity }} {{ selectedProduct?.product.unit }}
-                    </p>
-                </div>
-
-                <div class="return-qty-control">
-                    <label>จำนวนที่จะคืน:</label>
-                    <div class="qty-wrapper">
-                        <button class="qty-btn" @click="decrementReturnQty" :disabled="returnQuantity <= 1">
-                            <i class="fas fa-minus"></i>
-                        </button>
-
-                        <input type="number" v-model.number="returnQuantity" @input="validateReturnInput"
-                            class="qty-input" />
-
-                        <button class="qty-btn" @click="incrementReturnQty"
-                            :disabled="returnQuantity >= selectedProduct?.quantity">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="modal-buttons centered-buttons">
-                    <button class="modal-cancel-btn" @click="closeReturnModal">ยกเลิก</button>
-                    <button class="modal-confirm-btn" @click="returnProduct"
-                        :disabled="returnQuantity <= 0 || returnQuantity > selectedProduct?.quantity">
-                        ยืนยัน ({{ returnQuantity }})
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="showRefillDateModal" class="modal-overlay no-print" @click.self="closeRefillDateModal">
-            <div class="modal">
-                <div class="modal-header">
-                    <h3>เลือกช่วงเวลาที่ขาย</h3>
-                </div>
-
-                <div class="date-filter-container">
-                    <div class="form-group">
-                        <label>ตั้งแต่วันที่</label>
-                        <input type="date" v-model="refillStartDate" class="date-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>ถึงวันที่</label>
-                        <input type="date" v-model="refillEndDate" class="date-input" />
+    <div class="add-to-truck-page">
+        <div class="table-card no-print">
+            <!-- Header -->
+            <div class="page-header-row">
+                <div class="header-title-box">
+                    <div class="header-icon-badge">
+                        <i class="fas fa-truck-fast"></i>
                     </div>
                     <div>
-                        <input type="checkbox" id="includePreorders" v-model="includePreorder" true-value="all" false-value="except-preorder" />
-                        <label for="includePreorders">รวมสินค้าพรีออเดอร์</label>
+                        <h2 class="section-title">เบิกสินค้าเข้ารถขนส่ง</h2>
+                        <p class="section-subtitle">เลือกทะเบียนรถเพื่อตรวจสอบสต็อกบนรถ เติมสินค้า หรือตีสินค้ากลับโกดัง</p>
                     </div>
-                    <div class="form-group button-wrapper">
-                        <button class="search-action-btn" @click="refillFromSoldProducts" :disabled="loading">
-                            <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-search'"></i> ค้นหา
-                        </button>
+                </div>
+
+                <!-- Controls & Actions -->
+                <div class="top-controls">
+                    <div class="truck-select-group">
+                        <label for="truck-select">
+                            <i class="fas fa-truck"></i>
+                            <span>ทะเบียนรถ:</span>
+                        </label>
+                        <div class="select-wrapper">
+                            <select id="truck-select" v-model="selectedTruckId" @change="onTruckChange" class="truck-select">
+                                <option value="" disabled>-- เลือกทะเบียนรถ --</option>
+                                <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
+                                    {{ truck.plate_number }} - {{ truck?.user?.fullname || 'ยังไม่ได้มอบหมาย' }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
 
+                    <div class="right-actions">
+                        <div class="search-wrapper">
+                            <i class="fas fa-search search-icon-main"></i>
+                            <input
+                                type="text"
+                                placeholder="ค้นหาสินค้าในรถ..."
+                                v-model="truckSearchKeyword"
+                                @input="debouncedTruckSearch"
+                                :disabled="!selectedTruckId"
+                                class="main-search-input"
+                            />
+                        </div>
+
+                        <div class="button-group">
+                            <button class="btn btn-primary" @click="openAddModal" :disabled="!selectedTruckId">
+                                <i class="fas fa-plus"></i>
+                                <span>เพิ่มสินค้า</span>
+                            </button>
+                            <button
+                                :class="[
+                                    'btn',
+                                    isRefillConfirmed ? 'btn-success' : isRefillInsufficient ? 'btn-danger' : 'btn-warning',
+                                ]"
+                                @click="openRefillDateModal"
+                                :disabled="!selectedTruckId || loading || isRefillInitiated"
+                            >
+                                <span v-if="isRefillInsufficient">
+                                    <i class="fas fa-triangle-exclamation"></i> สินค้าไม่พอ
+                                </span>
+                                <span v-else-if="isRefillConfirmed">
+                                    <i class="fas fa-check"></i> พร้อมยืนยัน
+                                </span>
+                                <span v-else>
+                                    <i class="fas fa-arrows-rotate"></i> เติมจากยอดขาย
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading & Error -->
+            <div v-if="loading" class="state-container">
+                <div class="loading-spinner"></div>
+                <p>กำลังโหลดข้อมูลสินค้าในรถ...</p>
+            </div>
+            <div v-else-if="error" class="state-container error-state">
+                <i class="fas fa-circle-exclamation"></i>
+                <p>{{ error }}</p>
+            </div>
+
+            <!-- Truck Stocks Table -->
+            <div v-else>
+                <div class="table-responsive" v-if="truckStocks.length > 0">
+                    <table class="product-table">
+                        <thead>
+                            <tr>
+                                <th>รหัสสินค้า</th>
+                                <th>ชื่อสินค้า</th>
+                                <th>หมวดหมู่</th>
+                                <th>ยี่ห้อ</th>
+                                <th class="text-right">จำนวนบนรถ</th>
+                                <th class="text-right">พรีออเดอร์</th>
+                                <th class="text-right">ขายได้จริง</th>
+                                <th>หน่วย</th>
+                                <th class="text-center" style="width: 110px;">ดำเนินการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="stock in truckStocksWithSoldQuantities" :key="stock.id">
+                                <td>
+                                    <span class="sku-chip">{{ stock.sku }}</span>
+                                </td>
+                                <td class="font-medium">{{ stock.product.description }}</td>
+                                <td>
+                                    <span class="category-chip">{{ stock.product.category }}</span>
+                                </td>
+                                <td class="text-muted">{{ stock.product.brand || '-' }}</td>
+                                <td class="text-right tabular-nums font-bold">
+                                    {{ stock.quantity }}
+                                    <span v-if="stock.soldQuantity > 0" class="sold-quantity">
+                                        (+{{ stock.soldQuantity }})
+                                    </span>
+                                </td>
+                                <td class="text-right tabular-nums">
+                                    <span :class="['po-pill', { 'has-po': stock.preOrderQuantity > 0 }]">
+                                        {{ stock.preOrderQuantity || 0 }}
+                                    </span>
+                                </td>
+                                <td class="text-right tabular-nums font-bold">
+                                    <span :class="stock.availableQuantity < 0 ? 'text-danger' : 'text-success'">
+                                        {{ stock.availableQuantity }}
+                                    </span>
+                                </td>
+                                <td class="text-muted text-sm">{{ stock.product.unit || '-' }}</td>
+                                <td class="text-center">
+                                    <button
+                                        v-if="stock.quantity > 0"
+                                        class="btn-return"
+                                        @click="openReturnModal(stock)"
+                                        title="ตีกลับโกดัง"
+                                    >
+                                        <i class="fas fa-arrow-rotate-left"></i>
+                                        <span>ตีกลับ</span>
+                                    </button>
+                                    <button
+                                        v-else
+                                        disabled
+                                        class="btn-return disabled"
+                                        title="ไม่มีสินค้าในรถ"
+                                    >
+                                        <i class="fas fa-arrow-rotate-left"></i>
+                                        <span>ตีกลับ</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-else class="empty-state">
+                    <i class="fas fa-truck-ramp-box"></i>
+                    <p>{{ selectedTruckId ? 'ไม่มีข้อมูลสินค้าในรถคันนี้' : 'กรุณาเลือกทะเบียนรถด้านบนเพื่อดูสต็อก' }}</p>
+                </div>
+
+                <div class="pagination" v-if="truckStocks.length > 0 && truckTotalPages > 1">
+                    <button @click="changeTruckPage(truckPage - 1)" :disabled="truckPage === 1" class="page-btn">
+                        <i class="fas fa-chevron-left"></i>
+                        <span>ก่อนหน้า</span>
+                    </button>
+                    <span>หน้า {{ truckPage }} / {{ truckTotalPages }}</span>
+                    <button @click="changeTruckPage(truckPage + 1)" :disabled="truckPage === truckTotalPages" class="page-btn">
+                        <span>ถัดไป</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Added Products Summary Box -->
+            <div v-if="addedProducts.length > 0" class="added-summary-card">
+                <div class="summary-header">
+                    <div class="summary-title-badge">
+                        <i class="fas fa-boxes-packing"></i>
+                        <h3>สินค้าที่จะย้ายเข้า รถ {{ selectedTruckPlate }} ({{ addedProducts.length }} รายการ)</h3>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="product-table modal-inner-table">
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>ชื่อสินค้า</th>
+                                <th class="text-center" style="width: 170px;">จำนวนที่จะเติม</th>
+                                <th>หน่วย</th>
+                                <th class="text-center">ความพร้อมในคลัง</th>
+                                <th class="text-center" style="width: 60px;">ลบ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in addedProducts" :key="item.productId">
+                                <td>
+                                    <span class="sku-chip">SKU-{{ item.productId }}</span>
+                                </td>
+                                <td class="font-medium">{{ item.description }}</td>
+                                <td class="text-center">
+                                    <div class="stepper-controls centered">
+                                        <button
+                                            type="button"
+                                            class="step-btn"
+                                            @click="decrementAddedQuantity(item)"
+                                            :disabled="item.quantity <= 0"
+                                        >
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            :max="item.maxQuantity"
+                                            v-model.number="item.quantity"
+                                            @input="checkSufficiency(item)"
+                                            @blur="validateAddedQuantity(item)"
+                                            class="step-input tabular-nums"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="step-btn"
+                                            @click="incrementAddedQuantity(item)"
+                                            :disabled="item.quantity >= item.maxQuantity"
+                                        >
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td class="text-muted">{{ item.unit }}</td>
+                                <td class="text-center">
+                                    <span v-if="item.quantity === 0" class="stock-pill pill-medium">
+                                        🟡 ยกเว้นการเติม
+                                    </span>
+                                    <span v-else-if="insufficientProducts.includes(item.productId)" class="stock-pill pill-empty">
+                                        🔴 ในคลังไม่พอ
+                                    </span>
+                                    <span v-else class="stock-pill pill-high">
+                                        🟢 ในคลังเพียงพอ
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn-icon-del" @click="removeProductFromList(item.productId)" title="ลบสินค้า">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="summary-actions">
+                    <button class="btn btn-secondary" @click="cancelRefill">
+                        <i class="fas fa-xmark"></i>
+                        <span>ยกเลิก</span>
+                    </button>
+                    <button class="btn btn-primary" @click="saveRefillData" :disabled="saving || hasInsufficientStockComputed">
+                        <i class="fas fa-check"></i>
+                        <span>{{ saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึกเข้ารถ' }}</span>
+                    </button>
                 </div>
             </div>
         </div>
 
+        <!-- Add Modal (Warehouse Selection) -->
+        <div v-if="showAddModal" class="modal-overlay no-print" @click.self="closeAddModal">
+            <div class="modal modal-lg">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-boxes-stacked"></i>
+                        </div>
+                        <div>
+                            <h3>เลือกสินค้าจากคลังหลัก</h3>
+                            <span class="modal-subtitle">เลือกสินค้าและระบุจำนวนที่ต้องการเติมเข้ารถ {{ selectedTruckPlate }}</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeAddModal">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="search-wrapper" style="width: 100%; margin-bottom: 16px;">
+                        <i class="fas fa-search search-icon-main"></i>
+                        <input
+                            type="text"
+                            placeholder="ค้นหาสินค้าในคลัง..."
+                            v-model="searchKeyword"
+                            @input="debouncedFetchWarehouseStocks"
+                            class="main-search-input"
+                        />
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="product-table modal-inner-table">
+                            <thead>
+                                <tr>
+                                    <th>รหัส</th>
+                                    <th>ชื่อสินค้า</th>
+                                    <th>หมวดหมู่</th>
+                                    <th>ยี่ห้อ</th>
+                                    <th class="text-right">ในคลัง</th>
+                                    <th>หน่วย</th>
+                                    <th class="text-center" style="width: 180px;">ระบุจำนวน</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in warehouseStocks" :key="item.id">
+                                    <td>
+                                        <span class="sku-chip">{{ item.product.product_code }}</span>
+                                    </td>
+                                    <td class="font-medium">{{ item.product.description }}</td>
+                                    <td>
+                                        <span class="category-chip">{{ item.product.category }}</span>
+                                    </td>
+                                    <td class="text-muted">{{ item.product.brand || '-' }}</td>
+                                    <td class="text-right tabular-nums font-bold">{{ item.quantity }}</td>
+                                    <td class="text-muted text-sm">{{ item.product.unit || '-' }}</td>
+                                    <td class="text-center">
+                                        <div class="modal-stepper-wrap">
+                                            <div class="stepper-controls">
+                                                <button
+                                                    type="button"
+                                                    class="step-btn"
+                                                    @click="decrementQuantity(item.id)"
+                                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] <= 1"
+                                                >
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    :max="item.quantity"
+                                                    v-model.number="addQuantities[item.id]"
+                                                    class="step-input tabular-nums"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    class="step-btn"
+                                                    @click="incrementQuantity(item.id, item.quantity)"
+                                                    :disabled="!addQuantities[item.id] || addQuantities[item.id] >= item.quantity"
+                                                >
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+
+                                            <button
+                                                v-if="addQuantities[item.id] > item.quantity"
+                                                class="btn btn-danger btn-sm"
+                                                disabled
+                                            >
+                                                ไม่พอ
+                                            </button>
+                                            <button
+                                                v-else
+                                                class="btn btn-primary btn-sm"
+                                                :disabled="!addQuantities[item.id] || addQuantities[item.id] < 1"
+                                                @click="addProductToList(item)"
+                                            >
+                                                <i class="fas fa-plus"></i> เพิ่ม
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="warehouseStocks.length === 0">
+                                    <td colspan="7" class="empty-state">
+                                        <i class="fas fa-box-open"></i>
+                                        <p>ไม่พบสินค้าที่ค้นหา</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination" v-if="totalPages > 1">
+                        <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" class="page-btn">
+                            <i class="fas fa-chevron-left"></i>
+                            <span>ก่อนหน้า</span>
+                        </button>
+                        <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
+                        <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" class="page-btn">
+                            <span>ถัดไป</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeAddModal">ปิด</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div v-if="showSuccessModal" class="modal-overlay no-print">
+            <div class="modal modal-sm text-center">
+                <div class="success-icon-box">
+                    <i class="fas fa-circle-check"></i>
+                </div>
+                <h3 class="success-title">บันทึกข้อมูลสำเร็จ!</h3>
+                <p class="success-desc">ทำการเพิ่มสินค้าเข้าสู่รถขนส่งเรียบร้อยแล้ว</p>
+                <div class="success-action-btns">
+                    <button class="btn btn-secondary" @click="printRefillNote">
+                        <i class="fas fa-print"></i> พิมพ์ใบเบิก
+                    </button>
+                    <button class="btn btn-info" @click="downloadCSV">
+                        <i class="fas fa-file-csv"></i> ดาวน์โหลด CSV
+                    </button>
+                    <button class="btn btn-primary" @click="closeSuccessModal">เสร็จสิ้น</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Return to Warehouse Modal -->
+        <div v-if="showReturnModal" class="modal-overlay no-print">
+            <div class="modal modal-md">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge danger">
+                            <i class="fas fa-arrow-rotate-left"></i>
+                        </div>
+                        <div>
+                            <h3>ยืนยันการตีสินค้ากลับโกดัง</h3>
+                            <span class="modal-subtitle">นำสินค้าบนรถส่งคืนเข้าสต็อกคลังหลัก</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeReturnModal">&times;</button>
+                </div>
+
+                <div class="modal-body text-center">
+                    <div class="return-product-box">
+                        <h4>{{ selectedProduct?.product.description }}</h4>
+                        <div class="return-meta">
+                            <span class="sku-chip">{{ selectedProduct?.product.product_code }}</span>
+                            <span>จำนวนบนรถ: <strong>{{ selectedProduct?.quantity }}</strong> {{ selectedProduct?.product.unit }}</span>
+                        </div>
+                    </div>
+
+                    <div class="return-qty-control">
+                        <label>ระบุจำนวนที่จะคืนเข้าโกดัง:</label>
+                        <div class="stepper-controls centered">
+                            <button class="step-btn" @click="decrementReturnQty" :disabled="returnQuantity <= 1">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <input
+                                type="number"
+                                v-model.number="returnQuantity"
+                                @input="validateReturnInput"
+                                class="step-input tabular-nums"
+                            />
+                            <button
+                                class="step-btn"
+                                @click="incrementReturnQty"
+                                :disabled="returnQuantity >= selectedProduct?.quantity"
+                            >
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeReturnModal">ยกเลิก</button>
+                    <button
+                        class="btn btn-danger"
+                        @click="returnProduct"
+                        :disabled="returnQuantity <= 0 || returnQuantity > selectedProduct?.quantity"
+                    >
+                        <i class="fas fa-check"></i>
+                        <span>ยืนยันตีกลับ ({{ returnQuantity }})</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Refill Date Filter Modal -->
+        <div v-if="showRefillDateModal" class="modal-overlay no-print" @click.self="closeRefillDateModal">
+            <div class="modal modal-md">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge warning">
+                            <i class="fas fa-calendar-days"></i>
+                        </div>
+                        <div>
+                            <h3>เลือกช่วงเวลาที่ขาย</h3>
+                            <span class="modal-subtitle">คำนวณยอดขายที่เกิดขึ้นเพื่อเติมสินค้าทดแทน</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeRefillDateModal">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="date-filter-grid">
+                        <div class="form-group">
+                            <label>ตั้งแต่วันที่</label>
+                            <input type="date" v-model="refillStartDate" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label>ถึงวันที่</label>
+                            <input type="date" v-model="refillEndDate" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input
+                            type="checkbox"
+                            id="includePreorders"
+                            v-model="includePreorder"
+                            true-value="all"
+                            false-value="except-preorder"
+                        />
+                        <label for="includePreorders">รวมยอดสินค้าพรีออเดอร์ในการคำนวณ</label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeRefillDateModal">ยกเลิก</button>
+                    <button class="btn btn-primary" @click="refillFromSoldProducts" :disabled="loading">
+                        <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"></i>
+                        <span>ค้นหายอดขายและเตรียมเติม</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teleport Receipt Area (DO NOT CHANGE OR REMOVE) -->
         <Teleport to="body">
             <div class="printable-area print-only receipt-layout">
                 <div class="receipt-header">
@@ -387,7 +570,6 @@
                 </div>
             </div>
         </Teleport>
-
     </div>
 </template>
 
@@ -962,365 +1144,520 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ===========================================
-   AddtoTruck.vue - Page-specific styles only
-   Shared styles: see common.css and print.css
-   =========================================== */
-
-/* --- Refill Button States --- */
-.refill-success {
-    background-color: #28a745 !important;
-    cursor: default !important;
+.add-to-truck-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
-.refill-error {
-    background-color: #dc3545 !important;
-    cursor: default !important;
-}
-
-/* --- Quantity Indicators --- */
-.sold-quantity {
-    color: #28a745;
-    font-weight: bold;
-    margin-left: 5px;
-}
-
-.preorder-quantity {
-    color: #2563eb;
-    font-weight: bold;
-}
-
-.negative-quantity {
-    color: #dc3545;
-    font-weight: bold;
-}
-
-.positive-quantity {
-    color: #28a745;
-    font-weight: bold;
-}
-
-.insufficient-indicator {
-    color: #e53e3e;
-    font-weight: bold;
-}
-
-.sufficient-indicator {
-    color: #28a745;
-    font-weight: bold;
-}
-
-.excluded-indicator {
-    color: #d97706;
-    font-weight: bold;
-}
-
-/* --- Layout --- */
-.top-controls {
+/* Page Header & Top Controls */
+.page-header-row {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.header-title-box {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.header-icon-badge {
+    width: 46px;
+    height: 46px;
+    background: #eff6ff;
+    color: #2563eb;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+}
+
+.header-icon-badge.danger {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.header-icon-badge.warning {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.section-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 2px 0 0 0;
+}
+
+.top-controls {
+    display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: 16px;
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.truck-select-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.truck-select-group label {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.truck-select-group label i {
+    color: var(--primary-color);
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+.truck-select {
+    padding: 10px 32px 10px 14px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    font-weight: 600;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: #f8fafc;
+    color: var(--text-primary);
+    cursor: pointer;
+    min-width: 260px;
+    transition: all 0.2s ease;
+    appearance: auto;
+}
+
+.truck-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .right-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-left: auto;
 }
 
-.summary-buttons {
-    margin-top: 15px;
-    display: flex;
-    gap: 10px;
+.search-wrapper {
+    position: relative;
+    width: 250px;
+    max-width: 100%;
 }
 
-.added-summary {
-    margin-top: 2rem;
+.main-search-input {
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-family: inherit;
+    background: #f8fafc;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
 }
 
-.added-summary h3 {
-    margin-bottom: 0.5rem;
-}
-
-/* --- Truck Select --- */
-.truck-select-container label {
-    font-weight: 600;
-    color: #555;
-}
-
-.truck-select-container select {
-    padding: 10px 15px;
-    font-size: 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    min-width: 250px;
-    cursor: pointer;
-    transition: border-color 0.3s;
-}
-
-.truck-select-container select:focus {
+.main-search-input:focus {
     outline: none;
     border-color: var(--primary-color);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-/* --- Truck Search (override search-box for compact layout) --- */
-.truck-search {
-    position: relative;
-}
-
-.truck-search input {
-    padding: 8px 30px 8px 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: 250px;
-}
-
-.truck-search i {
+.search-icon-main {
     position: absolute;
-    right: 10px;
+    left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    color: #888;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    pointer-events: none;
 }
 
-/* --- Action Buttons --- */
 .button-group {
     display: flex;
+    align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
 }
 
-.add-stock-btn {
-    background-color: #38a169;
-    color: white;
-    border: none;
-    padding: 0.6rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.3s;
-}
-
-.add-stock-btn:disabled {
-    background-color: #94d3a2;
-    cursor: not-allowed;
-}
-
-.add-stock-btn:hover:not(:disabled) {
-    background-color: #2f855a;
-}
-
-.refill-btn {
-    background-color: #f6ad55;
-    color: white;
-    border: none;
-    padding: 0.6rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.3s;
-}
-
-.refill-btn:disabled {
-    background-color: #fbd38d;
-    cursor: not-allowed;
-}
-
-.refill-btn:hover:not(:disabled) {
-    background-color: #dd6b20;
-}
-
-/* --- Warehouse Modal Add Button --- */
-.add-btn {
-    background-color: #38a169;
-    border: none;
-    padding: 5px 10px;
-    color: white;
+/* Button & Pill styles */
+.sku-chip {
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    background: var(--primary-light);
+    padding: 3px 8px;
     border-radius: 6px;
+}
+
+.category-chip {
+    font-size: 0.78rem;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.po-pill {
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: #f1f5f9;
+}
+
+.po-pill.has-po {
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.sold-quantity {
+    color: #059669;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+.btn-return {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    font-weight: 600;
     cursor: pointer;
-    margin-left: 8px;
+    transition: all 0.2s ease;
 }
 
-.add-btn:disabled {
-    background-color: #94d3a2;
+.btn-return:hover:not(.disabled) {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+}
+
+.btn-return.disabled {
+    opacity: 0.4;
     cursor: not-allowed;
 }
 
-.not-enough-btn {
-    background-color: #e53e3e !important;
-    color: white !important;
-    cursor: not-allowed;
+/* Added Summary Card */
+.added-summary-card {
+    margin-top: 32px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: var(--radius-lg);
+    padding: 24px;
 }
 
-/* --- Quantity Controls --- */
-.quantity-control-cell {
+.summary-header {
+    margin-bottom: 16px;
+}
+
+.summary-title-badge {
     display: flex;
     align-items: center;
+    gap: 10px;
+    color: #1e293b;
 }
 
-.quantity-control-centered {
-    gap: 5px;
+.summary-title-badge i {
+    color: var(--primary-color);
+    font-size: 1.25rem;
+}
+
+.summary-title-badge h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.stepper-controls {
+    display: inline-flex;
+    align-items: center;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.stepper-controls.centered {
+    margin: 0 auto;
+}
+
+.step-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: #f8fafc;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.step-btn:hover:not(:disabled) {
+    background: #e2e8f0;
+}
+
+.step-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.step-input {
+    width: 50px;
+    height: 34px;
+    border: none;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.summary-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+/* Success Modal */
+.modal-sm {
+    max-width: 440px;
+    width: 95%;
+    padding: 32px 24px;
+}
+
+.success-icon-box {
+    width: 64px;
+    height: 64px;
+    background: #ecfdf5;
+    color: #059669;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    margin: 0 auto 16px auto;
+}
+
+.success-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 6px 0;
+}
+
+.success-desc {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin: 0 0 24px 0;
+}
+
+.success-action-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.success-action-btns button {
+    width: 100%;
     justify-content: center;
 }
 
-.qty-inline-input {
-    width: 70px;
-    text-align: center;
+/* Return Modal */
+.return-product-box {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 20px;
 }
 
-/* --- Return to Warehouse --- */
-.return-btn {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    text-align: center;
-    min-width: 80px;
-    white-space: nowrap;
-    background-color: #f56565;
-    color: white;
-    cursor: pointer;
+.return-product-box h4 {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    color: var(--text-primary);
 }
 
-.disabled-btn {
-    background-color: #feb2b2;
-    cursor: not-allowed;
-}
-
-/* --- Return Modal --- */
-.sub-text {
-    font-size: 0.9em;
-    color: #666;
-    margin: 5px 0;
+.return-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
 }
 
 .return-qty-control {
-    margin: 20px 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    margin: 20px 0;
 }
 
-.qty-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.qty-input {
-    width: 80px;
-    text-align: center;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1.1em;
-    font-weight: bold;
-    -moz-appearance: textfield;
-}
-
-.qty-input::-webkit-outer-spin-button,
-.qty-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-/* --- Modal Override (align-items: flex-start for this page) --- */
-.modal-overlay {
-    align-items: flex-start;
-    padding-top: 50px;
-}
-
-/* --- Success Modal Buttons --- */
-.csv-btn {
-    background-color: #3182ce;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
+.return-qty-control label {
+    font-size: 0.88rem;
     font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Refill Date Modal */
+.date-filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.checkbox-group {
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: background-color 0.3s;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-primary);
 }
 
-.csv-btn:hover {
-    background-color: #2b6cb0;
-}
-
-.print-btn {
-    background-color: #607d8b;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
+.checkbox-group input {
+    width: 16px;
+    height: 16px;
     cursor: pointer;
-    font-weight: 600;
+}
+
+.modal-stepper-wrap {
     display: flex;
     align-items: center;
-    gap: 5px;
-}
-
-/* --- Refill Date Modal --- */
-.date-filter-container {
-    display: flex;
-    align-items: flex-end;
-    gap: 15px;
-    padding: 20px 0;
     justify-content: center;
-}
-
-.date-input {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    font-size: 0.9em;
-}
-
-.search-action-btn {
-    padding: 9px 20px;
-    background-color: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
     gap: 8px;
 }
 
-.search-action-btn:hover {
-    background-color: #2563eb;
-}
-
-.search-action-btn:disabled {
-    background-color: #9ca3af;
-    cursor: not-allowed;
-}
-
-/* --- Utility --- */
-.text-center {
-    text-align: center;
-}
-
-/* --- Print Receipt (scoped styles for receipt layout) --- */
+/* Print Receipt Layout */
 .signature-row {
     display: flex;
     justify-content: space-between;
     margin-top: 30px;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px 16px !important;
+    color: #94a3b8;
+}
+
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+    color: #cbd5e1;
+}
+
+.state-container {
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--text-muted);
+}
+
+.loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e2e8f0;
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.error-state {
+    color: #dc2626;
+}
+
+@media (max-width: 768px) {
+    .page-header-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .top-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .truck-select-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .truck-select {
+        width: 100%;
+    }
+
+    .right-actions {
+        flex-direction: column;
+        align-items: stretch;
+        margin-left: 0;
+    }
+
+    .search-wrapper {
+        width: 100%;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .button-group button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .date-filter-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

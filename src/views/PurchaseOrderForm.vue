@@ -1,107 +1,183 @@
 <template>
     <div class="po-form-container">
-        <h2 class="section-title">
-            <i :class="isEditing ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
-            {{ isEditing ? 'แก้ไขใบสั่งซื้อ' : 'สร้างใบสั่งซื้อใหม่' }}
-        </h2>
-
-        <div class="form-grid">
-            <div class="card">
-                <h3 class="card-title">ข้อมูลใบสั่งซื้อ</h3>
-                <div class="form-group">
-                    <label>ผู้จำหน่าย (Supplier) <span style="color: #e53e3e;">*</span></label>
-                    <input type="text" v-model="form.supplier_name" placeholder="ชื่อร้านค้า หรือผู้จำหน่าย" required />
+        <!-- Header Banner -->
+        <div class="po-form-header">
+            <div class="header-title-box">
+                <div class="header-icon-badge">
+                    <i :class="isEditing ? 'fas fa-pen-to-square' : 'fas fa-file-circle-plus'"></i>
                 </div>
-                <div class="form-group">
-                    <label>หมายเหตุ</label>
-                    <textarea v-model="form.notes" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+                <div>
+                    <h2 class="section-title">{{ isEditing ? 'แก้ไขใบสั่งซื้อ' : 'สร้างใบสั่งซื้อใหม่' }}</h2>
+                    <p class="section-subtitle">ระบุข้อมูลผู้จำหน่ายและเลือกสินค้าเพื่อทำใบสั่งซื้อเข้าสต็อก</p>
                 </div>
             </div>
 
-            <div class="card">
-                <h3 class="card-title">เพิ่มรายการสินค้า</h3>
+            <button class="btn btn-secondary" @click="cancel">
+                <i class="fas fa-arrow-left"></i>
+                <span>ย้อนกลับ</span>
+            </button>
+        </div>
+
+        <div class="form-grid-split">
+            <!-- Left Card: Supplier & Notes -->
+            <div class="card form-card">
+                <h3 class="card-title">
+                    <i class="fas fa-truck-field"></i> ข้อมูลผู้จำหน่าย
+                </h3>
+                <div class="form-group">
+                    <label>ผู้จำหน่าย (Supplier) <span class="required">*</span></label>
+                    <input
+                        type="text"
+                        v-model="form.supplier_name"
+                        placeholder="ชื่อร้านค้า หรือผู้จำหน่าย..."
+                        class="form-control"
+                        required
+                    />
+                </div>
+                <div class="form-group">
+                    <label>หมายเหตุ</label>
+                    <textarea
+                        v-model="form.notes"
+                        placeholder="รายละเอียดเพิ่มเติม หรือเงื่อนไขการส่ง..."
+                        class="form-control"
+                        rows="3"
+                    ></textarea>
+                </div>
+            </div>
+
+            <!-- Right Card: Product Search & Add -->
+            <div class="card form-card">
+                <h3 class="card-title">
+                    <i class="fas fa-boxes-stacked"></i> เพิ่มรายการสินค้า
+                </h3>
                 <div class="add-item-form">
                     <div class="search-group">
-                        <label>ค้นหาสินค้า</label>
-
+                        <label class="font-semibold text-sm mb-1 block">ค้นหาสินค้าจากระบบ</label>
                         <div class="search-input-wrapper">
-                            <i class="fas fa-search search-icon"></i>
-
-                            <input type="text" v-model="searchTerm" @input="handleSearchInput"
-                                placeholder="พิมพ์ชื่อ หรือ รหัสสินค้า..." class="search-input" />
-
-                            <button v-if="searchTerm" class="clear-search-btn" @click="clearSearch">
+                            <i class="fas fa-search search-icon-inside"></i>
+                            <input
+                                type="text"
+                                v-model="searchTerm"
+                                @input="handleSearchInput"
+                                placeholder="พิมพ์ชื่อ หรือ รหัส SKU สินค้า..."
+                                class="form-control search-input-styled"
+                            />
+                            <button v-if="searchTerm" class="clear-search-btn" @click="clearSearch" type="button">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
 
-                        <div v-if="searchResults.length" class="search-results">
-                            <div v-for="product in searchResults" :key="product.id" class="result-item"
-                                @click="selectProduct(product)">
+                        <div v-if="searchResults.length" class="search-results-dropdown">
+                            <div
+                                v-for="product in searchResults"
+                                :key="product.id"
+                                class="result-item"
+                                @click="selectProduct(product)"
+                            >
                                 <div class="product-info">
-                                    <span class="product-name">{{ product.description }} - {{ product.category }}</span>
-                                    <span class="product-brand">{{ product.brand }}</span>
+                                    <span class="product-name font-bold">{{ product.description }}</span>
+                                    <span class="product-brand text-muted text-xs">{{ product.brand || 'ทั่วไป' }} • {{ product.category }}</span>
                                 </div>
-                                <span class="product-code">#{{ product.product_code }}</span>
+                                <span class="product-code-pill">#{{ product.product_code }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div v-if="selectedProduct" class="selected-product-form">
-                        <div class="form-group">
-                            <label>จำนวน</label>
-                            <input type="number" v-model.number="addItemForm.quantity" min="1" />
+                    <div v-if="selectedProduct" class="selected-product-box animate-fade-in">
+                        <div class="selected-name-bar">
+                            <i class="fas fa-box"></i>
+                            <span class="font-bold">{{ selectedProduct.description }}</span>
                         </div>
-                        <div class="form-group">
-                            <label>ราคาต้นทุน/หน่วย</label>
-                            <input type="number" v-model.number="addItemForm.cost_price" step="0.01" min="0" />
+                        <div class="selected-product-controls">
+                            <div class="form-group">
+                                <label>จำนวน</label>
+                                <input
+                                    type="number"
+                                    v-model.number="addItemForm.quantity"
+                                    min="1"
+                                    class="form-control tabular-nums text-center"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>ต้นทุน/หน่วย (บาท)</label>
+                                <input
+                                    type="number"
+                                    v-model.number="addItemForm.cost_price"
+                                    step="0.01"
+                                    min="0"
+                                    class="form-control tabular-nums text-right"
+                                />
+                            </div>
+                            <button class="btn btn-primary add-item-btn" @click="addItemToList" type="button">
+                                <i class="fas fa-plus"></i> เพิ่มลงรายการ
+                            </button>
                         </div>
-                        <button class="add-btn" @click="addItemToList">
-                            <i class="fas fa-plus"></i> เพิ่ม
-                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card summary-card">
-            <h3 class="card-title">สรุปรายการ ({{ form.items.length }} รายการ)</h3>
-            <div class="table-responsive">
-                <table class="product-table summary-table">
+        <!-- Summary Items Card -->
+        <div class="table-card">
+            <div class="table-card-header">
+                <div>
+                    <h3 class="card-title">สรุปรายการสินค้าในใบสั่งซื้อ</h3>
+                    <p class="card-subtitle">ทั้งหมด {{ form.items.length }} รายการ</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="product-table">
                     <thead>
                         <tr>
-                            <th>สินค้า</th>
+                            <th width="60" class="text-center">#</th>
+                            <th>ชื่อสินค้า</th>
                             <th>หมวดหมู่</th>
-                            <th>จำนวน</th>
-                            <th>ต้นทุน/หน่วย</th>
-                            <th>รวม</th>
-                            <th>ลบ</th>
+                            <th width="150" class="text-center">จำนวน</th>
+                            <th width="150" class="text-right">ต้นทุน/หน่วย</th>
+                            <th width="160" class="text-right">รวมเงิน</th>
+                            <th width="70" class="text-center">ลบ</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(item, index) in form.items" :key="index">
-                            <td>{{ item.product_name }}</td>
-                            <td>{{ item.category }}</td>
-                            <td class="quantity-control-cell">
-                                <button class="qty-btn" @click="updateItemQuantity(index, -1)"
-                                    :disabled="item.quantity <= 1">-</button>
-                                <input type="number" v-model.number="item.quantity" min="1" class="qty-input">
-                                <button class="qty-btn" @click="updateItemQuantity(index, 1)">+</button>
-                            </td>
-                            <td>{{ item.cost_price.toFixed(2) }}</td>
-                            <td>{{ (item.quantity * item.cost_price).toFixed(2) }}</td>
+                            <td class="text-center text-muted tabular-nums">{{ index + 1 }}</td>
+                            <td class="font-bold text-main">{{ item.product_name }}</td>
                             <td>
-                                <button class="remove-btn" @click="removeItem(index)">&times;</button>
+                                <span class="stock-pill pill-medium">{{ item.category || 'ทั่วไป' }}</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="stepper-wrap">
+                                    <button class="step-btn" @click="updateItemQuantity(index, -1)" :disabled="item.quantity <= 1">-</button>
+                                    <input type="number" v-model.number="item.quantity" min="1" class="form-control step-input tabular-nums">
+                                    <button class="step-btn" @click="updateItemQuantity(index, 1)">+</button>
+                                </div>
+                            </td>
+                            <td class="text-right tabular-nums">฿{{ item.cost_price.toFixed(2) }}</td>
+                            <td class="text-right tabular-nums font-bold text-success">
+                                ฿{{ (item.quantity * item.cost_price).toFixed(2) }}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn-icon-danger" @click="removeItem(index)" title="ลบรายการ">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
                             </td>
                         </tr>
                         <tr v-if="form.items.length === 0">
-                            <td colspan="5" style="text-align: center;">ยังไม่มีรายการสินค้า</td>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <div class="empty-state">
+                                    <i class="fas fa-basket-shopping empty-icon"></i>
+                                    <p class="empty-title">ยังไม่มีรายการสินค้าในใบสั่งซื้อ</p>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                     <tfoot v-if="form.items.length > 0">
-                        <tr class="total-row">
-                            <td colspan="3" class="total-label">ยอดรวมสุทธิ (Total)</td>
-                            <td class="total-value">{{ totalCost.toFixed(2) }}</td>
+                        <tr class="total-row-footer">
+                            <td colspan="5" class="text-right font-bold" style="font-size: 1.05rem;">ยอดรวมสุทธิทั้งสิ้น (Total):</td>
+                            <td class="text-right tabular-nums font-bold text-success" style="font-size: 1.25rem;">
+                                ฿{{ totalCost.toFixed(2) }}
+                            </td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -109,11 +185,13 @@
             </div>
         </div>
 
-        <div class="action-bar">
-            <button class="cancel-btn" @click="cancel">ยกเลิก</button>
-            <button class="save-btn" @click="submitForm" :disabled="loading || form.items.length === 0">
+        <!-- Action Bar -->
+        <div class="action-footer-bar">
+            <button class="btn btn-secondary" @click="cancel">ยกเลิก</button>
+            <button class="btn btn-primary save-po-btn" @click="submitForm" :disabled="loading || form.items.length === 0">
+                <i class="fas fa-check"></i>
                 <span v-if="loading">กำลังบันทึก...</span>
-                <span v-else>บันทึกใบสั่งซื้อ</span>
+                <span v-else>{{ isEditing ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบสั่งซื้อ' }}</span>
             </button>
         </div>
     </div>
@@ -310,37 +388,84 @@ const cancel = () => {
 
 <style scoped>
 .po-form-container {
-    max-width: 1200px;
-    margin: 2rem auto;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.po-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-title-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-icon-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
 }
 
 .section-title {
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-bottom: 2rem;
-    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
 }
 
-.form-grid {
+.section-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0.2rem 0 0 0;
+}
+
+/* Split Grid */
+.form-grid-split {
     display: grid;
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: 420px 1fr;
     gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    align-items: start;
 }
 
-.card {
-    background-color: var(--card-bg);
-    padding: 1.5rem 2rem;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
+.form-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .card-title {
-    font-size: 1.4rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.5rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-title i {
+    color: var(--primary-color);
 }
 
 .form-group {
@@ -349,27 +474,19 @@ const cancel = () => {
 
 .form-group label {
     display: block;
+    font-size: 0.85rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    color: var(--text-main);
+    margin-bottom: 6px;
 }
 
-.form-group input,
-.form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 16px;
+.required {
+    color: #ef4444;
 }
 
-.form-group textarea {
-    min-height: 100px;
-}
-
-/* --- Search Bar Styles (ปรับปรุงใหม่) --- */
-.add-item-form .search-group {
+/* Search Dropdown */
+.search-group {
     position: relative;
-    margin-bottom: 1.5rem;
 }
 
 .search-input-wrapper {
@@ -378,238 +495,217 @@ const cancel = () => {
     align-items: center;
 }
 
-.search-input {
-    width: 100%;
-    /* เว้นที่ซ้ายให้ไอคอนแว่นขยาย, เว้นที่ขวาให้ปุ่มล้าง */
-    padding: 12px 40px 12px 45px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 16px;
-    transition: all 0.3s ease;
-    background-color: #f9fafa;
+.search-input-styled {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
 }
 
-.search-input:focus {
-    border-color: var(--primary-color);
-    background-color: white;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
-    outline: none;
-}
-
-.search-icon {
-    position: absolute;
-    left: 15px;
-    color: #a0aec0;
-    font-size: 1.1rem;
-    pointer-events: none;
-}
-
-/* ปุ่มล้างค่า */
 .clear-search-btn {
     position: absolute;
     right: 12px;
     background: none;
     border: none;
-    color: #a0aec0;
+    color: #94a3b8;
     cursor: pointer;
-    padding: 4px;
+    font-size: 0.9rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    transition: all 0.2s;
+    transition: color 0.15s ease;
 }
 
 .clear-search-btn:hover {
-    color: #e53e3e;
-    background-color: #edf2f7;
+    color: #ef4444;
 }
 
-/* Search Results Dropdown */
-.search-results {
+.search-results-dropdown {
     position: absolute;
-    top: calc(100% + 8px);
-    background: white;
-    border: 1px solid #e2e8f0;
-    max-height: 250px;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    z-index: 50;
+    max-height: 240px;
     overflow-y: auto;
-    width: 100%;
-    z-index: 10;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .result-item {
-    padding: 12px 15px;
+    padding: 10px 14px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #f1f5f9;
-    transition: background-color 0.2s;
-}
-
-.result-item:last-child {
-    border-bottom: none;
+    transition: background 0.15s ease;
 }
 
 .result-item:hover {
-    background-color: #f7fafc;
+    background: #eff6ff;
 }
 
 .product-info {
     display: flex;
     flex-direction: column;
+    gap: 2px;
 }
 
-.product-name {
-    font-weight: 600;
-    color: #2d3748;
-}
-
-.product-brand {
-    font-size: 0.85rem;
-    color: #718096;
-}
-
-.product-code {
-    font-size: 0.85rem;
-    color: #a0aec0;
-    background-color: #edf2f7;
+.product-code-pill {
+    font-size: 0.8rem;
+    color: #64748b;
+    background: #f1f5f9;
     padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* Selected Product Box */
+.selected-product-box {
+    margin-top: 1rem;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
     border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
-/* Scrollbar */
-.search-results::-webkit-scrollbar {
-    width: 8px;
+.selected-name-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary-color);
+    font-size: 0.95rem;
 }
 
-.search-results::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 8px;
-}
-
-.search-results::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 8px;
-}
-
-.search-results::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* --- End Search Bar Styles --- */
-
-.selected-product-form {
+.selected-product-controls {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 10px;
+    grid-template-columns: 100px 160px 1fr;
+    gap: 12px;
     align-items: end;
 }
 
-.add-btn {
-    background-color: #3182ce;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-.summary-card {
-    margin-top: 1.5rem;
-}
-
-
-
-.action-bar {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-.save-btn,
-.cancel-btn {
-    padding: 12px 24px;
-    border-radius: 25px;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    font-size: 16px;
-}
-
-.save-btn {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.save-btn:disabled {
-    background-color: #a0aec0;
-}
-
-.cancel-btn {
-    background-color: #e2e8f0;
-    color: #4a5568;
-}
-
-.quantity-control-cell {
+.add-item-btn {
+    height: 42px;
     display: flex;
     align-items: center;
-    gap: 5px;
+    justify-content: center;
+    gap: 6px;
 }
 
-.qty-input {
-    width: 60px;
-    text-align: center;
-    padding: 8px;
+/* Table Stepper */
+.stepper-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.step-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-}
-
-.qty-btn {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    font-size: 16px;
-    font-weight: bold;
+    background: #ffffff;
+    color: var(--text-main);
+    font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
 }
 
-.qty-btn:disabled {
-    background-color: #ccc;
+.step-btn:hover:not(:disabled) {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: #eff6ff;
+}
+
+.step-btn:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
-.qty-btn:hover:not(:disabled) {
-    background-color: #2c7a7b;
+.step-input {
+    width: 60px;
+    text-align: center;
+    padding: 6px 8px;
 }
 
-.total-row {
-    background-color: #f8f9fa;
-    border-top: 2px solid #ddd;
+.btn-icon-danger {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #dc2626;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
 }
 
-.total-label {
-    text-align: right !important;
-    font-size: 1.1rem;
-    font-weight: bold;
+.btn-icon-danger:hover {
+    background: #fee2e2;
 }
 
-.total-value {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--primary-color);
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 }
 
-@media (max-width: 900px) {
-    .form-grid {
+.empty-icon {
+    font-size: 2.5rem;
+    color: #cbd5e1;
+}
+
+.empty-title {
+    font-size: 0.95rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.total-row-footer td {
+    border-top: 2px solid var(--border-color);
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+.action-footer-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.save-po-btn {
+    padding: 12px 28px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@media (max-width: 1024px) {
+    .form-grid-split {
+        grid-template-columns: 1fr;
+    }
+    .selected-product-controls {
         grid-template-columns: 1fr;
     }
 }
