@@ -56,14 +56,17 @@
                                 @click="openRefillDateModal"
                                 :disabled="!selectedTruckId || loading || isRefillInitiated"
                             >
-                                <span v-if="isRefillInsufficient">
-                                    <i class="fas fa-triangle-exclamation"></i> สินค้าไม่พอ
+                                <span v-if="isRefillInsufficient" class="btn-inner-content">
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                    <span>สินค้าไม่พอ</span>
                                 </span>
-                                <span v-else-if="isRefillConfirmed">
-                                    <i class="fas fa-check"></i> พร้อมยืนยัน
+                                <span v-else-if="isRefillConfirmed" class="btn-inner-content">
+                                    <i class="fas fa-check"></i>
+                                    <span>พร้อมยืนยัน</span>
                                 </span>
-                                <span v-else>
-                                    <i class="fas fa-arrows-rotate"></i> เติมจากยอดขาย
+                                <span v-else class="btn-inner-content">
+                                    <i class="fas fa-arrows-rotate" :class="{ 'fa-spin': isRefillInitiated }"></i>
+                                    <span>เติมจากยอดขาย</span>
                                 </span>
                             </button>
                         </div>
@@ -1305,6 +1308,12 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.btn-inner-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* Button & Pill styles */

@@ -11,85 +11,103 @@
         </div>
 
         <form @submit.prevent="openConfirmModal" class="user-form">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="username" class="form-label">
-                        <i class="fas fa-user"></i> ชื่อผู้ใช้งาน (Username) <span class="required">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        id="username"
-                        class="form-control"
-                        placeholder="เช่น somchai_k"
-                        v-model="formData.username"
-                        required
-                    />
+            <div class="form-sections-wrap">
+                <!-- Section 1: Credentials & Role -->
+                <div class="form-section-card">
+                    <div class="section-badge-title">
+                        <i class="fas fa-key"></i>
+                        <span>ข้อมูลบัญชีผู้ใช้และสิทธิ์</span>
+                    </div>
+                    <div class="section-grid">
+                        <div class="form-group">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user"></i> ชื่อผู้ใช้งาน (Username) <span class="required">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="username"
+                                class="form-control"
+                                placeholder="เช่น somchai_k"
+                                v-model="formData.username"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-lock"></i> รหัสผ่าน (Password) <span class="required">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                id="password"
+                                class="form-control"
+                                placeholder="กำหนดรหัสผ่านเข้าสู่ระบบ"
+                                v-model="formData.password"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="role" class="form-label">
+                                <i class="fas fa-shield-alt"></i> สิทธิ์การใช้งาน (Role) <span class="required">*</span>
+                            </label>
+                            <select id="role" class="form-control" v-model="formData.role" required>
+                                <option value="admin">Admin (ผู้ดูแลระบบ)</option>
+                                <option value="warehouse">Warehouse (เจ้าหน้าที่คลัง)</option>
+                                <option value="truck">Truck (พนักงานประจำรถขนส่ง)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="fullname" class="form-label">
-                        <i class="fas fa-id-card"></i> ชื่อ-นามสกุล (Full Name) <span class="required">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        id="fullname"
-                        class="form-control"
-                        placeholder="เช่น สมชาย ใจดี"
-                        v-model="formData.fullname"
-                        required
-                    />
-                </div>
+                <!-- Section 2: Personal Profile & Contact -->
+                <div class="form-section-card">
+                    <div class="section-badge-title">
+                        <i class="fas fa-address-card"></i>
+                        <span>ข้อมูลส่วนบุคคลและการติดต่อ</span>
+                    </div>
+                    <div class="section-grid">
+                        <div class="form-group full-width">
+                            <label for="fullname" class="form-label">
+                                <i class="fas fa-id-card"></i> ชื่อ-นามสกุล (Full Name) <span class="required">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="fullname"
+                                class="form-control"
+                                placeholder="เช่น สมชาย ใจดี"
+                                v-model="formData.fullname"
+                                required
+                            />
+                        </div>
 
-                <div class="form-group">
-                    <label for="email" class="form-label">
-                        <i class="fas fa-envelope"></i> อีเมล (Email)
-                    </label>
-                    <input
-                        type="email"
-                        id="email"
-                        class="form-control"
-                        placeholder="เช่น somchai@example.com"
-                        v-model="formData.email"
-                    />
-                </div>
+                        <div class="form-group">
+                            <label for="tel" class="form-label">
+                                <i class="fas fa-phone"></i> เบอร์โทรศัพท์ (Telephone) <span class="required">*</span>
+                            </label>
+                            <input
+                                type="tel"
+                                id="tel"
+                                class="form-control"
+                                placeholder="เช่น 0812345678"
+                                v-model="formData.tel"
+                                required
+                            />
+                        </div>
 
-                <div class="form-group">
-                    <label for="tel" class="form-label">
-                        <i class="fas fa-phone"></i> เบอร์โทรศัพท์ (Telephone) <span class="required">*</span>
-                    </label>
-                    <input
-                        type="tel"
-                        id="tel"
-                        class="form-control"
-                        placeholder="เช่น 0812345678"
-                        v-model="formData.tel"
-                        required
-                    />
-                </div>
-
-                <div class="form-group">
-                    <label for="password" class="form-label">
-                        <i class="fas fa-lock"></i> รหัสผ่าน (Password) <span class="required">*</span>
-                    </label>
-                    <input
-                        type="password"
-                        id="password"
-                        class="form-control"
-                        placeholder="กำหนดรหัสผ่านเข้าสู่ระบบ"
-                        v-model="formData.password"
-                        required
-                    />
-                </div>
-
-                <div class="form-group">
-                    <label for="role" class="form-label">
-                        <i class="fas fa-shield-alt"></i> สิทธิ์การใช้งาน (Role) <span class="required">*</span>
-                    </label>
-                    <select id="role" class="form-control" v-model="formData.role" required>
-                        <option value="admin">Admin (ผู้ดูแลระบบ)</option>
-                        <option value="warehouse">Warehouse (เจ้าหน้าที่คลัง)</option>
-                        <option value="truck">Truck (พนักงานประจำรถขนส่ง)</option>
-                    </select>
+                        <div class="form-group">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope"></i> อีเมล (Email)
+                            </label>
+                            <input
+                                type="email"
+                                id="email"
+                                class="form-control"
+                                placeholder="เช่น somchai@example.com"
+                                v-model="formData.email"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -205,6 +223,8 @@ const registerUser = async () => {
 <style scoped>
 .add-user-container {
     padding: 0.5rem 0;
+    max-width: 920px;
+    margin: 0 auto;
 }
 
 .form-header-box {
@@ -212,40 +232,98 @@ const registerUser = async () => {
     align-items: center;
     gap: 1rem;
     padding-bottom: 1.25rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
     border-bottom: 1px solid var(--border);
 }
 
 .form-icon-circle {
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     border-radius: var(--radius-full);
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(99, 102, 241, 0.15));
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(99, 102, 241, 0.16));
     color: var(--primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     border: 1px solid rgba(37, 99, 235, 0.2);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.08);
 }
 
 .form-title {
-    font-size: 1.15rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
 }
 
 .form-desc {
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: var(--text-secondary);
-    margin: 0.2rem 0 0 0;
+    margin: 0.25rem 0 0 0;
 }
 
-.form-grid {
+.form-sections-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-section-card {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--transition-fast);
+}
+
+.form-section-card:hover {
+    border-color: #cbd5e1;
+}
+
+.form-control {
+    background-color: #ffffff !important;
+    border: 1.5px solid #94a3b8 !important;
+    color: #0f172a !important;
+    box-shadow: 0 1.5px 3px rgba(15, 23, 42, 0.06);
+}
+
+.form-control:hover {
+    border-color: #64748b !important;
+}
+
+.form-control:focus {
+    border-color: #2563eb !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.16) !important;
+}
+
+.section-badge-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #1e293b;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.section-badge-title i {
+    color: var(--primary);
+    font-size: 0.95rem;
+}
+
+.section-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 1.25rem;
+}
+
+.full-width {
+    grid-column: 1 / -1;
 }
 
 .required {
@@ -265,5 +343,17 @@ const registerUser = async () => {
     font-size: 0.95rem;
     color: var(--text-secondary);
     padding: 1rem 0;
+}
+
+@media (max-width: 640px) {
+    .section-grid {
+        grid-template-columns: 1fr;
+    }
+    .form-actions {
+        flex-direction: column;
+    }
+    .form-actions .btn {
+        width: 100%;
+    }
 }
 </style>

@@ -2,6 +2,7 @@
     <div class="warehouse-page">
         <div class="table-card">
             <!-- Header & Actions -->
+            <!-- Header -->
             <div class="page-header-row">
                 <div class="header-title-box">
                     <div class="header-icon-badge">
@@ -12,29 +13,30 @@
                         <p class="section-subtitle">ตรวจสอบสต็อกสินค้าคงคลัง จุดจัดเก็บ และสถานะความพร้อมจำหน่าย</p>
                     </div>
                 </div>
+            </div>
 
-                <div class="action-header">
-                    <div class="search-wrapper">
-                        <i class="fas fa-search search-icon-main"></i>
-                        <input
-                            type="text"
-                            v-model="tableSearchTerm"
-                            @input="handleTableSearch"
-                            placeholder="ค้นหารหัส, ชื่อสินค้า, หมวดหมู่..."
-                            class="main-search-input"
-                        />
-                    </div>
+            <!-- Action Toolbar: Search on Left, Buttons on Far Right -->
+            <div class="action-header">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon-main"></i>
+                    <input
+                        type="text"
+                        v-model="tableSearchTerm"
+                        @input="handleTableSearch"
+                        placeholder="ค้นหารหัส, ชื่อสินค้า, หมวดหมู่..."
+                        class="main-search-input"
+                    />
+                </div>
 
-                    <div class="buttons-wrapper">
-                        <button class="btn btn-primary" @click="openModal">
-                            <i class="fas fa-plus"></i>
-                            <span>เพิ่มสินค้าเข้าคลัง</span>
-                        </button>
-                        <button class="btn btn-info" @click="openExcelModal">
-                            <i class="fas fa-file-excel"></i>
-                            <span>นำเข้าจาก Excel</span>
-                        </button>
-                    </div>
+                <div class="buttons-wrapper">
+                    <button class="btn btn-primary" @click="openModal">
+                        <i class="fas fa-plus"></i>
+                        <span>เพิ่มสินค้าเข้าคลัง</span>
+                    </button>
+                    <button class="btn btn-info" @click="openExcelModal">
+                        <i class="fas fa-file-excel"></i>
+                        <span>นำเข้าจาก Excel</span>
+                    </button>
                 </div>
             </div>
 
@@ -681,7 +683,7 @@ onMounted(fetchWarehouseStock)
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .header-title-box {
@@ -718,13 +720,15 @@ onMounted(fetchWarehouseStock)
 .action-header {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 20px;
+    gap: 16px;
 }
 
 .search-wrapper {
     position: relative;
-    width: 320px;
+    width: 360px;
     max-width: 100%;
 }
 
@@ -760,7 +764,8 @@ onMounted(fetchWarehouseStock)
 .buttons-wrapper {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    margin-left: auto;
 }
 
 /* Data Table Tags & Chips */

@@ -63,15 +63,21 @@
         <div class="card filter-card">
             <div class="filter-grid">
                 <div class="form-group">
-                    <label class="form-label">ตั้งแต่วันที่</label>
+                    <label class="form-label">
+                        <i class="fas fa-calendar-day"></i> ตั้งแต่วันที่
+                    </label>
                     <input type="date" class="form-control" v-model="filters.startDate" @change="(fetchReports(1), fetchSummary())" />
                 </div>
                 <div class="form-group">
-                    <label class="form-label">ถึงวันที่</label>
+                    <label class="form-label">
+                        <i class="fas fa-calendar-check"></i> ถึงวันที่
+                    </label>
                     <input type="date" class="form-control" v-model="filters.endDate" @change="(fetchReports(1), fetchSummary())" />
                 </div>
                 <div class="form-group">
-                    <label class="form-label">จุดขาย (รถ/โกดัง)</label>
+                    <label class="form-label">
+                        <i class="fas fa-store"></i> จุดขาย (รถ/โกดัง)
+                    </label>
                     <select class="form-control" v-model="filters.truckId" @change="(fetchReports(1), fetchSummary())">
                         <option value="">ทั้งหมด</option>
                         <option :value="0">โกดังหลัก</option>
@@ -81,7 +87,9 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">ประเภทออเดอร์</label>
+                    <label class="form-label">
+                        <i class="fas fa-filter"></i> ประเภทออเดอร์
+                    </label>
                     <select class="form-control" v-model="include_preorder" @change="(fetchReports(1), fetchSummary())">
                         <option value="all">รวมทั้งสองแบบ</option>
                         <option value="only-preorder">เฉพาะ Pre-order</option>
@@ -89,7 +97,9 @@
                     </select>
                 </div>
                 <div class="form-group search-form-group">
-                    <label class="form-label">ค้นหาบิล / ลูกค้า</label>
+                    <label class="form-label">
+                        <i class="fas fa-magnifying-glass"></i> ค้นหาบิล / ลูกค้า
+                    </label>
                     <div class="search-input-wrap">
                         <i class="fas fa-search search-icon"></i>
                         <input
@@ -520,17 +530,110 @@ onMounted(() => {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
-    padding: 1.25rem;
+    padding: 1.25rem 1.5rem;
     box-shadow: var(--shadow-sm);
 }
 
 .filter-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    gap: 1.25rem;
     align-items: flex-end;
 }
 
+.filter-grid .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-grid .form-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.filter-grid .form-label i {
+    color: var(--primary);
+    font-size: 0.82rem;
+}
+
+/* Modern Dropdown */
+.filter-grid select.form-control {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: #ffffff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%232563eb' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 14px 14px;
+    padding: 0 38px 0 14px;
+    height: 44px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-lg);
+    font-size: 0.92rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.filter-grid select.form-control:hover {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+}
+
+.filter-grid select.form-control:focus {
+    border-color: #2563eb;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.12);
+    outline: none;
+}
+
+/* Modern Datepicker */
+.filter-grid input[type="date"].form-control {
+    background-color: #ffffff;
+    height: 44px;
+    padding: 0 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-lg);
+    font-size: 0.92rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.filter-grid input[type="date"].form-control:hover {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+}
+
+.filter-grid input[type="date"].form-control:focus {
+    border-color: #2563eb;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.12);
+    outline: none;
+}
+
+.filter-grid input[type="date"].form-control::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.65;
+    filter: invert(36%) sepia(85%) saturate(1487%) hue-rotate(206deg) brightness(97%) contrast(92%);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.filter-grid input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+/* Modern Searchbar */
 .search-form-group {
     grid-column: span 1;
 }
@@ -543,20 +646,47 @@ onMounted(() => {
 
 .search-input-wrap {
     position: relative;
+    width: 100%;
 }
 
-.search-icon {
+.search-input-wrap .search-icon {
     position: absolute;
-    left: 12px;
+    left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--text-muted);
-    font-size: 0.9rem;
+    color: #94a3b8;
+    font-size: 0.95rem;
     pointer-events: none;
+    transition: color 0.2s ease;
 }
 
-.form-control.with-icon {
-    padding-left: 36px;
+.filter-grid input[type="text"].form-control.with-icon {
+    height: 44px;
+    padding: 0 14px 0 42px;
+    background-color: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-lg);
+    font-size: 0.92rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.filter-grid input[type="text"].form-control.with-icon:hover {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+}
+
+.filter-grid input[type="text"].form-control.with-icon:focus {
+    border-color: #2563eb;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.12);
+    outline: none;
+}
+
+.search-input-wrap:focus-within .search-icon {
+    color: #2563eb;
 }
 
 /* Table styling */
