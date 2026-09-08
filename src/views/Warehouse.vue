@@ -540,16 +540,8 @@ onMounted(fetchWarehouseStock)
 </script>
 
 <style scoped>
-.product-table-container {
-    background-color: var(--card-bg);
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-}
-
 .product-table-container h2 {
     margin-bottom: 0;
-    font-size: 24px;
     display: inline-block;
 }
 
@@ -638,48 +630,7 @@ onMounted(fetchWarehouseStock)
     background-color: #2b6cb0;
 }
 
-.product-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-
-.product-table thead tr {
-    background-color: var(--secondary-color);
-    text-align: left;
-}
-
-.product-table th,
-.product-table td {
-    padding: 15px;
-    border-bottom: 1px solid var(--border-color);
-    text-align: left;
-}
-
-.product-table tbody tr:hover {
-    background-color: #f9f9f9;
-}
-
-.pagination {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    margin-top: 20px;
-}
-
-/* Modal Shared Styles */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 999;
-}
+/* Modal Styles */
 
 .modal-content {
     background: white;
@@ -901,35 +852,8 @@ onMounted(fetchWarehouseStock)
     font-weight: bold;
 }
 
-/* Badge Styles */
-.stock-badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    text-align: center;
-    min-width: 80px;
-    white-space: nowrap;
-}
-
 .badge-empty {
     background-color: #f56565;
-    color: white;
-}
-
-.badge-low {
-    background-color: #f56565;
-    color: white;
-}
-
-.badge-medium {
-    background-color: #f6e05e;
-    color: #4a5568;
-}
-
-.badge-high {
-    background-color: #48bb78;
     color: white;
 }
 </style>

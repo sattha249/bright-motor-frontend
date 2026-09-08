@@ -115,71 +115,13 @@ h2 {
     /* เพิ่มความสูงขั้นต่ำเพื่อป้องกันหน้าจอกระโดด */
 }
 
-/* Modal styles (shared) */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
 .modal {
-    background: white;
-    padding: 2rem;
-    border-radius: 12px;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    width: 90%;
     max-width: 400px;
-}
-
-.modal h3 {
-    margin-bottom: 1rem;
-    color: #333;
+    text-align: center;
 }
 
 .modal p {
     margin-bottom: 1.5rem;
     color: #555;
-}
-
-.modal-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.modal-confirm-btn,
-.modal-cancel-btn {
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    transition: background-color 0.3s;
-}
-
-.modal-confirm-btn {
-    background-color: #48bb78;
-    color: white;
-}
-
-.modal-confirm-btn:hover {
-    background-color: #38a169;
-}
-
-.modal-cancel-btn {
-    background-color: #e53e3e;
-    color: white;
-}
-
-.modal-cancel-btn:hover {
-    background-color: #c53030;
 }
 </style>

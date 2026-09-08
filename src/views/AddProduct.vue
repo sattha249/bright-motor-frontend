@@ -203,33 +203,11 @@ const saveProduct = async () => {
     margin-top: 20px;
 }
 
-.save-btn,
 .cancel-btn {
-    padding: 12px 25px;
-    border: none;
-    border-radius: 20px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s;
     text-decoration: none;
-}
-
-.save-btn {
-    background-color: var(--primary-color);
-    color: var(--white-color);
-}
-
-.save-btn:hover {
-    background-color: #43a047;
-}
-
-.cancel-btn {
-    background-color: #e0e0e0;
-    color: #666;
-}
-
-.cancel-btn:hover {
-    background-color: #c0c0c0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .error {

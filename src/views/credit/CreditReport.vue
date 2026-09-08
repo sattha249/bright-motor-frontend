@@ -508,18 +508,7 @@ onMounted(fetchCreditSummary);
     padding-right: 2.5rem !important;
 }
 
-/* Modals */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+
 
 /* [แก้ Z-Index ให้สูงกว่าทุกอย่าง] */
 .z-list {
@@ -664,14 +653,7 @@ onMounted(fetchCreditSummary);
     background-color: #2b6cb0;
 }
 
-.cancel-btn {
-    background-color: #718096;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-}
+
 
 .confirm-pay-btn {
     background-color: #38a169;
@@ -715,28 +697,7 @@ onMounted(fetchCreditSummary);
     color: #666;
 }
 
-.pagination {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 1.5rem;
-    align-items: center;
-}
 
-.pagination button {
-    background-color: var(--secondary-color);
-    color: #4a5568;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.pagination button:disabled {
-    background-color: #e2e8f0;
-    color: #a0aec0;
-    cursor: not-allowed;
-}
 
 .summary-row {
     display: flex;

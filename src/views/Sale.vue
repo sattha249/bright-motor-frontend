@@ -617,22 +617,7 @@ onMounted(() => {
 }
 
 /* ... (Styles ตารางและอื่นๆ เหมือนเดิม) ... */
-.product-table {
-    width: 100%;
-    border-collapse: collapse;
-}
 
-.product-table th,
-.product-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border-color);
-    text-align: left;
-}
-
-.product-table th {
-    background-color: var(--secondary-color);
-    font-weight: 600;
-}
 
 .text-center {
     text-align: center !important;
@@ -706,49 +691,9 @@ onMounted(() => {
     cursor: not-allowed;
 }
 
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
 .modal {
-    background: white;
-    padding: 2rem;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 800px;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: var(--shadow);
-}
-
-.search-box {
-    position: relative;
-    margin-bottom: 1rem;
-}
-
-.search-box input {
-    width: 100%;
-    padding: 10px 15px;
-    padding-left: 40px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-}
-
-.search-box i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #999;
 }
 
 .add-to-list-btn {

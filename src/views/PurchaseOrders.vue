@@ -432,19 +432,7 @@ const openCancelModal = (po) => {
     color: var(--text-color-secondary);
 }
 
-/* --- Modal Styles (เพิ่มใหม่) --- */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
+
 
 .modal {
     background: white;
@@ -488,14 +476,7 @@ const openCancelModal = (po) => {
     color: #666;
 }
 
-.cancel-btn {
-    background-color: #6c757d;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-}
+
 
 /* Detail Info Grid in Modal */
 .info-grid {
@@ -572,31 +553,4 @@ const openCancelModal = (po) => {
     background-color: #f8f9fa;
 }
 
-/* Pagination Styles */
-.pagination {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
-    align-items: center;
-}
-
-.pagination button {
-    padding: 6px 12px;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.pagination button:hover:not(:disabled) {
-    background-color: #f0f0f0;
-}
-
-.pagination button:disabled {
-    background: #f5f5f5;
-    color: #ccc;
-    cursor: not-allowed;
-}
 </style>

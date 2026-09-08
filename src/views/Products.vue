@@ -499,23 +499,7 @@ onMounted(() => {
     color: #999;
 }
 
-.product-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 1rem;
-}
 
-.product-table th,
-.product-table td {
-    padding: 12px;
-    border: 1px solid #eee;
-    text-align: left;
-}
-
-.product-table th {
-    background: #f7fafc;
-    font-weight: 600;
-}
 
 .action-btn {
     padding: 6px 10px;
@@ -576,12 +560,7 @@ onMounted(() => {
     cursor: pointer;
 }
 
-.pagination {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-top: 1rem;
-}
+
 
 .upload-btn {
     background-color: #ebf8ff;

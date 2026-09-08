@@ -522,29 +522,7 @@ const cancel = () => {
     margin-top: 1.5rem;
 }
 
-.product-table {
-    width: 100%;
-    border-collapse: collapse;
-}
 
-.product-table th,
-.product-table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.product-table th {
-    background-color: #f8f9fa;
-}
-
-.remove-btn {
-    background: transparent;
-    border: none;
-    color: #e53e3e;
-    font-size: 20px;
-    cursor: pointer;
-}
 
 .action-bar {
     display: flex;

@@ -279,26 +279,12 @@ onMounted(() => {
 }
 
 .search-box {
-    position: relative;
     flex-grow: 1;
     max-width: 300px;
 }
 
 .search-box input {
-    width: 100%;
-    padding: 10px 15px;
-    padding-left: 40px;
-    border: 1px solid var(--border-color);
     border-radius: 20px;
-    font-size: 14px;
-}
-
-.search-box i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #999;
 }
 
 .primary-btn {

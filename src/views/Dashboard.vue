@@ -192,61 +192,11 @@ function formatDate(dateStr) {
 </script>
 
 <style scoped>
-/* Pagination */
-.pagination {
-    margin-top: 15px;
-    text-align: center;
-    margin: 2%;
-}
-
-/* 
-.pagination button {
-    background: var(--secondary-color);
-    border: none;
-    padding: 8px 12px;
-    margin: 0 3px;
-    border-radius: 5px;
-    cursor: pointer;
-    color: white;
-}
-
-.pagination button.active {
-    background: var(--primary-color);
-    font-weight: bold;
-}
-
-.pagination button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-} */
-
-/* modal */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 999;
-}
-
 .modal {
-    background: white;
-    padding: 20px;
     width: 850px;
     max-width: 95%;
     max-height: 90vh;
     overflow-y: auto;
-    border-radius: 10px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-}
-
-.modal h3 {
-    margin-bottom: 1rem;
 }
 
 .modal table {
@@ -260,15 +210,6 @@ function formatDate(dateStr) {
     border: 1px solid #ccc;
     padding: 8px 10px;
     text-align: left;
-}
-
-.close-btn {
-    background-color: #f44336;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
 }
 
 /* dashboard */
@@ -297,27 +238,5 @@ function formatDate(dateStr) {
     font-size: 36px;
     font-weight: 700;
     color: var(--primary-color);
-}
-
-.product-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-.product-table thead tr {
-    background-color: var(--secondary-color);
-    text-align: left;
-}
-
-.product-table th,
-.product-table td {
-    padding: 15px;
-    border-bottom: 1px solid var(--border-color);
-    text-align: left;
-}
-
-.product-table tbody tr:hover {
-    background-color: #f9f9f9;
 }
 </style>

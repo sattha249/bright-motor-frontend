@@ -51,27 +51,9 @@ onMounted(async () => {
     padding: 15px 25px;
     border-radius: 12px;
     box-shadow: var(--shadow);
-}
-
-.search-box {
     position: relative;
-}
-
-.search-box input {
-    width: 300px;
-    padding: 10px 15px;
-    padding-left: 40px;
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    font-size: 14px;
-}
-
-.search-box i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #999;
+    top: 0;
+    z-index: 100;
 }
 
 .user-info {
@@ -122,11 +104,6 @@ onMounted(async () => {
         padding: 15px;
     }
 
-    .search-box,
-    .search-box input {
-        width: 100%;
-    }
-
     .user-info {
         width: 100%;
         justify-content: space-between;
@@ -141,11 +118,5 @@ onMounted(async () => {
         margin-left: auto;
         padding: 6px 10px;
     }
-}
-
-.header {
-    position: relative;
-    top: 0;
-    z-index: 100;
 }
 </style>

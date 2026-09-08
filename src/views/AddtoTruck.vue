@@ -129,8 +129,7 @@
                     <tr v-for="item in addedProducts" :key="item.productId">
                         <td>SKU-{{ item.productId }}</td>
                         <td>{{ item.description }}</td>
-                        <td class="quantity-control-cell"
-                            style="display: flex; gap: 5px; justify-content: center; align-items: center;">
+                        <td class="quantity-control-cell quantity-control-centered">
                             <button class="qty-btn" @click="decrementAddedQuantity(item)"
                                 :disabled="item.quantity <= 0">
                                 -
@@ -138,7 +137,7 @@
 
                             <input type="number" min="0" :max="item.maxQuantity" v-model.number="item.quantity"
                                 @input="checkSufficiency(item)" @blur="validateAddedQuantity(item)"
-                                style="width: 70px; text-align: center" />
+                                class="qty-inline-input" />
 
                             <button class="qty-btn" @click="incrementAddedQuantity(item)"
                                 :disabled="item.quantity >= item.maxQuantity">
@@ -147,15 +146,14 @@
                         </td>
                         <td>{{ item.unit }}</td>
                         <td>
-                            <span v-if="item.quantity === 0" class="excluded-indicator"
-                                style="color: #d97706; font-weight: bold;">
+                            <span v-if="item.quantity === 0" class="excluded-indicator">
                                 🟡 ยกเว้นการเติม
                             </span>
                             <span v-else-if="insufficientProducts.includes(item.productId)"
-                                class="insufficient-indicator" style="color: #e53e3e; font-weight: bold;">
+                                class="insufficient-indicator">
                                 🔴 ไม่พอ
                             </span>
-                            <span v-else class="sufficient-indicator" style="color: #38a169; font-weight: bold;">
+                            <span v-else class="sufficient-indicator">
                                 🟢 พอ
                             </span>
                         </td>
@@ -210,7 +208,7 @@
                                     -
                                 </button>
                                 <input type="number" min="1" :max="item.quantity"
-                                    v-model.number="addQuantities[item.id]" style="width: 70px; text-align: center" />
+                                    v-model.number="addQuantities[item.id]" class="qty-inline-input" />
                                 <button class="qty-btn" @click="incrementQuantity(item.id, item.quantity)"
                                     :disabled="!addQuantities[item.id] || addQuantities[item.id] >= item.quantity">
                                     +
@@ -228,7 +226,7 @@
                             </td>
                         </tr>
                         <tr v-if="warehouseStocks.length === 0">
-                            <td colspan="7" style="text-align: center">ไม่พบสินค้าที่ค้นหา</td>
+                            <td colspan="7" class="text-center">ไม่พบสินค้าที่ค้นหา</td>
                         </tr>
                     </tbody>
                 </table>
@@ -255,8 +253,7 @@
                 <h3>บันทึกข้อมูลสำเร็จ!</h3>
                 <p>ทำการเพิ่มสินค้าเข้าสู่รถเรียบร้อยแล้ว</p>
                 <div class="modal-buttons centered-buttons">
-                    <button class="print-btn" @click="printRefillNote"
-                        style="background-color: #607d8b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+                    <button class="print-btn" @click="printRefillNote">
                         <i class="fas fa-print"></i> พิมพ์
                     </button>
 
@@ -274,7 +271,7 @@
                 <p>ระบุจำนวนที่ต้องการตีกลับโกดัง</p>
                 <br />
 
-                <div class="product-detail" style="text-align: center">
+                <div class="product-detail text-center">
                     <p>
                         <strong>{{ selectedProduct?.product.description }}</strong>
                     </p>
@@ -376,12 +373,12 @@
                     <span class="grand-total">{{ addedProducts.length }}</span>
                 </div>
                 <br><br>
-                <div style="display: flex; justify-content: space-between; margin-top: 30px;">
-                    <div style="text-align: center;">
+                <div class="signature-row">
+                    <div class="text-center">
                         <p>.......................................</p>
                         <p>ผู้เบิกสินค้า</p>
                     </div>
-                    <div style="text-align: center;">
+                    <div class="text-center">
                         <p>.......................................</p>
                         <p>ผู้ตรวจสอบ</p>
                     </div>
@@ -963,7 +960,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* (Styles เดิมทั้งหมด คงไว้ตามที่คุณส่งมา) */
+/* ===========================================
+   AddtoTruck.vue - Page-specific styles only
+   Shared styles: see common.css and print.css
+   =========================================== */
+
+/* --- Refill Button States --- */
 .refill-success {
     background-color: #28a745 !important;
     cursor: default !important;
@@ -974,6 +976,7 @@ onMounted(() => {
     cursor: default !important;
 }
 
+/* --- Quantity Indicators --- */
 .sold-quantity {
     color: #28a745;
     font-weight: bold;
@@ -996,7 +999,7 @@ onMounted(() => {
 }
 
 .insufficient-indicator {
-    color: #dc3545;
+    color: #e53e3e;
     font-weight: bold;
 }
 
@@ -1005,48 +1008,42 @@ onMounted(() => {
     font-weight: bold;
 }
 
+.excluded-indicator {
+    color: #d97706;
+    font-weight: bold;
+}
+
+/* --- Layout --- */
+.top-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.right-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .summary-buttons {
     margin-top: 15px;
     display: flex;
     gap: 10px;
 }
 
-.cancel-btn {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    padding: 10px 25px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
+.added-summary {
+    margin-top: 2rem;
 }
 
-.cancel-btn:hover {
-    background-color: #5a6268;
+.added-summary h3 {
+    margin-bottom: 0.5rem;
 }
 
-.product-table-container {
-    background-color: var(--card-bg);
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-}
-
-.product-table-container h2 {
-    margin-bottom: 1rem;
-    font-size: 24px;
-}
-
-.top-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
+/* --- Truck Select --- */
 .truck-select-container label {
     font-weight: 600;
     color: #555;
@@ -1067,6 +1064,27 @@ onMounted(() => {
     border-color: var(--primary-color);
 }
 
+/* --- Truck Search (override search-box for compact layout) --- */
+.truck-search {
+    position: relative;
+}
+
+.truck-search input {
+    padding: 8px 30px 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 250px;
+}
+
+.truck-search i {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+}
+
+/* --- Action Buttons --- */
 .button-group {
     display: flex;
     gap: 10px;
@@ -1113,146 +1131,7 @@ onMounted(() => {
     background-color: #dd6b20;
 }
 
-.product-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 0;
-}
-
-.product-table thead tr {
-    background-color: var(--secondary-color);
-    text-align: left;
-}
-
-.product-table th,
-.product-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border-color);
-    text-align: left;
-    font-size: 14px;
-}
-
-.product-table tbody tr:hover {
-    background-color: #f9f9f9;
-}
-
-.error-msg {
-    color: #e53e3e;
-    font-weight: 600;
-}
-
-.added-summary {
-    margin-top: 2rem;
-}
-
-.added-summary h3 {
-    margin-bottom: 0.5rem;
-}
-
-.save-btn {
-    background-color: var(--primary-color);
-    color: var(--white-color);
-    border: none;
-    padding: 10px 25px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
-}
-
-.save-btn:hover:not(:disabled) {
-    background-color: #2c7a7b;
-}
-
-.remove-btn {
-    background: transparent;
-    border: none;
-    color: #e53e3e;
-    font-size: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    padding: 0 8px;
-    line-height: 1;
-}
-
-.remove-btn:hover {
-    color: #a02828;
-}
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 50px;
-    z-index: 999;
-}
-
-.modal {
-    background: white;
-    padding: 20px;
-    width: 90%;
-    max-width: 900px;
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-}
-
-.large-modal {
-    max-height: 80vh;
-    overflow-y: auto;
-}
-
-.modal h3 {
-    margin-bottom: 1rem;
-}
-
-.close-btn {
-    margin-top: 15px;
-    background-color: #f44336;
-    color: white;
-    border: none;
-    padding: 10px 25px;
-    border-radius: 20px;
-    cursor: pointer;
-}
-
-.qty-btn {
-    background-color: #3b82f6;
-    border: none;
-    color: white;
-    font-weight: 700;
-    font-size: 20px;
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-right: 5px;
-    transition: background-color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.qty-btn:hover {
-    background-color: #2563eb;
-}
-
-.qty-btn:disabled {
-    background-color: #e5e7eb;
-    cursor: not-allowed;
-    color: #9ca3af;
-}
-
-.quantity-control-cell {
-    display: flex;
-    align-items: center;
-}
-
+/* --- Warehouse Modal Add Button --- */
 .add-btn {
     background-color: #38a169;
     border: none;
@@ -1274,22 +1153,23 @@ onMounted(() => {
     cursor: not-allowed;
 }
 
-.stock-badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
+/* --- Quantity Controls --- */
+.quantity-control-cell {
+    display: flex;
+    align-items: center;
+}
+
+.quantity-control-centered {
+    gap: 5px;
+    justify-content: center;
+}
+
+.qty-inline-input {
+    width: 70px;
     text-align: center;
-    min-width: 80px;
-    white-space: nowrap;
 }
 
-.badge-low {
-    background-color: #f56565;
-    color: white;
-}
-
+/* --- Return to Warehouse --- */
 .return-btn {
     display: inline-block;
     padding: 4px 8px;
@@ -1309,141 +1189,7 @@ onMounted(() => {
     cursor: not-allowed;
 }
 
-.badge-medium {
-    background-color: #f6e05e;
-    color: #4a5568;
-}
-
-.badge-high {
-    background-color: #48bb78;
-    color: white;
-}
-
-.success-modal {
-    max-width: 400px;
-    text-align: center;
-    padding: 30px;
-    margin-top: 15vh;
-    align-self: flex-start;
-}
-
-.success-icon {
-    font-size: 50px;
-    color: #28a745;
-    margin-bottom: 15px;
-}
-
-.centered-buttons {
-    justify-content: center;
-    gap: 15px;
-    margin-top: 25px;
-    display: flex;
-}
-
-.csv-btn {
-    background-color: #3182ce;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: background-color 0.3s;
-}
-
-.csv-btn:hover {
-    background-color: #2b6cb0;
-}
-
-.modal-cancel-btn {
-    background-color: #e53e3e;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.3s;
-}
-
-.modal-cancel-btn:hover {
-    background-color: #c53030;
-}
-
-.modal-confirm-btn {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.3s;
-}
-
-.modal-confirm-btn:hover {
-    background-color: #1c6e2f;
-}
-
-.pagination {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 20px;
-    align-items: center;
-}
-
-.pagination button {
-    padding: 5px 10px;
-    border: 1px solid #ccc;
-    background-color: white;
-    cursor: pointer;
-    border-radius: 4px;
-}
-
-.pagination button:disabled {
-    background-color: #f0f0f0;
-    cursor: not-allowed;
-    color: #aaa;
-}
-
-.top-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.right-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.truck-search {
-    position: relative;
-}
-
-.truck-search input {
-    padding: 8px 30px 8px 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: 250px;
-}
-
-.truck-search i {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #888;
-}
-
+/* --- Return Modal --- */
 .sub-text {
     font-size: 0.9em;
     color: #666;
@@ -1481,6 +1227,45 @@ onMounted(() => {
     margin: 0;
 }
 
+/* --- Modal Override (align-items: flex-start for this page) --- */
+.modal-overlay {
+    align-items: flex-start;
+    padding-top: 50px;
+}
+
+/* --- Success Modal Buttons --- */
+.csv-btn {
+    background-color: #3182ce;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.3s;
+}
+
+.csv-btn:hover {
+    background-color: #2b6cb0;
+}
+
+.print-btn {
+    background-color: #607d8b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* --- Refill Date Modal --- */
 .date-filter-container {
     display: flex;
     align-items: flex-end;
@@ -1525,160 +1310,15 @@ onMounted(() => {
     cursor: not-allowed;
 }
 
-/* ซ่อน print-only ในหน้าจอปกติ */
-.print-only {
-    display: none;
-}
-</style>
-
-<style>
-@media print {
-
-    /* 1. Reset พื้นที่กระดาษ */
-    @page {
-        size: auto;
-        margin: 0mm;
-    }
-
-    /* 2. สั่ง Body ให้หดตัวเท่าเนื้อหา */
-    html,
-    body {
-        width: 100%;
-        height: fit-content !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background-color: white;
-        overflow: hidden !important;
-        font-family: 'Courier New', Courier, monospace;
-        /* Font แบบ PreOrder */
-        font-size: 12px;
-        color: #000;
-    }
-
-    /* 3. ซ่อนเนื้อหาอื่นแบบ Invisible */
-    body * {
-        visibility: hidden;
-        height: 0;
-        overflow: hidden;
-    }
-
-    /* 4. ดึงพื้นที่พิมพ์ออกมาแสดง */
-    .printable-area {
-        visibility: visible !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: fit-content !important;
-        background: white !important;
-        margin: 0 !important;
-        padding: 20px !important;
-        /* เพิ่ม Padding นิดหน่อย */
-        z-index: 999999 !important;
-        display: block !important;
-    }
-
-    /* 5. แสดงลูกหลานของพื้นที่พิมพ์ */
-    .printable-area * {
-        visibility: visible !important;
-        height: auto;
-    }
-
-    /* 6. Toggle View */
-    .no-print {
-        display: none !important;
-    }
-
-    .print-only {
-        display: block !important;
-    }
-
-    /* 7. Receipt Styling (Copy จาก PreOrder) */
-    .receipt-layout {
-        width: 100%;
-        max-width: 800px;
-        /* จำกัดความกว้างให้อ่านง่าย */
-        margin: 0 auto;
-    }
-
-    .receipt-header {
-        text-align: center;
-        margin-bottom: 10px;
-    }
-
-    .receipt-header h2 {
-        font-size: 16px;
-        font-weight: bold;
-        margin: 0;
-    }
-
-    .receipt-header p {
-        font-size: 24px;
-        margin: 2px 0;
-    }
-
-    .receipt-info-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 24px;
-    }
-
-    .dashed-line {
-        border-top: 1px dashed #000;
-        margin: 5px 0;
-        width: 100%;
-        display: block;
-    }
-
-    .receipt-item-row {
-        margin-bottom: 5px;
-    }
-
-    .item-name {
-        display: flex;
-        justify-content: space-between;
-        /* ดันซ้าย-ขวา */
-        align-items: baseline;
-        /* จัดแนวบรรทัดให้สวยงาม */
-        font-size: 24px;
-        font-weight: bold;
-        width: 100%;
-        /* ให้กว้างเต็มพื้นที่ */
-    }
-
-    /* [เพิ่ม] ปรับขนาดตัวอักษรจุดเก็บให้เล็กลงนิดหน่อย (Optional) */
-    .item-zone {
-        font-size: 18px;
-        font-weight: normal;
-        margin-left: 10px;
-        /* เว้นระยะห่างเผื่อชื่อสินค้าสั้น */
-        white-space: nowrap;
-        /* ห้ามตัดบรรทัด */
-    }
-
-    .item-calc {
-        display: flex;
-        justify-content: space-between;
-        font-size: 24px;
-        padding-left: 10px;
-    }
-
-    .receipt-total-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 32px;
-        font-weight: bold;
-    }
-
-    .receipt-footer {
-        text-align: center;
-        margin-top: 10px;
-        font-size: 24px;
-    }
+/* --- Utility --- */
+.text-center {
+    text-align: center;
 }
 
-/* ซ่อนในหน้าจอปกติ */
-.print-only {
-    display: none;
+/* --- Print Receipt (scoped styles for receipt layout) --- */
+.signature-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
 }
 </style>

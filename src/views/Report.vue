@@ -426,26 +426,6 @@ onMounted(() => {
     font-weight: bold;
 }
 
-.pagination {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
-    align-items: center;
-}
-
-.pagination button {
-    padding: 6px 12px;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.pagination button:disabled {
-    background: #f5f5f5;
-    color: #ccc;
-}
 
 .search-wrapper {
     position: relative;
