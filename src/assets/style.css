@@ -1,34 +1,131 @@
 /*
- * style.css - โค้ด CSS ทั่วไปของโปรเจกต์
+ * style.css - Design System Tokens & Base Styles
+ * Bright Motor Management System
  */
 :root {
-  --primary-color: #4caf50; /* สีเขียวหลัก */
-  --secondary-color: #f4f4f4; /* สีพื้นหลังรอง */
-  --text-color: #333;
-  --white-color: #fff;
-  --border-color: #ddd;
-  --card-bg: #fff;
-  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  /* Brand & Primary Accents */
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+  --primary-light: #eff6ff;
+  --primary-border: #bfdbfe;
+  --primary-glow: rgba(37, 99, 235, 0.2);
+
+  --accent-cyan: #06b6d4;
+  --accent-emerald: #10b981;
+  --accent-purple: #8b5cf6;
+
+  /* Surfaces & Backgrounds */
+  --bg-app: #f8fafc;
+  --secondary-color: #f8fafc;
+  --card-bg: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --sidebar-bg: #0b132b;
+  --sidebar-surface: #1c2541;
+
+  /* Typography & Text */
+  --text-color: #0f172a;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --white-color: #ffffff;
+
+  /* Borders & Dividers */
+  --border-color: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --border-strong: #cbd5e1;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 6px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 30px -4px rgba(15, 23, 42, 0.12), 0 4px 8px -4px rgba(15, 23, 42, 0.05);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Status Colors */
+  --success-bg: #ecfdf5;
+  --success-text: #047857;
+  --success-border: #a7f3d0;
+
+  --warning-bg: #fffbeb;
+  --warning-text: #b45309;
+  --warning-border: #fde68a;
+
+  --danger-bg: #fef2f2;
+  --danger-text: #dc2626;
+  --danger-border: #fecaca;
+
+  --info-bg: #eff6ff;
+  --info-text: #2563eb;
+  --info-border: #bfdbfe;
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 body {
-  background-color: var(--secondary-color);
+  background-color: var(--bg-app);
   color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
 }
 
+/* Tabular numbers for clean numeric alignment */
+.tabular-nums,
+table td,
+.stat-value,
+.price-value,
+.grand-total {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Global Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* App Shell Base */
 .container {
   display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-app);
 }
 
 .main-content {
   flex-grow: 1;
-  padding: 30px;
+  padding: 28px;
+  min-width: 0;
+  overflow-x: hidden;
+  transition: padding 0.3s ease;
 }
-.header
+
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 16px;
+  }
+}
