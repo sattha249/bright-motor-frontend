@@ -1,39 +1,58 @@
 <template>
     <div class="preorder-container">
-        <h2 class="section-title no-print">
-            <i class="fas fa-truck-loading"></i> จัดการใบส่งของล่วงหน้า & โอนของขึ้นรถ
-        </h2>
+        <!-- Page Title & Tabs -->
+        <div class="preorder-header-row no-print">
+            <div class="header-title-box">
+                <div class="header-icon-badge">
+                    <i class="fas fa-truck-ramp-box"></i>
+                </div>
+                <div>
+                    <h2 class="section-title">พรีออเดอร์ & โอนสินค้าขึ้นรถ</h2>
+                    <p class="section-subtitle">สร้างใบส่งของล่วงหน้า โอนสินค้าจากคลังขึ้นรถ และติดตามสถานะบิล</p>
+                </div>
+            </div>
 
-        <div class="tabs no-print">
-            <button :class="['tab-btn', { active: currentTab === 'list' }]" @click="currentTab = 'list'">
-                <i class="fas fa-list"></i> รายการใบงาน
-            </button>
-            <button :class="['tab-btn', { active: currentTab === 'form' }]" @click="currentTab = 'form'">
-                <i class="fas fa-plus-circle"></i> เปิดบิลส่งของขึ้นรถ
-            </button>
+            <div class="tabs-nav">
+                <button :class="['tab-pill', { active: currentTab === 'list' }]" @click="currentTab = 'list'">
+                    <i class="fas fa-list-check"></i>
+                    <span>รายการใบงาน</span>
+                </button>
+                <button :class="['tab-pill', { active: currentTab === 'form' }]" @click="currentTab = 'form'">
+                    <i class="fas fa-file-circle-plus"></i>
+                    <span>{{ isEditing ? 'แก้ไขใบงาน' : 'เปิดบิลส่งของขึ้นรถ' }}</span>
+                </button>
+            </div>
         </div>
 
+        <!-- TAB 1: List View -->
         <div v-if="currentTab === 'list'" class="tab-content no-print">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">สถานะการโอนของและบิลล่วงหน้า</h3>
+            <div class="table-card">
+                <div class="table-card-header">
+                    <div>
+                        <h3 class="card-title">สถานะการโอนของและบิลส่งของ</h3>
+                        <p class="card-subtitle">ตรวจสอบสถานะใบงานที่รอดำเนินการ ปิดงาน หรือยกเลิก</p>
+                    </div>
 
-                    <div class="filter-group">
-                        <select v-model="filterTruckId" @change="fetchPreOrders(1)" class="status-select"
-                            style="margin-right: 8px">
-                            <option value="">รถทั้งหมด</option>
+                    <div class="filter-controls-row">
+                        <select v-model="filterTruckId" @change="fetchPreOrders(1)" class="filter-select">
+                            <option value="">รถขนส่งทั้งหมด</option>
                             <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
                                 {{ truck.plate_number }} - {{ truck?.user?.fullname || 'ไม่ระบุคนขับ' }}
                             </option>
                         </select>
 
-                        <div class="search-input-wrapper small-search">
-                            <input type="text" v-model="preOrderSearchTerm" @input="debouncedFetchPreOrders"
-                                placeholder="ค้นหาเลขบิล / ลูกค้า..." class="search-input" />
-                            <i class="fas fa-search search-icon-inside"></i>
+                        <div class="search-wrapper">
+                            <i class="fas fa-search search-icon-main"></i>
+                            <input
+                                type="text"
+                                v-model="preOrderSearchTerm"
+                                @input="debouncedFetchPreOrders"
+                                placeholder="ค้นหาเลขบิล / ลูกค้า..."
+                                class="main-search-input"
+                            />
                         </div>
 
-                        <select v-model="filterStatus" @change="fetchPreOrders(1)" class="status-select">
+                        <select v-model="filterStatus" @change="fetchPreOrders(1)" class="filter-select">
                             <option value="">สถานะทั้งหมด</option>
                             <option value="Pending">Pending (รอรถ)</option>
                             <option value="Completed">Completed (ปิดงาน)</option>
@@ -43,111 +62,155 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="data-table">
+                    <table class="product-table">
                         <thead>
                             <tr>
                                 <th>เลขที่บิล</th>
                                 <th>รถขนส่ง</th>
-                                <th>ลูกค้า</th>
-                                <th>ยอดรวม</th>
-                                <th>สถานะ</th>
-                                <th>ดำเนินการ</th>
+                                <th>ลูกค้าปลายทาง</th>
+                                <th class="text-right">ยอดรวมสุทธิ</th>
+                                <th class="text-center">สถานะ</th>
+                                <th class="text-center" style="width: 140px;">การจัดการ</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="po in preOrders" :key="po.id">
-                                <td class="bold">{{ po.bill_no }}</td>
-                                <td><i class="fas fa-truck"></i> {{ po.truck?.plate_number || 'ไม่ระบุ' }}</td>
-                                <td>{{ po.customer?.name || 'ไม่ระบุ' }}</td>
-                                <td class="price-text">฿{{ Number(po.total_sold_price).toLocaleString() }}</td>
                                 <td>
-                                    <span :class="['status-badge', po.status.toLowerCase()]">
+                                    <span class="bill-chip">{{ po.bill_no }}</span>
+                                </td>
+                                <td>
+                                    <span class="truck-pill">
+                                        <i class="fas fa-truck"></i>
+                                        {{ po.truck?.plate_number || 'ไม่ระบุ' }}
+                                    </span>
+                                </td>
+                                <td class="font-medium">{{ po.customer?.name || 'ไม่ระบุ' }}</td>
+                                <td class="text-right tabular-nums font-bold text-success">
+                                    ฿{{ Number(po.total_sold_price).toLocaleString() }}
+                                </td>
+                                <td class="text-center">
+                                    <span :class="['stock-pill', po.status.toLowerCase() === 'pending' ? 'pill-low' : po.status.toLowerCase() === 'completed' ? 'pill-high' : 'pill-empty']">
                                         {{ po.status }}
                                     </span>
                                 </td>
-                                <td class="action-buttons">
-                                    <button class="action-btn view-btn" @click="viewDetail(po)">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button v-if="po.status === 'Pending'" class="action-btn edit-btn"
-                                        @click="editPreOrder(po)">
-                                        <i class="fas fa-pen"></i>
-                                    </button>
-                                    <button v-if="po.status === 'Pending'" class="action-btn delete-btn"
-                                        @click="cancelPreOrder(po)">
-                                        <i class="fas fa-undo"></i> ยกเลิก
-                                    </button>
+                                <td class="text-center">
+                                    <div class="row-actions">
+                                        <button class="action-btn view-btn" @click="viewDetail(po)" title="ดูรายละเอียด">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button v-if="po.status === 'Pending'" class="action-btn edit-btn" @click="editPreOrder(po)" title="แก้ไขใบงาน">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                        <button v-if="po.status === 'Pending'" class="action-btn delete-btn" @click="cancelPreOrder(po)" title="ยกเลิกและคืนของ">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             <tr v-if="preOrders.length === 0">
-                                <td colspan="6" class="text-center py-4">ไม่พบรายการใบงาน</td>
+                                <td colspan="6" class="empty-state">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    <p>ไม่พบรายการใบงานตามเงื่อนไขที่เลือก</p>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="modal-pagination" v-if="preOrdersTotalPages > 1" style="margin-top: 20px">
-                    <button @click="changePreOrderPage(preOrderCurrentPage - 1)" :disabled="preOrderCurrentPage === 1">
+                <div class="pagination" v-if="preOrdersTotalPages > 1">
+                    <button @click="changePreOrderPage(preOrderCurrentPage - 1)" :disabled="preOrderCurrentPage === 1" class="page-btn">
                         <i class="fas fa-chevron-left"></i>
+                        <span>ก่อนหน้า</span>
                     </button>
-                    <span class="page-info">หน้า {{ preOrderCurrentPage }} / {{ preOrdersTotalPages }}</span>
-                    <button @click="changePreOrderPage(preOrderCurrentPage + 1)"
-                        :disabled="preOrderCurrentPage === preOrdersTotalPages">
+                    <span>หน้า {{ preOrderCurrentPage }} / {{ preOrdersTotalPages }}</span>
+                    <button @click="changePreOrderPage(preOrderCurrentPage + 1)" :disabled="preOrderCurrentPage === preOrdersTotalPages" class="page-btn">
+                        <span>ถัดไป</span>
                         <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
             </div>
         </div>
 
+        <!-- TAB 2: Form View -->
         <div v-if="currentTab === 'form'" class="tab-content no-print">
             <div class="form-grid">
+                <!-- Left: Info Card -->
                 <div class="card info-card">
-                    <h3 class="card-title">{{ isEditing ? 'แก้ไขข้อมูลใบงาน' : 'ข้อมูลปลายทาง' }}</h3>
+                    <div class="card-title-group">
+                        <i class="fas fa-truck-front"></i>
+                        <h3 class="card-title">{{ isEditing ? 'แก้ไขข้อมูลใบงาน' : 'ข้อมูลรถและลูกค้า' }}</h3>
+                    </div>
+
                     <div class="form-group">
                         <label>เลือกรถขนส่ง <span class="required">*</span></label>
-                        <select v-model="truckId" class="custom-select" :disabled="isEditing">
+                        <select v-model="truckId" class="form-control" :disabled="isEditing">
                             <option :value="null">-- เลือกรถที่จะนำของขึ้น --</option>
                             <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
                                 {{ truck.plate_number }} ({{ truck?.user?.fullname || 'ไม่มีชื่อคนขับ' }})
                             </option>
                         </select>
                     </div>
+
                     <div class="form-group customer-search-group">
                         <label>ลูกค้าปลายทาง <span class="required">*</span></label>
-                        <div class="search-input-wrapper">
-                            <input :disabled="isEditing" type="text" v-model="customerSearchTerm"
-                                placeholder="ค้นหาชื่อลูกค้า..." @input="debouncedSearchCustomers"
-                                @focus="showCustomerDropdown = true" @blur="hideCustomerDropdown"
-                                class="search-input" />
-                            <i class="fas fa-search search-icon-inside"></i>
+                        <div class="search-wrapper" style="width: 100%;">
+                            <i class="fas fa-search search-icon-main"></i>
+                            <input
+                                :disabled="isEditing"
+                                type="text"
+                                v-model="customerSearchTerm"
+                                placeholder="ค้นหาชื่อ หรือรหัสลูกค้า..."
+                                @input="debouncedSearchCustomers"
+                                @focus="showCustomerDropdown = true"
+                                @blur="hideCustomerDropdown"
+                                class="main-search-input"
+                            />
                         </div>
-                        <div class="dropdown" v-if="showCustomerDropdown">
-                            <div v-for="c in filteredCustomers" :key="c.id" class="dropdown-item"
-                                @mousedown.prevent="selectCustomer(c)">
-                                {{ c.name }} ({{ c.customer_no }})
+                        <div class="dropdown-list" v-if="showCustomerDropdown">
+                            <div
+                                v-for="c in filteredCustomers"
+                                :key="c.id"
+                                class="dropdown-item"
+                                @mousedown.prevent="selectCustomer(c)"
+                            >
+                                <div class="item-main">{{ c.name }}</div>
+                                <div class="item-sub">รหัสลูกค้า: {{ c.customer_no }}</div>
                             </div>
                             <div v-if="filteredCustomers.length === 0" class="dropdown-item disabled">
                                 ไม่พบข้อมูลลูกค้า
                             </div>
                         </div>
                     </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="preIsCredit" v-model="isCredit" />
-                        <label for="preIsCredit">ตั้งยอดเครดิต</label>
+
+                    <div class="credit-toggle-box">
+                        <label class="toggle-checkbox-label">
+                            <input type="checkbox" id="preIsCredit" v-model="isCredit" />
+                            <span>ตั้งยอดเครดิต (ค้างชำระ)</span>
+                        </label>
                     </div>
+
                     <div v-if="isCredit" class="credit-type-selector">
-                        <label class="radio-label"><input type="radio" v-model="creditType" value="week" />
-                            รายสัปดาห์</label>
-                        <label class="radio-label"><input type="radio" v-model="creditType" value="month" />
-                            รายเดือน</label>
+                        <label class="radio-label">
+                            <input type="radio" v-model="creditType" value="week" />
+                            <span>รายสัปดาห์</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" v-model="creditType" value="month" />
+                            <span>รายเดือน</span>
+                        </label>
                     </div>
                 </div>
 
+                <!-- Right: Items Card -->
                 <div class="card items-card">
-                    <div class="card-header">
-                        <h3 class="card-title">รายการสินค้า (โอนจากโกดัง)</h3>
-                        <button class="add-btn" @click="openStockModal" :disabled="!truckId">
-                            <i class="fas fa-plus"></i> เพิ่มสินค้า
+                    <div class="card-header-actions">
+                        <div class="card-title-group">
+                            <i class="fas fa-boxes-stacked"></i>
+                            <h3 class="card-title">รายการสินค้าที่จะโอนจากโกดัง</h3>
+                        </div>
+                        <button class="btn btn-primary btn-sm" @click="openStockModal" :disabled="!truckId">
+                            <i class="fas fa-plus"></i>
+                            <span>เลือกสินค้าจากคลัง</span>
                         </button>
                     </div>
 
@@ -155,96 +218,113 @@
                         <table class="product-table">
                             <thead>
                                 <tr>
-                                    <th>สินค้า</th>
+                                    <th>ชื่อสินค้า</th>
                                     <th width="120" class="text-center">จำนวน</th>
-                                    <th class="text-right">ราคา</th>
-                                    <th width="150" class="text-right">ส่วนลด/หน่วย</th>
-                                    <th class="text-right">รวม</th>
-                                    <th class="text-center"></th>
+                                    <th class="text-right">ราคา/หน่วย</th>
+                                    <th width="140" class="text-right">ส่วนลด/หน่วย</th>
+                                    <th class="text-right">ราคารวม</th>
+                                    <th class="text-center" style="width: 50px;"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="(item, index) in items" :key="item.productId">
-                                    <td class="bold">{{ item.description }}</td>
+                                    <td class="font-medium">{{ item.description }}</td>
                                     <td class="text-center">
-                                        <input type="number" v-model.number="item.quantity" min="1"
-                                            :max="item.maxAllowed" @change="validateItemQuantity(item)"
-                                            class="qty-input" />
-                                        <div v-if="item.maxAllowed !== undefined"
-                                            style="font-size: 0.75rem; color: #718096; margin-top: 4px;">
-                                            (สูงสุด: {{ item.maxAllowed }})
+                                        <input
+                                            type="number"
+                                            v-model.number="item.quantity"
+                                            min="1"
+                                            :max="item.maxAllowed"
+                                            @change="validateItemQuantity(item)"
+                                            class="form-control text-center tabular-nums"
+                                            style="width: 75px; display: inline-block; padding: 6px;"
+                                        />
+                                        <div v-if="item.maxAllowed !== undefined" class="max-limit-text">
+                                            สูงสุด: {{ item.maxAllowed }}
                                         </div>
                                     </td>
-                                    <td class="text-right">฿{{ item.price.toLocaleString() }}</td>
-                                     <td class="text-right">
-                                         <input type="number" v-model.number="item.discount" min="0" :max="item.price"
-                                             class="qty-input discount-input" @input="validateItemDiscount(item)" />
-                                     </td>
-                                    <td class="text-right bold">
-                                        ฿{{ (item.quantity * item.price - item.discount *
-                                            item.quantity).toLocaleString() }}
+                                    <td class="text-right tabular-nums">฿{{ item.price.toLocaleString() }}</td>
+                                    <td class="text-right">
+                                        <input
+                                            type="number"
+                                            v-model.number="item.discount"
+                                            min="0"
+                                            :max="item.price"
+                                            class="form-control text-right tabular-nums text-danger"
+                                            style="width: 85px; display: inline-block; padding: 6px;"
+                                            @input="validateItemDiscount(item)"
+                                        />
+                                    </td>
+                                    <td class="text-right tabular-nums font-bold text-success">
+                                        ฿{{ (item.quantity * item.price - (item.discount || 0) * item.quantity).toLocaleString() }}
                                     </td>
                                     <td class="text-center">
-                                        <button class="remove-btn" @click="removeItem(index)">&times;</button>
+                                        <button class="btn-icon-del" @click="removeItem(index)" title="ลบรายการ">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </td>
                                 </tr>
                                 <tr v-if="items.length === 0">
-                                    <td colspan="5" class="text-center py-4 text-muted">
-                                        ยังไม่มีรายการสินค้า กรุณากดปุ่มเพิ่มสินค้า
+                                    <td colspan="6" class="empty-state">
+                                        <i class="fas fa-cart-arrow-down"></i>
+                                        <p>ยังไม่มีรายการสินค้า กรุณากดปุ่ม <strong>เลือกสินค้าจากคลัง</strong></p>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <div class="action-bar discount-controls-bar no-print" v-if="items.length > 0">
-                        <div class="discount-controls">
-                            <label>ส่วนลดรวม:</label>
-                            <div class="discount-btn-group">
-                                <button v-for="pct in [5, 10, 15]" :key="pct" @click="applyDiscountPercentage(pct)"
-                                    class="discount-btn" :class="{ 'active': selectedDiscount === pct }">
+                    <!-- Discount Controls & Summary -->
+                    <div class="discount-summary-wrapper" v-if="items.length > 0">
+                        <div class="discount-controls-box">
+                            <label class="discount-label">ส่วนลดรวมทั้งบิล:</label>
+                            <div class="discount-pct-group">
+                                <button
+                                    v-for="pct in [5, 10, 15]"
+                                    :key="pct"
+                                    type="button"
+                                    @click="applyDiscountPercentage(pct)"
+                                    class="pct-btn"
+                                    :class="{ active: selectedDiscount === pct }"
+                                >
                                     {{ pct }}%
                                 </button>
                             </div>
-                            <div class="discount-input-group">
-                                <input type="number" v-model.number="manualDiscountAmount" placeholder="ระบุจำนวนเงิน"
-                                    class="manual-discount-input" />
-                                <button @click="applyManualDiscount" class="discount-btn apply-manual-btn">
+                            <div class="manual-discount-row">
+                                <input
+                                    type="number"
+                                    v-model.number="manualDiscountAmount"
+                                    placeholder="ระบุจำนวนเงิน (บาท)"
+                                    class="form-control tabular-nums text-right"
+                                    style="width: 160px;"
+                                />
+                                <button type="button" @click="applyManualDiscount" class="btn btn-secondary btn-sm">
                                     เฉลี่ยลด
                                 </button>
                             </div>
                         </div>
 
-                        <div class="sale-summary">
-                            <div class="summary-row">
-                                <span>รวมราคาสินค้า (ก่อนลด):</span>
-                                <span>฿{{ totalOriginalPrice.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                }) }}</span>
+                        <div class="sale-summary-card">
+                            <div class="summary-line">
+                                <span>ราคาก่อนลด:</span>
+                                <span class="tabular-nums">฿{{ totalOriginalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
                             </div>
-
-                            <div class="summary-row discount-text">
+                            <div class="summary-line text-danger">
                                 <span>ส่วนลดรวม:</span>
-                                <span>-฿{{ totalDiscountAmount.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                }) }}</span>
+                                <span class="tabular-nums">-฿{{ totalDiscountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+                            </div>
+                            <div class="summary-line grand-total-line">
+                                <span>ยอดสุทธิทั้งสิ้น:</span>
+                                <span class="grand-total-price tabular-nums">฿{{ totalSalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
                             </div>
 
-                            <div class="summary-row grand-total-row">
-                                <span>ยอดรวมสุทธิ:</span>
-                                <span class="total-amount">฿{{ totalSalePrice.toLocaleString(undefined,
-                                    { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
-                            </div>
-
-                            <div class="button-group">
-                                <button v-if="isEditing" class="cancel-edit-btn" @click="cancelEditMode">
+                            <div class="summary-action-btns">
+                                <button v-if="isEditing" type="button" class="btn btn-secondary" @click="cancelEditMode">
                                     ยกเลิกการแก้ไข
                                 </button>
-                                <button class="save-btn" @click="submitPreOrder" :disabled="loading">
-                                    <i class="fas fa-save"></i>
-                                    {{ loading ? 'กำลังบันทึก...' : isEditing ? 'บันทึกการแก้ไข' : 'บันทึกใบงาน' }}
+                                <button type="button" class="btn btn-primary submit-preorder-btn" @click="submitPreOrder" :disabled="loading">
+                                    <i class="fas fa-check"></i>
+                                    <span>{{ loading ? 'กำลังบันทึก...' : isEditing ? 'บันทึกการแก้ไข' : 'ยืนยันเปิดบิลส่งของ' }}</span>
                                 </button>
                             </div>
                         </div>
@@ -253,17 +333,25 @@
             </div>
         </div>
 
+        <!-- Detail Modal -->
         <div v-if="showDetailModal" class="modal-overlay no-print" @click.self="showDetailModal = false">
-            <div class="modal large-modal">
+            <div class="modal modal-lg">
                 <div class="modal-header no-print">
-                    <h3>
-                        <i class="fas fa-info-circle"></i> รายละเอียดใบงาน {{ selectedPreOrder?.bill_no }}
-                    </h3>
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div>
+                            <h3>รายละเอียดใบงาน {{ selectedPreOrder?.bill_no }}</h3>
+                            <span class="modal-subtitle">บันทึกเมื่อ {{ new Date(selectedPreOrder?.created_at).toLocaleDateString('th-TH') }}</span>
+                        </div>
+                    </div>
                     <div class="header-actions">
-                        <button class="print-btn" @click="printDetail">
-                            <i class="fas fa-print"></i> พิมพ์
+                        <button class="btn btn-secondary btn-sm" @click="printDetail">
+                            <i class="fas fa-print"></i>
+                            <span>พิมพ์ใบเสร็จ</span>
                         </button>
-                        <button class="close-icon-btn" @click="showDetailModal = false">&times;</button>
+                        <button class="modal-close-x" @click="showDetailModal = false">&times;</button>
                     </div>
                 </div>
 
@@ -275,53 +363,52 @@
                         </div>
                         <div class="info-box">
                             <label>รถขนส่ง:</label>
-                            <span>{{ selectedPreOrder?.truck?.plate_number }}</span>
+                            <span>{{ selectedPreOrder?.truck?.plate_number || '-' }}</span>
                         </div>
                         <div class="info-box">
                             <label>ลูกค้า:</label>
-                            <span>{{ selectedPreOrder?.customer?.name }}</span>
+                            <span>{{ selectedPreOrder?.customer?.name || '-' }}</span>
                         </div>
                         <div class="info-box">
                             <label>สถานะ:</label>
-                            <span :class="['status-badge', selectedPreOrder?.status.toLowerCase()]">{{
-                                selectedPreOrder?.status
-                            }}</span>
+                            <span :class="['stock-pill', selectedPreOrder?.status.toLowerCase() === 'pending' ? 'pill-low' : selectedPreOrder?.status.toLowerCase() === 'completed' ? 'pill-high' : 'pill-empty']">
+                                {{ selectedPreOrder?.status }}
+                            </span>
                         </div>
                         <div class="info-box">
-                            <label>เครดิต:</label>
-                            <span>{{ selectedPreOrder?.is_credit || 'เงินสด' }}</span>
+                            <label>เงื่อนไขการชำระ:</label>
+                            <span>{{ selectedPreOrder?.is_credit ? 'เครดิต (' + selectedPreOrder?.is_credit + ')' : 'เงินสด' }}</span>
                         </div>
                     </div>
 
-                    <div class="modal-table-container mt-4">
-                        <table class="data-table">
+                    <div class="modal-table-wrap" style="margin-top: 20px;">
+                        <table class="product-table modal-inner-table">
                             <thead>
                                 <tr>
-                                    <th>สินค้า</th>
-                                    <th class="text-center">จำนวน</th>
+                                    <th>ชื่อสินค้า</th>
+                                    <th class="text-right">จำนวน</th>
                                     <th class="text-right">ราคา/หน่วย</th>
                                     <th class="text-right">ส่วนลด</th>
-                                    <th class="text-right">รวม</th>
+                                    <th class="text-right">รวมสุทธิ</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="item in selectedPreOrder?.items" :key="item.id">
-                                    <td>{{ item.product?.description }}</td>
-                                    <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-right">฿{{ Number(item.price).toLocaleString() }}</td>
-                                    <td class="text-right bold">
-                                        ฿{{ item.discount.toLocaleString() }}
+                                    <td class="font-medium">{{ item.product?.description }}</td>
+                                    <td class="text-right tabular-nums font-bold">{{ item.quantity }}</td>
+                                    <td class="text-right tabular-nums">฿{{ Number(item.price).toLocaleString() }}</td>
+                                    <td class="text-right tabular-nums text-danger">
+                                        {{ Number(item.discount) > 0 ? '-฿' + Number(item.discount).toLocaleString() : '฿0' }}
                                     </td>
-                                    <td class="text-right bold">
-                                        ฿{{ (item.quantity * item.price - item.discount *
-                                            item.quantity).toLocaleString() }}
+                                    <td class="text-right tabular-nums font-bold text-success">
+                                        ฿{{ (item.quantity * item.price - item.discount * item.quantity).toLocaleString() }}
                                     </td>
                                 </tr>
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="3" class="text-right bold">รวมสุทธิ:</td>
-                                    <td class="text-right bold total-highlight">
+                                    <td colspan="4" class="text-right font-bold">รวมยอดสุทธิทั้งสิ้น:</td>
+                                    <td class="text-right tabular-nums font-bold text-success" style="font-size: 1.15rem;">
                                         ฿{{ Number(selectedPreOrder?.total_sold_price).toLocaleString() }}
                                     </td>
                                 </tr>
@@ -331,7 +418,7 @@
                 </div>
 
                 <div class="modal-footer no-print">
-                    <button class="cancel-btn-modal" @click="showDetailModal = false">ปิดหน้าต่าง</button>
+                    <button class="btn btn-secondary" @click="showDetailModal = false">ปิดหน้าต่าง</button>
                 </div>
             </div>
         </div>
@@ -410,65 +497,100 @@
             </div>
         </Teleport>
 
+        <!-- Warehouse Stock Selection Modal -->
         <div v-if="showModal" class="modal-overlay no-print" @click.self="closeStockModal">
-            <div class="modal large-modal">
+            <div class="modal modal-lg">
                 <div class="modal-header">
-                    <h3><i class="fas fa-boxes"></i> เลือกสินค้าจากโกดังหลัก</h3>
-                    <button class="close-icon-btn" @click="closeStockModal">&times;</button>
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div>
+                            <h3>เลือกสินค้าจากโกดังหลัก</h3>
+                            <span class="modal-subtitle">เลือกสินค้าและระบุจำนวนเพื่อเพิ่มลงในใบงาน</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeStockModal">&times;</button>
                 </div>
 
-                <div class="modal-search-bar">
-                    <div class="search-input-wrapper">
-                        <i class="fas fa-search search-icon-inside"></i>
-                        <input type="text" v-model="searchKeyword" @input="debouncedSearch"
-                            placeholder="ค้นหาชื่อสินค้า หรือ SKU..." class="modal-search-input" />
+                <div class="modal-body">
+                    <div class="modal-search-box" style="margin-bottom: 16px;">
+                        <div class="search-input-wrapper">
+                            <i class="fas fa-search search-icon-inside"></i>
+                            <input
+                                type="text"
+                                v-model="searchKeyword"
+                                @input="debouncedSearch"
+                                placeholder="ค้นหาชื่อสินค้า หรือ SKU..."
+                                class="form-control"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="modal-table-wrap">
+                        <table class="product-table modal-inner-table">
+                            <thead>
+                                <tr>
+                                    <th>สินค้า</th>
+                                    <th class="text-right">คงเหลือ</th>
+                                    <th class="text-right">ราคาขาย</th>
+                                    <th class="text-center" width="160">จำนวนที่จะโอน</th>
+                                    <th class="text-center" width="100">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody v-if="!loading">
+                                <tr v-for="stock in warehouseStocks" :key="stock.id">
+                                    <td class="font-medium">{{ stock.product.description }}</td>
+                                    <td class="text-right tabular-nums">
+                                        <span class="stock-pill pill-medium">{{ stock.quantity }} {{ stock.product.unit || 'ชิ้น' }}</span>
+                                    </td>
+                                    <td class="text-right tabular-nums font-bold">฿{{ Number(stock.product.sell_price).toLocaleString() }}</td>
+                                    <td class="text-center">
+                                        <div class="table-qty-control" style="justify-content: center;">
+                                            <input
+                                                type="number"
+                                                v-model.number="addQuantities[stock.id]"
+                                                min="1"
+                                                :max="stock.quantity"
+                                                class="form-control table-qty-input tabular-nums"
+                                                style="width: 80px; text-align: center;"
+                                            />
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <button
+                                            class="btn btn-primary btn-sm"
+                                            @click="addItem(stock)"
+                                            :disabled="
+                                                !addQuantities[stock.id] ||
+                                                addQuantities[stock.id] > stock.quantity ||
+                                                addQuantities[stock.id] < 1
+                                            "
+                                        >
+                                            <i class="fas fa-plus"></i> เพิ่ม
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="warehouseStocks.length === 0">
+                                    <td colspan="5" class="text-center py-4 text-muted">ไม่พบสินค้าในคลัง</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination-container" v-if="totalPages > 1" style="margin-top: 16px;">
+                        <button class="pagination-btn" @click="changeModalPage(currentPage - 1)" :disabled="currentPage === 1">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="page-indicator">หน้า {{ currentPage }} / {{ totalPages }}</span>
+                        <button class="pagination-btn" @click="changeModalPage(currentPage + 1)" :disabled="currentPage === totalPages">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
                 </div>
 
-                <div class="modal-table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>สินค้า</th>
-                                <th class="text-right">คงเหลือ</th>
-                                <th class="text-right">ราคาขาย</th>
-                                <th class="text-center" width="150">จำนวนที่จะโอน</th>
-                                <th class="text-center">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody v-if="!loading">
-                            <tr v-for="stock in warehouseStocks" :key="stock.id">
-                                <td class="bold">{{ stock.product.description }}</td>
-                                <td class="text-right">{{ stock.quantity }} {{ stock.product.unit || 'ชิ้น' }}</td>
-                                <td class="text-right">฿{{ Number(stock.product.sell_price).toLocaleString() }}</td>
-                                <td class="text-center">
-                                    <input type="number" v-model.number="addQuantities[stock.id]" min="1"
-                                        :max="stock.quantity" class="modal-qty-input" />
-                                </td>
-                                <td class="text-center">
-                                    <button class="mini-add-btn" @click="addItem(stock)" :disabled="!addQuantities[stock.id] ||
-                                        addQuantities[stock.id] > stock.quantity ||
-                                        addQuantities[stock.id] < 1
-                                        ">
-                                        <i class="fas fa-plus"></i> เพิ่ม
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr v-if="warehouseStocks.length === 0">
-                                <td colspan="5" class="text-center py-4">ไม่พบสินค้าในคลัง</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="modal-pagination" v-if="totalPages > 1">
-                    <button @click="changeModalPage(currentPage - 1)" :disabled="currentPage === 1">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <span class="page-info">หน้า {{ currentPage }} / {{ totalPages }}</span>
-                    <button @click="changeModalPage(currentPage + 1)" :disabled="currentPage === totalPages">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeStockModal">เสร็จสิ้น / ปิด</button>
                 </div>
             </div>
         </div>
@@ -1012,776 +1134,504 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* --- Layout & Global (Styles เดิม) --- */
-/* ... (Style เดิมทั้งหมด) ... */
-
-/* [แก้ไข] เพิ่ม Style ให้ filter-group เป็น Flex และมี gap */
-.filter-group {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-/* [เพิ่ม] Style ให้ช่องค้นหาเล็กใน header */
-.small-search {
-    width: 250px !important;
-    /* หรือขนาดที่ต้องการ */
-}
-
-/* ... (Style เดิมอื่นๆ ต่อจากนี้) ... */
 .preorder-container {
-    max-width: 1240px;
-    margin: 2rem auto;
-    padding: 0 1.5rem;
-}
-
-.section-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 2rem;
-    color: #2d3748;
-}
-
-.card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.text-center {
-    text-align: center !important;
-}
-
-.text-right {
-    text-align: right !important;
-}
-
-.bold {
-    font-weight: 700;
-}
-
-.py-4 {
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
-}
-
-.mt-4 {
-    margin-top: 1.5rem;
-}
-
-/* Tabs */
-.tabs {
+    max-width: 1400px;
+    margin: 0 auto;
     display: flex;
-    gap: 10px;
-    margin-bottom: 25px;
-    border-bottom: 2px solid #e2e8f0;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
-.tab-btn {
-    padding: 12px 24px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-weight: 600;
-    color: #718096;
-    transition: 0.3s;
-    font-size: 1rem;
-}
-
-.tab-btn.active {
-    color: var(--primary-color);
-    border-bottom: 3px solid var(--primary-color);
-}
-
-.tab-btn i {
-    margin-right: 8px;
-}
-
-/* Dashboard */
-.card-header {
+.preorder-header-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
-.status-select {
-    padding: 8px 12px;
-    border: 1px solid #e2e8f0;
+.header-title-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-icon-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.section-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0.2rem 0 0 0;
+}
+
+/* Tabs */
+.tabs-nav {
+    display: flex;
+    background: #e2e8f0;
+    padding: 4px;
+    border-radius: 12px;
+    gap: 4px;
+}
+
+.tab-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-pill:hover {
+    color: var(--text-main);
+}
+
+.tab-pill.active {
+    background: #ffffff;
+    color: var(--primary-color);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Filter controls */
+.table-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.filter-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.filter-select {
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    font-size: 0.875rem;
+    color: var(--text-main);
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.filter-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon-main {
+    position: absolute;
+    left: 12px;
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.filter-search-input {
+    padding: 0.6rem 1rem 0.6rem 2.25rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    font-size: 0.875rem;
+    color: var(--text-main);
+    width: 240px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.filter-search-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Action buttons in table */
+.action-btns-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
-    background: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
 }
 
-.price-text {
-    color: #3182ce;
-    font-weight: 700;
+.btn-icon:hover {
+    transform: translateY(-1px);
 }
 
-.status-badge {
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
+.view-btn {
+    background: #eff6ff;
+    color: #2563eb;
+}
+.view-btn:hover {
+    background: #dbeafe;
 }
 
-.status-badge.pending {
-    background: #feebc8;
-    color: #92400e;
+.edit-btn {
+    background: #fef3c7;
+    color: #b45309;
+}
+.edit-btn:hover {
+    background: #fde68a;
 }
 
-.status-badge.synced {
-    background: #bee3f8;
-    color: #2a4365;
+.delete-btn {
+    background: #fef2f2;
+    color: #dc2626;
+}
+.delete-btn:hover {
+    background: #fee2e2;
 }
 
-.status-badge.completed {
-    background: #c6f6d5;
-    color: #22543d;
-}
-
-.status-badge.cancelled {
-    background: #fed7d7;
-    color: #822727;
-}
-
-/* Form */
+/* Form View */
 .form-grid {
     display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 25px;
+    grid-template-columns: 380px 1fr;
+    gap: 1.5rem;
+    align-items: start;
 }
 
-.required {
-    color: #e53e3e;
+.card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.25rem;
+    color: var(--text-main);
+    font-size: 1.15rem;
+}
+
+.card-title-group i {
+    color: var(--primary-color);
 }
 
 .form-group {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.1rem;
     position: relative;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 8px;
+    font-size: 0.85rem;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--text-main);
+    margin-bottom: 6px;
 }
 
-.custom-select,
-.search-input {
-    width: 100%;
-    padding: 11px 15px;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    font-size: 15px;
-    background: #f8fafc;
-    transition: 0.2s;
+.required {
+    color: #ef4444;
 }
 
-.custom-select:focus,
-.search-input:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-}
-
-.search-input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.search-icon-inside {
+.dropdown-menu-list {
     position: absolute;
-    right: 15px;
-    color: #a0aec0;
-}
-
-.dropdown {
-    position: absolute;
-    width: 100%;
-    background: white;
-    border: 1px solid #e2e8f0;
-    z-index: 50;
-    border-radius: 8px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    margin-top: 5px;
-    max-height: 250px;
-    overflow-y: auto;
-}
-
-.dropdown-item {
-    padding: 12px 15px;
-    cursor: pointer;
-    border-bottom: 1px solid #f7fafc;
-    transition: 0.2s;
-}
-
-.dropdown-item:hover {
-    background: #f7fafc;
-    color: var(--primary-color);
-}
-
-.checkbox-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 1rem;
-    cursor: pointer;
-}
-
-.checkbox-group input {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-}
-
-.credit-type-selector {
-    display: flex;
-    gap: 20px;
-    margin-top: 15px;
-    padding: 12px;
-    background: #f1f5f9;
-    border-radius: 10px;
-}
-
-.radio-label {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-/* Product Table */
-.qty-input {
-    width: 80px;
-    padding: 8px;
-    text-align: center;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-weight: 700;
-}
-
-.discount-input {
-    width: 80px;
-}
-
-.remove-btn {
-    color: #e53e3e;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0 10px;
-}
-
-.sale-summary {
-    margin-top: 2rem;
-    border-top: 2px solid #edf2f7;
-    padding-top: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.summary-row {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
-    font-size: 1.2rem;
-    font-weight: 600;
-}
-
-.total-amount {
-    font-size: 2.2rem;
-    font-weight: 800;
-    color: var(--primary-color);
-}
-
-.save-btn {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 15px 40px;
-    border-radius: 35px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.save-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(49, 130, 206, 0.4);
-}
-
-/* Buttons */
-.button-group {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-}
-
-.cancel-edit-btn {
-    background: #cbd5e0;
-    color: #2d3748;
-    border: none;
-    padding: 15px 30px;
-    border-radius: 35px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 10px;
-}
-
-.action-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: none;
-    color: white;
-    cursor: pointer;
-    transition: 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.1);
-}
-
-.view-btn {
-    background: #3182ce;
-}
-
-.edit-btn {
-    background: #ecc94b;
-    color: #744210;
-}
-
-.delete-btn {
-    background: #e53e3e;
-    width: auto;
-    padding: 0 15px;
-    font-weight: 600;
-    gap: 8px;
-}
-
-.add-btn {
-    background: #48bb78;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-/* Modal Styles */
-.modal-overlay {
-    position: fixed;
-    top: 0;
+    top: 100%;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(26, 32, 44, 0.7);
+    right: 0;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    z-index: 40;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 4px;
+}
+
+.dropdown-item-option {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--text-main);
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
+}
+
+.dropdown-item-option:hover {
+    background: #f8fafc;
+    color: var(--primary-color);
+}
+
+/* Payment toggle */
+.payment-toggle-group {
     display: flex;
-    justify-content: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+}
+
+.payment-pill {
+    flex: 1;
+    display: flex;
     align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border-color);
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.2s ease;
 }
 
-.modal {
-    background: white;
-    padding: 2rem;
-    border-radius: 20px;
-    width: 95%;
-    max-width: 900px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    display: flex;
-    flex-direction: column;
+.payment-pill.active {
+    border-color: var(--primary-color);
+    background: #eff6ff;
+    color: var(--primary-color);
 }
 
-.modal-header {
+.credit-terms-box {
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.credit-terms-box label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: block;
+}
+
+.credit-radio-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--text-main);
+}
+
+/* Items Card & Table */
+.card-header-flex {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid #edf2f7;
-    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
 }
 
-.header-actions {
-    display: flex;
+.selected-items-table {
+    margin-top: 0.5rem;
+}
+
+.table-qty-control,
+.table-discount-control {
+    display: inline-flex;
     align-items: center;
-    gap: 15px;
 }
 
-.print-btn {
-    background: #4a5568;
-    color: white;
+.table-qty-input,
+.table-discount-input {
+    padding: 6px 10px;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.btn-icon-danger {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #dc2626;
     border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 5px;
+    justify-content: center;
+    transition: all 0.15s ease;
 }
 
-.modal-header h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
+.btn-icon-danger:hover {
+    background: #fee2e2;
+}
+
+/* Bottom summary pane */
+.bottom-summary-pane {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    align-items: start;
+}
+
+.discount-control-box {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 10px;
-    color: #2d3748;
 }
 
-.close-icon-btn {
-    background: none;
-    border: none;
-    font-size: 2rem;
-    color: #a0aec0;
+.discount-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.discount-pct-group {
+    display: flex;
+    gap: 8px;
+}
+
+.pct-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    color: var(--text-main);
+    font-weight: 600;
+    font-size: 0.85rem;
     cursor: pointer;
-    line-height: 1;
+    transition: all 0.2s ease;
 }
 
-.modal-body {
+.pct-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.pct-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.manual-discount-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.sale-summary-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.grand-total-line {
+    border-top: 1px dashed var(--border-color);
+    padding-top: 10px;
+    margin-top: 4px;
+    font-weight: 700;
+    color: var(--text-main);
+    font-size: 1rem;
+}
+
+.grand-total-price {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    font-weight: 800;
+}
+
+.summary-action-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.submit-preorder-btn {
     flex: 1;
-    overflow-y: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
 }
 
-/* Detail Specific */
+/* Modal details */
 .info-grid-detail {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
     background: #f8fafc;
-    padding: 20px;
+    padding: 16px;
     border-radius: 12px;
+    border: 1px solid var(--border-color);
 }
 
 .info-box {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
 }
 
 .info-box label {
-    font-size: 0.85rem;
-    color: #718096;
+    font-size: 0.78rem;
+    color: var(--text-muted);
     font-weight: 600;
 }
 
 .info-box span {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #2d3748;
-}
-
-.total-highlight {
-    font-size: 1.5rem;
-    color: var(--primary-color);
-}
-
-.modal-footer {
-    margin-top: 20px;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.cancel-btn-modal {
-    background: #cbd5e0;
-    color: #4a5568;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-/* Stock Modal */
-.modal-search-bar {
-    margin-bottom: 1.5rem;
-}
-
-.modal-search-input {
-    width: 100%;
-    padding: 12px 15px 12px 40px;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    background: #f8fafc;
-    font-size: 1rem;
-}
-
-.modal-search-bar .search-icon-inside {
-    left: 15px;
-    right: auto;
-}
-
-.modal-table-container {
-    max-height: 400px;
-    overflow-y: auto;
-    border: 1px solid #edf2f7;
-    border-radius: 12px;
-}
-
-.modal-qty-input {
-    width: 90px;
-    padding: 8px;
-    border: 1px solid #cbd5e0;
-    border-radius: 8px;
-    text-align: center;
-    font-weight: 700;
-    color: var(--primary-color);
-}
-
-.mini-add-btn {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 8px 18px;
-    border-radius: 8px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.mini-add-btn:hover:not(:disabled) {
-    background: #2b6cb0;
-    transform: scale(1.05);
-}
-
-.mini-add-btn:disabled {
-    background: #cbd5e0;
-    cursor: not-allowed;
-}
-
-/* Global Data Table */
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.data-table th {
-    background: #f8fafc;
-    padding: 15px;
-    text-align: left;
-    font-size: 0.85rem;
-    color: #718096;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 2px solid #edf2f7;
-}
-
-.data-table td {
-    padding: 15px;
-    border-bottom: 1px solid #edf2f7;
-}
-
-.screen-only {
-    display: block;
-}
-
-/* Modal Pagination */
-.modal-pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    margin-top: 1.5rem;
-}
-
-.modal-pagination button {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 1px solid #e2e8f0;
-    background: white;
-    cursor: pointer;
-    transition: 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-pagination button:hover:not(:disabled) {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-/* Added Pagination Style for Main List */
-.pagination {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 1.5rem;
-    align-items: center;
-}
-
-.pagination button {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 1px solid #e2e8f0;
-    background: white;
-    cursor: pointer;
-    transition: 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #4a5568;
-}
-
-.pagination button:hover:not(:disabled) {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.pagination button:disabled {
-    background-color: #e2e8f0;
-    color: #a0aec0;
-    cursor: not-allowed;
-}
-
-.page-info {
-    font-weight: 700;
-    color: #4a5568;
-}
-
-.discount-controls-bar {
-    display: flex;
-    justify-content: space-between;
-    /* ซ้ายปุ่มลด ขวาสรุปยอด */
-    align-items: flex-start;
-    padding-top: 1.5rem;
-    margin-top: 1rem;
-    border-top: 1px solid #e2e8f0;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-
-.discount-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.discount-controls label {
+    font-size: 0.95rem;
     font-weight: 600;
-    color: #4a5568;
-}
-
-.discount-btn-group {
-    display: flex;
-    gap: 8px;
-}
-
-.discount-btn {
-    background-color: #ecc94b;
-    /* สีเหลืองส้ม */
-    color: #744210;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: all 0.2s;
-}
-
-.discount-btn:hover {
-    background-color: #d69e2e;
-}
-
-.discount-btn.active {
-    background-color: #c05621;
-    /* สีส้มเข้มเมื่อเลือก */
-    color: white;
-    transform: scale(1.05);
-    box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.4);
-}
-
-.discount-input-group {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-top: 5px;
-}
-
-.manual-discount-input {
-    padding: 8px 12px;
-    width: 140px;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    text-align: right;
-}
-
-.apply-manual-btn {
-    background-color: #4299e1;
-    /* สีฟ้า */
-    color: white;
-}
-
-.apply-manual-btn:hover {
-    background-color: #3182ce;
-}
-
-/* --- Summary --- */
-.sale-summary {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-    min-width: 300px;
-}
-
-.summary-row {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    font-size: 1rem;
-    color: #4a5568;
-}
-
-.discount-text {
-    color: #e53e3e;
-    font-weight: 600;
-}
-
-.grand-total-row {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 2px solid #e2e8f0;
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: var(--primary-color);
-}
-
-.button-group {
-    margin-top: 15px;
-    width: 100%;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
+    color: var(--text-main);
 }
 
 @media (max-width: 1024px) {
     .form-grid {
+        grid-template-columns: 1fr;
+    }
+    .bottom-summary-pane {
         grid-template-columns: 1fr;
     }
 }

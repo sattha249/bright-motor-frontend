@@ -1,149 +1,202 @@
 <template>
-    <div class="main-content-container">
-        <h2 class="section-title">ใบสั่งซื้อ (Purchase Orders)</h2>
-
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">รายการใบสั่งซื้อ</h3>
-
-                <router-link :to="{ name: 'CreatePO' }" class="primary-btn">
-                    <i class="fas fa-plus"></i> สร้างใบสั่งซื้อใหม่
-                </router-link>
+    <div class="po-view-container">
+        <!-- Header Banner -->
+        <div class="po-header">
+            <div class="header-title-box">
+                <div class="header-icon-badge">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <div>
+                    <h2 class="section-title">ใบสั่งซื้อ (Purchase Orders)</h2>
+                    <p class="section-subtitle">จัดการใบสั่งซื้อสินค้าเข้าสต็อก อนุมัติ และติดตามสถานะการสั่งซื้อ</p>
+                </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="data-table">
+            <router-link :to="{ name: 'CreatePO' }" class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>สร้างใบสั่งซื้อใหม่</span>
+            </router-link>
+        </div>
+
+        <!-- Table Card -->
+        <div class="table-card">
+            <div class="table-card-header">
+                <div>
+                    <h3 class="card-title">รายการใบสั่งซื้อทั้งหมด</h3>
+                    <p class="card-subtitle">ตรวจสอบและอนุมัติใบสั่งซื้อสินค้าเข้าคลัง</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="product-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th width="110">เลขที่ PO</th>
                             <th>ผู้สร้าง</th>
                             <th>ผู้จำหน่าย</th>
-                            <th>สถานะ</th>
+                            <th width="130" class="text-center">สถานะ</th>
                             <th>ผู้อนุมัติ</th>
-                            <th>วันที่สร้าง</th>
-                            <th>ดำเนินการ</th>
+                            <th width="130">วันที่สร้าง</th>
+                            <th width="200" class="text-center">ดำเนินการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="po in purchaseOrders" :key="po.id">
-                            <td>PO-{{ po.id }}</td>
-                            <td>{{ po.creator?.fullname || 'N/A' }}</td>
-                            <td>{{ po.supplier_name || '-' }}</td>
                             <td>
-                                <span :class="['status-badge', po.status.toLowerCase()]">
+                                <span class="po-badge tabular-nums">PO-{{ po.id }}</span>
+                            </td>
+                            <td class="font-medium text-main">{{ po.creator?.fullname || 'N/A' }}</td>
+                            <td>{{ po.supplier_name || '-' }}</td>
+                            <td class="text-center">
+                                <span :class="['stock-pill', po.status.toLowerCase() === 'approved' ? 'pill-high' : po.status.toLowerCase() === 'pending' ? 'pill-low' : 'pill-empty']">
                                     {{ po.status }}
                                 </span>
                             </td>
-                            <td>{{ po.approver?.fullname || '-' }}</td>
-                            <td>{{ new Date(po.created_at).toLocaleDateString() }}</td>
-                            <td class="action-buttons">
-                                <button class="action-btn view-btn" @click="openViewModal(po.id)">
-                                    <i class="fas fa-eye"></i> ดู
-                                </button>
+                            <td class="text-muted">{{ po.approver?.fullname || '-' }}</td>
+                            <td class="tabular-nums text-muted">{{ new Date(po.created_at).toLocaleDateString('th-TH') }}</td>
+                            <td class="text-center">
+                                <div class="action-btns-group" style="justify-content: center;">
+                                    <button class="btn-icon view-btn" @click="openViewModal(po.id)" title="ดูรายละเอียด">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
 
-                                <router-link :to="{ name: 'EditPO', params: { id: po.id } }" class="action-btn edit-btn"
-                                    v-if="po.status === 'Pending'">
-                                    แก้ไข
-                                </router-link>
+                                    <router-link
+                                        :to="{ name: 'EditPO', params: { id: po.id } }"
+                                        class="btn-icon edit-btn"
+                                        v-if="po.status === 'Pending'"
+                                        title="แก้ไข"
+                                    >
+                                        <i class="fas fa-pen"></i>
+                                    </router-link>
 
-                                <button class="action-btn approve-btn" @click="openApproveModal(po)"
-                                    v-if="userStore.role === 'admin' && po.status === 'Pending'">
-                                    อนุมัติ
-                                </button>
-                                <button class="action-btn delete-btn" @click="openCancelModal(po)"
-                                    v-if="po.status === 'Pending'">
-                                    ยกเลิก
-                                </button>
+                                    <button
+                                        class="btn-icon approve-btn"
+                                        @click="openApproveModal(po)"
+                                        v-if="userStore.role === 'admin' && po.status === 'Pending'"
+                                        title="อนุมัติ"
+                                    >
+                                        <i class="fas fa-check"></i>
+                                    </button>
+
+                                    <button
+                                        class="btn-icon delete-btn"
+                                        @click="openCancelModal(po)"
+                                        v-if="po.status === 'Pending'"
+                                        title="ยกเลิก"
+                                    >
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="!loading && purchaseOrders.length === 0">
-                            <td colspan="7" style="text-align: center;">ไม่พบข้อมูลใบสั่งซื้อ</td>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <div class="empty-state">
+                                    <i class="fas fa-file-circle-xmark empty-icon"></i>
+                                    <p class="empty-title">ไม่พบข้อมูลใบสั่งซื้อ</p>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div v-if="loading" class="loading-indicator">
-                กำลังโหลดข้อมูล...
+            <div v-if="loading" class="text-center py-4 text-muted">
+                <i class="fas fa-spinner fa-spin"></i> กำลังโหลดข้อมูล...
             </div>
 
-            <div class="pagination" v-if="totalPages > 1">
-                <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">
-                    ก่อนหน้า
+            <div class="pagination-container" v-if="totalPages > 1" style="margin-top: 20px">
+                <button class="pagination-btn" @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">
+                    <i class="fas fa-chevron-left"></i>
                 </button>
-                <span>หน้า {{ currentPage }} / {{ totalPages }}</span>
-                <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">
-                    ถัดไป
+                <span class="page-indicator">หน้า {{ currentPage }} / {{ totalPages }}</span>
+                <button class="pagination-btn" @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">
+                    <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
         </div>
 
+        <!-- Detail Modal -->
         <div v-if="showViewModal" class="modal-overlay" @click.self="closeViewModal">
-            <div class="modal large-modal">
+            <div class="modal modal-lg">
                 <div class="modal-header">
-                    <h3>รายละเอียดใบสั่งซื้อ: PO-{{ selectedPO?.id }}</h3>
-                    <button class="close-icon-btn" @click="closeViewModal">&times;</button>
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                        <div>
+                            <h3>รายละเอียดใบสั่งซื้อ: PO-{{ selectedPO?.id }}</h3>
+                            <span class="modal-subtitle">ตรวจสอบรายการและยอดรวมของใบสั่งซื้อ</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeViewModal">&times;</button>
                 </div>
 
                 <div class="modal-body">
-                    <div v-if="viewLoading" class="loading-indicator">กำลังโหลดข้อมูล...</div>
+                    <div v-if="viewLoading" class="text-center py-4 text-muted">
+                        <i class="fas fa-spinner fa-spin"></i> กำลังโหลดข้อมูล...
+                    </div>
                     <div v-else-if="selectedPO">
-                        <div class="info-grid">
-                            <div class="info-item">
+                        <div class="info-grid-detail">
+                            <div class="info-box">
                                 <label>ผู้จำหน่าย:</label>
                                 <span>{{ selectedPO.supplier_name }}</span>
                             </div>
-                            <div class="info-item">
+                            <div class="info-box">
                                 <label>สถานะ:</label>
-                                <span :class="['status-text', selectedPO.status.toLowerCase()]">{{ selectedPO.status
-                                }}</span>
+                                <span :class="['stock-pill', selectedPO.status.toLowerCase() === 'approved' ? 'pill-high' : selectedPO.status.toLowerCase() === 'pending' ? 'pill-low' : 'pill-empty']">
+                                    {{ selectedPO.status }}
+                                </span>
                             </div>
-                            <div class="info-item">
+                            <div class="info-box">
                                 <label>ผู้สร้าง:</label>
                                 <span>{{ selectedPO.creator?.fullname }}</span>
                             </div>
-                            <div class="info-item">
+                            <div class="info-box">
                                 <label>วันที่สร้าง:</label>
-                                <span>{{ new Date(selectedPO.created_at).toLocaleString('th-TH') }}</span>
+                                <span class="tabular-nums">{{ new Date(selectedPO.created_at).toLocaleString('th-TH') }}</span>
                             </div>
-                            <div class="info-item full-width">
+                            <div class="info-box full-span">
                                 <label>หมายเหตุ:</label>
                                 <span>{{ selectedPO.notes || '-' }}</span>
                             </div>
                         </div>
 
-                        <hr class="divider">
-
-                        <h4>รายการสินค้า</h4>
-                        <table class="detail-table">
-                            <thead>
-                                <tr>
-                                    <th>สินค้า</th>
-                                    <th>จำนวน</th>
-                                    <th>ต้นทุน/หน่วย</th>
-                                    <th>รวม</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="item in selectedPO.items" :key="item.id">
-                                    <td>{{ item.product?.description || item.product_id }}</td>
-                                    <td>{{ item.quantity }}</td>
-                                    <td>{{ Number(item.cost_price).toLocaleString() }}</td>
-                                    <td>{{ (item.quantity * item.cost_price).toLocaleString() }}</td>
-                                </tr>
-                            </tbody>
-                            <tfoot>
-                                <tr class="total-row">
-                                    <td colspan="3" style="text-align: right;">ยอดรวมสุทธิ</td>
-                                    <td>{{ calculateTotal(selectedPO.items) }}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                        <div class="modal-table-wrap" style="margin-top: 20px;">
+                            <table class="product-table modal-inner-table">
+                                <thead>
+                                    <tr>
+                                        <th>สินค้า</th>
+                                        <th class="text-right">จำนวน</th>
+                                        <th class="text-right">ต้นทุน/หน่วย</th>
+                                        <th class="text-right">รวม</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="item in selectedPO.items" :key="item.id">
+                                        <td class="font-medium">{{ item.product?.description || item.product_id }}</td>
+                                        <td class="text-right tabular-nums font-bold">{{ item.quantity }}</td>
+                                        <td class="text-right tabular-nums">฿{{ Number(item.cost_price).toLocaleString() }}</td>
+                                        <td class="text-right tabular-nums font-bold text-success">
+                                            ฿{{ (item.quantity * item.cost_price).toLocaleString() }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-right font-bold">ยอดรวมสุทธิทั้งสิ้น:</td>
+                                        <td class="text-right tabular-nums font-bold text-success" style="font-size: 1.15rem;">
+                                            ฿{{ calculateTotal(selectedPO.items) }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <div class="modal-footer">
-                    <button class="cancel-btn" @click="closeViewModal">ปิด</button>
+                    <button class="btn btn-secondary" @click="closeViewModal">ปิดหน้าต่าง</button>
                 </div>
             </div>
         </div>
@@ -284,273 +337,175 @@ const openCancelModal = (po) => {
 </script>
 
 <style scoped>
-/* ... (CSS เดิม) ... */
-.main-content-container {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: auto;
+.po-view-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
-.section-title {
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-bottom: 2rem;
-    text-align: center;
-}
-
-.card {
-    background-color: var(--card-bg);
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-}
-
-.card-header {
+.po-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
-.card-title {
-    font-size: 1.4rem;
+.header-title-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-icon-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.section-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0.2rem 0 0 0;
+}
+
+.table-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.po-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-main);
+}
+
+.action-btns-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.btn-icon:hover {
+    transform: translateY(-1px);
+}
+
+.view-btn {
+    background: #eff6ff;
+    color: #2563eb;
+}
+.view-btn:hover {
+    background: #dbeafe;
+}
+
+.edit-btn {
+    background: #fef3c7;
+    color: #b45309;
+}
+.edit-btn:hover {
+    background: #fde68a;
+}
+
+.approve-btn {
+    background: #ecfdf5;
+    color: #059669;
+}
+.approve-btn:hover {
+    background: #d1fae5;
+}
+
+.delete-btn {
+    background: #fef2f2;
+    color: #dc2626;
+}
+.delete-btn:hover {
+    background: #fee2e2;
+}
+
+/* Modal */
+.info-grid-detail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.info-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-box.full-span {
+    grid-column: 1 / -1;
+}
+
+.info-box label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
     font-weight: 600;
 }
 
-.primary-btn {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    font-size: 16px;
-    display: inline-flex;
+.info-box span {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 8px;
 }
 
-.primary-btn:hover {
-    background-color: #2c7a7b;
+.empty-icon {
+    font-size: 2.5rem;
+    color: #cbd5e1;
 }
 
-.table-responsive {
-    overflow-x: auto;
+.empty-title {
+    font-size: 0.95rem;
+    color: #64748b;
+    margin: 0;
 }
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.data-table th,
-.data-table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
-}
-
-.data-table th {
-    background-color: #f8f9fa;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
-}
-
-/* Action Buttons Style */
-.action-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: none;
-    font-size: 14px;
-    font-weight: 500;
-    color: white !important;
-    text-decoration: none;
-    font-family: inherit;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: opacity 0.3s;
-    gap: 5px;
-    /* เพิ่ม gap ให้ไอคอนกับตัวหนังสือ */
-}
-
-.action-btn:hover {
-    opacity: 0.8;
-}
-
-/* สีปุ่มต่างๆ */
-.view-btn {
-    background-color: #3182ce;
-}
-
-/* สีฟ้า */
-.edit-btn {
-    background-color: #ffc107;
-}
-
-.approve-btn {
-    background-color: #28a745;
-}
-
-.delete-btn {
-    background-color: #dc3545;
-}
-
-/* Badge Status */
-.status-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    color: white;
-    text-transform: capitalize;
-}
-
-.status-badge.pending {
-    background-color: #f6ad55;
-}
-
-.status-badge.approved {
-    background-color: #48bb78;
-}
-
-.status-badge.cancelled {
-    background-color: #e53e3e;
-}
-
-.loading-indicator {
-    text-align: center;
-    padding: 2rem;
-    font-weight: 600;
-    color: var(--text-color-secondary);
-}
-
-
-
-.modal {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    max-height: 90vh;
-}
-
-.large-modal {
-    width: 95%;
-    max-width: 800px;
-}
-
-.modal-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-body {
-    padding: 1.5rem;
-    overflow-y: auto;
-}
-
-.modal-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #eee;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.close-icon-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #666;
-}
-
-
-
-/* Detail Info Grid in Modal */
-.info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.info-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.info-item.full-width {
-    grid-column: span 2;
-}
-
-.info-item label {
-    font-weight: 600;
-    color: #666;
-    font-size: 0.9rem;
-    margin-bottom: 4px;
-}
-
-.info-item span {
-    font-size: 1rem;
-    color: #333;
-}
-
-.status-text {
-    font-weight: bold;
-}
-
-.status-text.pending {
-    color: #f6ad55;
-}
-
-.status-text.approved {
-    color: #28a745;
-}
-
-.status-text.cancelled {
-    color: #e53e3e;
-}
-
-.divider {
-    border: 0;
-    border-top: 1px solid #eee;
-    margin: 20px 0;
-}
-
-/* Detail Table in Modal */
-.detail-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-
-.detail-table th,
-.detail-table td {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    text-align: left;
-}
-
-.detail-table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-}
-
-.total-row {
-    font-weight: bold;
-    background-color: #f8f9fa;
-}
-
 </style>

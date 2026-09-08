@@ -1,183 +1,328 @@
 <template>
-    <div class="sale-container">
-        <h2><i class="fas fa-cash-register"></i> บันทึกการขายสินค้า (หน้าโกดัง)</h2>
-        <div class="card">
-
-            <div class="controls-group">
-                <div class="info-group">
-                    <label>สถานที่ขาย:</label>
-                    <span class="location-tag">โกดังหลัก</span>
+    <div class="sale-view-container">
+        <!-- Header Banner -->
+        <div class="sale-header">
+            <div class="header-title-box">
+                <div class="header-icon-badge">
+                    <i class="fas fa-cash-register"></i>
                 </div>
+                <div>
+                    <h2 class="section-title">บันทึกการขายสินค้า (หน้าโกดัง)</h2>
+                    <p class="section-subtitle">เปิดบิลขายหน้าร้าน คิดเงิน คำนวณส่วนลด และจัดการการชำระเงินเครดิต</p>
+                </div>
+            </div>
+            <div class="header-location-tag">
+                <i class="fas fa-warehouse"></i>
+                <span>โกดังหลัก</span>
+            </div>
+        </div>
 
-                <div class="select-group customer-search-group">
-                    <label>ลูกค้า (Customer):</label>
-                    <input type="text" v-model="customerSearchTerm" placeholder="ค้นหาลูกค้า..."
-                        @input="debouncedSearchCustomers" @focus="showCustomerDropdown = true"
-                        @blur="hideCustomerDropdown" />
-                    <div class="dropdown" v-if="showCustomerDropdown">
-                        <div v-for="customer in filteredCustomers" :key="customer.id" class="dropdown-item"
-                            @mousedown.prevent="selectCustomer(customer)">
-                            {{ customer.name }} ({{ customer.customer_no }})
+        <!-- POS Workspace Layout -->
+        <div class="pos-workspace-card">
+            <!-- Top Controls: Customer & Credit Terms -->
+            <div class="pos-top-controls">
+                <div class="customer-picker-box">
+                    <label class="control-label">
+                        <i class="fas fa-user-tag"></i> เลือกลูกค้า (Customer) <span class="text-danger">*</span>
+                    </label>
+                    <div class="search-input-wrapper">
+                        <i class="fas fa-search search-icon-inside"></i>
+                        <input
+                            type="text"
+                            v-model="customerSearchTerm"
+                            placeholder="ค้นหาชื่อลูกค้า หรือ รหัสลูกค้า..."
+                            class="form-control customer-search-input"
+                            @input="debouncedSearchCustomers"
+                            @focus="showCustomerDropdown = true"
+                            @blur="hideCustomerDropdown"
+                        />
+                        <div class="dropdown-menu-list" v-if="showCustomerDropdown">
+                            <div
+                                v-for="customer in filteredCustomers"
+                                :key="customer.id"
+                                class="dropdown-item-option"
+                                @mousedown.prevent="selectCustomer(customer)"
+                            >
+                                <div class="customer-option-row">
+                                    <span class="customer-name font-bold">{{ customer.name }}</span>
+                                    <span class="customer-code text-muted">({{ customer.customer_no }})</span>
+                                </div>
+                            </div>
+                            <div v-if="filteredCustomers.length === 0" class="dropdown-item-option disabled text-muted text-center py-2">
+                                ไม่พบข้อมูลลูกค้า
+                            </div>
                         </div>
-                        <div v-if="filteredCustomers.length === 0" class="dropdown-item disabled">ไม่พบลูกค้า</div>
+                    </div>
+                </div>
+
+                <div class="credit-management-box">
+                    <label class="control-label">
+                        <i class="fas fa-credit-card"></i> เงื่อนไขการชำระเงิน
+                    </label>
+                    <div class="credit-pill-wrapper">
+                        <div class="checkbox-pill" :class="{ active: isCredit }">
+                            <input type="checkbox" id="isCredit" v-model="isCredit" @change="handleCreditChange" />
+                            <label for="isCredit">ขายเงินเชื่อ (ติดเครดิต)</label>
+                        </div>
+
+                        <div v-if="isCredit" class="credit-sub-terms">
+                            <label class="radio-pill" :class="{ active: creditType === 'week' }">
+                                <input type="radio" value="week" v-model="creditType" />
+                                <span>รายสัปดาห์</span>
+                            </label>
+                            <label class="radio-pill" :class="{ active: creditType === 'month' }">
+                                <input type="radio" value="month" v-model="creditType" />
+                                <span>รายเดือน</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="add-item-bar">
-                <button class="add-item-btn" @click="openModal" :disabled="customerId === null">
-                    <i class="fas fa-box-open"></i> เพิ่มรายการสินค้า
+            <!-- Action Bar: Add Product Button -->
+            <div class="pos-cart-header">
+                <div class="cart-title-info">
+                    <h3 class="card-title">
+                        <i class="fas fa-basket-shopping"></i> รายการสินค้าในบิล
+                    </h3>
+                    <span class="cart-badge">{{ totalItems }} ชิ้น</span>
+                </div>
+                <button class="btn btn-primary" @click="openModal" :disabled="customerId === null">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>เลือกสินค้าเพิ่ม</span>
                 </button>
-
-                <div class="credit-options-container">
-                    <div class="checkbox-group main-credit">
-                        <input type="checkbox" id="isCredit" v-model="isCredit" @change="handleCreditChange" />
-                        <label for="isCredit">ติดเครดิต</label>
-                    </div>
-
-                    <div v-if="isCredit" class="credit-type-options">
-                        <label class="radio-label">
-                            <input type="radio" value="week" v-model="creditType"> สัปดาห์
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" value="month" v-model="creditType"> เดือน
-                        </label>
-                    </div>
-                </div>
             </div>
 
-            <div class="summary-table-container">
-                <h3>รายการสินค้าที่เลือก (Total: {{ totalItems }})</h3>
+            <!-- Cart Table -->
+            <div class="table-container">
                 <table class="product-table">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th v-if="isCredit" class="text-center">จ่าย</th>
+                            <th width="50" class="text-center">#</th>
+                            <th v-if="isCredit" width="80" class="text-center">จ่ายแล้ว</th>
                             <th>สินค้า</th>
                             <th>ประเภท</th>
-                            <th>จำนวน</th>
-                            <th>ราคา/หน่วย</th>
-                            <th>ส่วนลด/หน่วย</th>
-                            <th>รวมสุทธิ</th>
-                            <th>ลบ</th>
+                            <th width="120" class="text-center">จำนวน</th>
+                            <th width="130" class="text-right">ราคา/หน่วย</th>
+                            <th width="130" class="text-right">ส่วนลด/หน่วย</th>
+                            <th width="140" class="text-right">รวมสุทธิ</th>
+                            <th width="70" class="text-center">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(item, index) in items" :key="item.productId">
-                            <td>{{ index + 1 }}</td>
-
+                            <td class="text-center text-muted tabular-nums">{{ index + 1 }}</td>
                             <td v-if="isCredit" class="text-center">
-                                <input type="checkbox" v-model="item.is_paid" class="paid-checkbox">
+                                <input type="checkbox" v-model="item.is_paid" class="table-checkbox" />
                             </td>
-
-                            <td>{{ item.description }}</td>
-                            <td>{{ item.category }}</td>
                             <td>
-                                <input type="number" v-model.number="item.quantity" min="1" class="qty-input" />
+                                <div class="font-bold text-main">{{ item.description }}</div>
                             </td>
-                            <td>฿{{ parseFloat(item.price).toFixed(2) }}</td>
-                            <td class="discount-cell">
-                                <input type="number" v-model.number="item.discount" min="0" :max="item.price"
-                                    class="qty-input discount-input" @input="validateItemDiscount(item)" />
-                            </td>
-                            <td>฿{{ (item.quantity * (item.price - item.discount)).toFixed(2) }}</td>
                             <td>
-                                <button class="remove-item-btn" @click="removeItem(item.productId)">
-                                    &times;
+                                <span class="stock-pill pill-medium">{{ item.category || 'ทั่วไป' }}</span>
+                            </td>
+                            <td class="text-center">
+                                <input
+                                    type="number"
+                                    v-model.number="item.quantity"
+                                    min="1"
+                                    class="form-control table-qty-input tabular-nums text-center"
+                                />
+                            </td>
+                            <td class="text-right tabular-nums">฿{{ parseFloat(item.price).toFixed(2) }}</td>
+                            <td class="text-right">
+                                <input
+                                    type="number"
+                                    v-model.number="item.discount"
+                                    min="0"
+                                    :max="item.price"
+                                    class="form-control table-discount-input tabular-nums text-right"
+                                    @input="validateItemDiscount(item)"
+                                />
+                            </td>
+                            <td class="text-right tabular-nums font-bold text-success">
+                                ฿{{ (item.quantity * (item.price - item.discount)).toFixed(2) }}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn-icon-danger" @click="removeItem(item.productId)" title="ลบรายการ">
+                                    <i class="fas fa-trash-alt"></i>
                                 </button>
                             </td>
                         </tr>
                         <tr v-if="items.length === 0">
-                            <td :colspan="isCredit ? 8 : 7" style="text-align: center;">กรุณาเพิ่มรายการสินค้า</td>
+                            <td :colspan="isCredit ? 9 : 8" class="text-center py-5">
+                                <div class="empty-cart-state">
+                                    <i class="fas fa-cart-arrow-down empty-icon"></i>
+                                    <p class="empty-title">ยังไม่มีรายการสินค้าในบิล</p>
+                                    <p class="empty-desc">เลือกลูกค้าแล้วคลิก "เลือกสินค้าเพิ่ม" เพื่อทำรายการ</p>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div class="action-bar discount-controls-bar">
-                <div class="discount-controls">
-                    <label>ส่วนลดรวม:</label>
+            <!-- Discount & Summary Checkout Area -->
+            <div class="pos-checkout-pane">
+                <div class="discount-management-card">
+                    <h4 class="card-subtitle-bold"><i class="fas fa-tags"></i> ส่วนลดทั้งบิล</h4>
                     <div class="discount-btn-group">
-                        <button v-for="pct in [5, 10, 15]" :key="pct" @click="applyDiscountPercentage(pct)"
-                            class="discount-btn" :class="{ 'active': selectedDiscount === pct }"
-                            :disabled="items.length === 0">
+                        <button
+                            v-for="pct in [5, 10, 15]"
+                            :key="pct"
+                            @click="applyDiscountPercentage(pct)"
+                            class="pct-btn"
+                            :class="{ active: selectedDiscount === pct }"
+                            :disabled="items.length === 0"
+                        >
                             {{ pct }}%
                         </button>
                     </div>
-                    <div class="discount-input-group">
-                        <input type="number" v-model.number="manualDiscountAmount" placeholder="หรือกรอกจำนวนเงิน"
-                            class="manual-discount-input" :disabled="items.length === 0" />
-                        <button @click="applyManualDiscount" class="discount-btn apply-manual-btn"
-                            :disabled="items.length === 0">เฉลี่ยลด</button>
+                    <div class="manual-discount-row">
+                        <input
+                            type="number"
+                            v-model.number="manualDiscountAmount"
+                            placeholder="ระบุส่วนลด (บาท)"
+                            class="form-control tabular-nums text-right"
+                            style="width: 170px;"
+                            :disabled="items.length === 0"
+                        />
+                        <button
+                            @click="applyManualDiscount"
+                            class="btn btn-secondary btn-sm"
+                            :disabled="items.length === 0"
+                        >
+                            เฉลี่ยลด
+                        </button>
                     </div>
                 </div>
 
-                <div class="sale-summary">
-                    <p class="summary-line">รวมราคาสินค้า (ก่อนลด): ฿{{ totalOriginalPrice.toFixed(2) }}</p>
-                    <p class="summary-line discount-amount">ส่วนลดรวม: ฿{{ totalDiscountAmount.toFixed(2) }}</p>
+                <div class="sale-summary-card">
+                    <div class="summary-line">
+                        <span>ราคารวม (ก่อนลด):</span>
+                        <span class="tabular-nums">฿{{ totalOriginalPrice.toFixed(2) }}</span>
+                    </div>
+                    <div class="summary-line text-danger">
+                        <span>ส่วนลดรวม:</span>
+                        <span class="tabular-nums">-฿{{ totalDiscountAmount.toFixed(2) }}</span>
+                    </div>
 
                     <template v-if="isCredit">
-                        <hr class="summary-divider">
-                        <p class="summary-line paid-today">จ่ายวันนี้: ฿{{ totalPaidToday.toFixed(2) }}</p>
-                        <p class="summary-line credit-amount">ค้างชำระ (Credit): ฿{{ totalCreditAmount.toFixed(2) }}</p>
-                        <hr class="summary-divider">
+                        <div class="summary-divider"></div>
+                        <div class="summary-line text-success">
+                            <span>จ่ายวันนี้:</span>
+                            <span class="tabular-nums font-bold">฿{{ totalPaidToday.toFixed(2) }}</span>
+                        </div>
+                        <div class="summary-line text-warning">
+                            <span>ค้างชำระ (Credit):</span>
+                            <span class="tabular-nums font-bold">฿{{ totalCreditAmount.toFixed(2) }}</span>
+                        </div>
                     </template>
 
-                    <h3 class="summary-line total-price">รวมทั้งสิ้น: ฿{{ totalSalePrice.toFixed(2) }}</h3>
-                    <button class="save-sale-btn" @click="saveSale" :disabled="items.length === 0 || loading">
-                        {{ loading ? 'กำลังบันทึก...' : 'บันทึกการขาย' }}
+                    <div class="summary-line grand-total-line">
+                        <span>ยอดสุทธิทั้งสิ้น:</span>
+                        <span class="grand-total-price tabular-nums">฿{{ totalSalePrice.toFixed(2) }}</span>
+                    </div>
+
+                    <button
+                        class="btn btn-primary checkout-btn"
+                        @click="saveSale"
+                        :disabled="items.length === 0 || loading"
+                    >
+                        <i class="fas fa-check-double"></i>
+                        <span>{{ loading ? 'กำลังบันทึก...' : 'บันทึกการขาย' }}</span>
                     </button>
                 </div>
             </div>
         </div>
 
+        <!-- Add Item Modal -->
         <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-            <div class="modal">
-                <h3>เลือกสินค้าในโกดัง</h3>
-                <div class="search-box">
-                    <input type="text" placeholder="ค้นหาสินค้า..." v-model="searchKeyword"
-                        @input="debouncedFetchWarehouseStock" />
-                    <i class="fas fa-search"></i>
+            <div class="modal modal-lg">
+                <div class="modal-header">
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-warehouse"></i>
+                        </div>
+                        <div>
+                            <h3>เลือกสินค้าจากโกดัง</h3>
+                            <span class="modal-subtitle">เลือกสินค้าพร้อมระบุจำนวนเพื่อเพิ่มลงในรายการขาย</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeModal">&times;</button>
                 </div>
 
-                <table class="product-table">
-                    <thead>
-                        <tr>
-                            <th>รหัส</th>
-                            <th>สินค้า</th>
-                            <th>ประเภท</th>
-                            <th>คงเหลือ</th>
-                            <th>ราคาขาย</th>
-                            <th>จำนวนที่ต้องการ</th>
-                            <th>เพิ่ม</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="stock in filteredStocks" :key="stock.id">
-                            <td>SKU-{{ stock.product_id }}</td>
-                            <td>{{ stock.product.description }}</td>
-                            <td>{{ stock.product.category }}</td>
-                            <td>{{ stock.quantity }}</td>
-                            <td>฿{{ parseFloat(stock.product.sell_price).toFixed(2) }}</td>
-                            <td class="quantity-control-cell">
-                                <input type="number" v-model.number="stock.tempQuantity" min="1" :max="stock.quantity"
-                                    class="qty-input" />
-                            </td>
-                            <td>
-                                <button class="add-to-list-btn"
-                                    :disabled="stock.tempQuantity < 1 || stock.tempQuantity > stock.quantity"
-                                    @click="addItemToSale(stock)">
-                                    เพิ่ม
-                                </button>
-                            </td>
-                        </tr>
-                        <tr v-if="filteredStocks.length === 0">
-                            <td colspan="6" style="text-align: center;">ไม่พบสินค้าหรือคลังว่าง</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="modal-body">
+                    <div class="modal-search-box" style="margin-bottom: 16px;">
+                        <div class="search-input-wrapper">
+                            <i class="fas fa-search search-icon-inside"></i>
+                            <input
+                                type="text"
+                                placeholder="ค้นหาชื่อสินค้า หรือ SKU..."
+                                v-model="searchKeyword"
+                                @input="debouncedFetchWarehouseStock"
+                                class="form-control"
+                            />
+                        </div>
+                    </div>
 
-                <button class="close-btn" @click="closeModal">ปิด</button>
+                    <div class="modal-table-wrap">
+                        <table class="product-table modal-inner-table">
+                            <thead>
+                                <tr>
+                                    <th>รหัส</th>
+                                    <th>สินค้า</th>
+                                    <th>ประเภท</th>
+                                    <th class="text-right">คงเหลือ</th>
+                                    <th class="text-right">ราคาขาย</th>
+                                    <th class="text-center" width="150">จำนวนที่ต้องการ</th>
+                                    <th class="text-center" width="100">เพิ่ม</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="stock in filteredStocks" :key="stock.id">
+                                    <td class="text-muted tabular-nums">SKU-{{ stock.product_id }}</td>
+                                    <td class="font-medium">{{ stock.product.description }}</td>
+                                    <td>
+                                        <span class="stock-pill pill-medium">{{ stock.product.category || 'ทั่วไป' }}</span>
+                                    </td>
+                                    <td class="text-right tabular-nums font-bold">
+                                        <span :class="['stock-pill', stock.quantity > 10 ? 'pill-high' : stock.quantity > 0 ? 'pill-low' : 'pill-empty']">
+                                            {{ stock.quantity }}
+                                        </span>
+                                    </td>
+                                    <td class="text-right tabular-nums font-bold">฿{{ parseFloat(stock.product.sell_price).toFixed(2) }}</td>
+                                    <td class="text-center">
+                                        <input
+                                            type="number"
+                                            v-model.number="stock.tempQuantity"
+                                            min="1"
+                                            :max="stock.quantity"
+                                            class="form-control table-qty-input tabular-nums text-center"
+                                            style="width: 80px; margin: 0 auto;"
+                                        />
+                                    </td>
+                                    <td class="text-center">
+                                        <button
+                                            class="btn btn-primary btn-sm"
+                                            :disabled="!stock.tempQuantity || stock.tempQuantity < 1 || stock.tempQuantity > stock.quantity"
+                                            @click="addItemToSale(stock)"
+                                        >
+                                            <i class="fas fa-plus"></i> เพิ่ม
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="filteredStocks.length === 0">
+                                    <td colspan="7" class="text-center py-4 text-muted">ไม่พบสินค้าหรือคลังว่าง</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeModal">เสร็จสิ้น / ปิด</button>
+                </div>
             </div>
         </div>
     </div>
@@ -542,245 +687,324 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ... Styles เดิม ... */
-.sale-container {
-    padding: 2rem;
-    max-width: 1000px;
-    margin: auto;
-}
-
-.sale-container h2 {
-    text-align: center;
-    margin-bottom: 2rem;
-    font-size: 28px;
-    color: var(--text-color-primary);
-}
-
-.card {
-    background-color: var(--card-bg);
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-}
-
-.controls-group,
-.add-item-bar,
-.action-bar {
+.sale-view-container {
+    max-width: 1400px;
+    margin: 0 auto;
     display: flex;
-    align-items: center;
-    gap: 20px;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
-.add-item-bar {
+.sale-header {
+    display: flex;
     justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
-/* [ใหม่] Credit Options Styles */
-.credit-options-container {
+.header-title-box {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 1rem;
 }
 
-.checkbox-group {
+.header-icon-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: var(--primary-color);
     display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.section-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0.2rem 0 0 0;
+}
+
+.header-location-tag {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.checkbox-group input {
-    transform: scale(1.2);
-}
-
-.credit-type-options {
-    display: flex;
-    gap: 15px;
-    background-color: #f0f4f8;
-    padding: 5px 15px;
-    border-radius: 20px;
-    border: 1px solid #e2e8f0;
-}
-
-.radio-label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 14px;
-    cursor: pointer;
-    color: var(--text-color-primary);
-}
-
-/* ... (Styles ตารางและอื่นๆ เหมือนเดิม) ... */
-
-
-.text-center {
-    text-align: center !important;
-}
-
-.paid-checkbox {
-    transform: scale(1.5);
-    cursor: pointer;
-}
-
-/* ... (Styles อื่นๆ คงเดิม) ... */
-.select-group select {
-    padding: 10px 15px;
+    background: #ffffff;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    min-width: 200px;
-    font-size: 16px;
-}
-
-.add-item-btn {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.3s;
-}
-
-.add-item-btn:disabled {
-    background-color: #a0aec0;
-    cursor: not-allowed;
-}
-
-.qty-input {
-    width: 60px;
-    padding: 5px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-}
-
-.discount-input {
-    width: 80px;
-}
-
-.remove-item-btn {
-    background-color: #e53e3e;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.save-sale-btn {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 12px 25px;
-    border: none;
+    padding: 8px 16px;
     border-radius: 20px;
-    cursor: pointer;
-    font-size: 18px;
+    font-size: 0.875rem;
     font-weight: 600;
-    transition: background-color 0.3s;
+    color: var(--text-main);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.save-sale-btn:disabled {
-    background-color: #a0aec0;
-    cursor: not-allowed;
+.header-location-tag i {
+    color: var(--primary-color);
 }
 
-.modal {
-    max-height: 80vh;
-    overflow-y: auto;
+/* Workspace Card */
+.pos-workspace-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
-.add-to-list-btn {
-    background-color: #3182ce;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 6px;
-    cursor: pointer;
+/* Top Controls */
+.pos-top-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.add-to-list-btn:disabled {
-    background-color: #a0aec0;
+.control-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 8px;
 }
 
-.close-btn {
-    margin-top: 1rem;
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.customer-search-group {
+.customer-picker-box {
     position: relative;
 }
 
-.customer-search-group input {
-    padding: 10px 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    min-width: 250px;
+.customer-search-input {
+    padding-left: 2.25rem;
 }
 
-.dropdown {
+.dropdown-menu-list {
     position: absolute;
     top: 100%;
     left: 0;
-    width: 100%;
-    background-color: white;
+    right: 0;
+    background: #ffffff;
     border: 1px solid var(--border-color);
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     z-index: 50;
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
+    margin-top: 4px;
 }
 
-.dropdown-item {
-    padding: 10px 15px;
+.dropdown-item-option {
+    padding: 10px 14px;
     cursor: pointer;
-    text-align: left;
-    border-bottom: 1px solid #f4f4f4;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
 }
 
-.dropdown-item:hover {
-    background-color: var(--secondary-color);
+.dropdown-item-option:hover:not(.disabled) {
+    background: #eff6ff;
+    color: var(--primary-color);
 }
 
-.dropdown-item.disabled {
-    cursor: default;
-    color: #999;
-}
-
-.discount-controls-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    border-top: 1px solid var(--border-color);
-    padding-top: 1rem;
-    width: 100%;
-}
-
-.discount-controls {
+.customer-option-row {
     display: flex;
-    gap: 20px;
-    margin-bottom: 1rem;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Credit pill */
+.credit-pill-wrapper {
+    display: flex;
+    gap: 12px;
     align-items: center;
     flex-wrap: wrap;
 }
 
-.discount-controls label {
+.checkbox-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border-color);
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 0.875rem;
     font-weight: 600;
-    color: var(--text-color);
-    white-space: nowrap;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+}
+
+.checkbox-pill.active {
+    border-color: #d97706;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.checkbox-pill input {
+    cursor: pointer;
+}
+
+.credit-sub-terms {
+    display: inline-flex;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 10px;
+    gap: 4px;
+}
+
+.radio-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.825rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.radio-pill.active {
+    background: #ffffff;
+    color: var(--text-main);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.radio-pill input {
+    display: none;
+}
+
+/* Cart Header */
+.pos-cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cart-title-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cart-badge {
+    background: #eff6ff;
+    color: var(--primary-color);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* Table Controls */
+.table-qty-input,
+.table-discount-input {
+    padding: 6px 10px;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.table-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.btn-icon-danger {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #dc2626;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.btn-icon-danger:hover {
+    background: #fee2e2;
+}
+
+.empty-cart-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    gap: 8px;
+}
+
+.empty-icon {
+    font-size: 2.5rem;
+    color: #cbd5e1;
+    margin-bottom: 4px;
+}
+
+.empty-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #64748b;
+    margin: 0;
+}
+
+.empty-desc {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* Checkout Pane */
+.pos-checkout-pane {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    align-items: start;
+}
+
+.discount-management-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.card-subtitle-bold {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .discount-btn-group {
@@ -788,89 +1012,95 @@ onMounted(() => {
     gap: 8px;
 }
 
-.discount-btn {
-    background-color: #f6ad55;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 6px;
-    cursor: pointer;
+.pct-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    color: var(--text-main);
     font-weight: 600;
-    transition: background-color 0.3s;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.discount-input-group {
+.pct-btn:hover:not(:disabled) {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.pct-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.pct-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.manual-discount-row {
     display: flex;
     gap: 8px;
     align-items: center;
 }
 
-.manual-discount-input {
-    padding: 8px 10px;
-    width: 150px;
+.sale-summary-card {
+    background: #f8fafc;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-}
-
-.apply-manual-btn {
-    background-color: #4299e1;
-}
-
-.sale-summary {
-    width: 100%;
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
+    gap: 10px;
 }
 
 .summary-line {
-    width: 350px;
-    text-align: right;
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-.discount-amount {
-    color: #e53e3e;
-    font-weight: 600;
-    font-size: 1.2rem;
-    border-top: 1px dashed var(--border-color);
-    padding-top: 8px;
-}
-
-.total-price {
-    font-size: 1.8rem;
-    color: var(--primary-color);
-    font-weight: 700;
-}
-
-.paid-today {
-    color: #38a169;
-    /* สีเขียว */
-    font-weight: 600;
-}
-
-.credit-amount {
-    color: #e53e3e;
-    /* สีแดง */
-    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
 }
 
 .summary-divider {
-    width: 100%;
-    border: 0;
-    border-top: 1px solid #e2e8f0;
-    margin: 5px 0;
+    border-top: 1px dashed var(--border-color);
+    margin: 4px 0;
 }
 
-.discount-btn.active {
-    background-color: #c05621;
-    /* สีเข้มขึ้น */
-    color: white;
-    transform: scale(1.05);
-    /* ขยายเล็กน้อย */
-    box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.5);
-    /* เพิ่มเงาขอบ */
+.grand-total-line {
+    border-top: 1px dashed var(--border-color);
+    padding-top: 10px;
+    margin-top: 4px;
+    font-weight: 700;
+    color: var(--text-main);
+    font-size: 1rem;
+}
+
+.grand-total-price {
+    font-size: 1.6rem;
+    color: var(--primary-color);
+    font-weight: 800;
+}
+
+.checkout-btn {
+    width: 100%;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1rem;
+    margin-top: 6px;
+}
+
+@media (max-width: 1024px) {
+    .pos-top-controls {
+        grid-template-columns: 1fr;
+    }
+    .pos-checkout-pane {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
