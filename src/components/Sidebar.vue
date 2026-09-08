@@ -6,7 +6,7 @@
         <aside :class="['sidebar', { 'sidebar-open': isOpen }]">
             <div class="sidebar-brand">
                 <div class="brand-logo-box">
-                    <i class="fas fa-cubes"></i>
+                    <img src="/favicon.svg" alt="Bright Motor" class="brand-logo-img" />
                 </div>
                 <div class="brand-info">
                     <h2>BRIGHT MOTOR</h2>
@@ -185,17 +185,23 @@ onMounted(() => {
 }
 
 .brand-logo-box {
-    width: 42px;
-    height: 42px;
-    background: linear-gradient(135deg, #2563eb, #06b6d4);
+    width: 44px;
+    height: 44px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
-    color: #ffffff;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45);
     flex-shrink: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+.brand-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
 }
 
 .brand-info h2 {

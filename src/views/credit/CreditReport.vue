@@ -1,37 +1,41 @@
 <template>
     <div class="credit-view-container">
         <!-- Header Banner -->
-        <div class="credit-header">
-            <div class="header-title-box">
-                <div class="header-icon-badge">
-                    <i class="fas fa-coins"></i>
-                </div>
-                <div>
-                    <h2 class="section-title">รายงานสรุปเครดิต (Credit Summary)</h2>
-                    <p class="section-subtitle">ตรวจสอบสถานะยอดค้างชำระ บิลเครดิต ดอกเบี้ย และบันทึกการชำระเงิน</p>
-                </div>
-            </div>
-
-            <div class="credit-header-actions">
-                <div class="toggle-container">
-                    <button
-                        :class="['toggle-btn', { active: viewMode === 'truck' }]"
-                        @click="changeViewMode('truck')"
-                    >
-                        <i class="fas fa-truck"></i> รถ/คนขับ
-                    </button>
-                    <button
-                        :class="['toggle-btn', { active: viewMode === 'customer' }]"
-                        @click="changeViewMode('customer')"
-                    >
-                        <i class="fas fa-users"></i> ลูกค้า
-                    </button>
+        <div class="page-header-card">
+            <div class="header-content-wrap">
+                <div class="header-left-group">
+                    <div class="page-icon-badge">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div>
+                        <h1 class="page-title">รายงานสรุปเครดิต (Credit Summary)</h1>
+                        <p class="page-subtitle">ตรวจสอบสถานะยอดค้างชำระ บิลเครดิต ดอกเบี้ย และบันทึกการชำระเงิน</p>
+                    </div>
                 </div>
 
-                <button class="btn btn-secondary" @click="fetchCreditSummary">
-                    <i class="fas fa-sync-alt"></i>
-                    <span>รีเฟรช</span>
-                </button>
+                <div class="header-right-actions">
+                    <div class="toggle-container">
+                        <button
+                            :class="['toggle-btn', { active: viewMode === 'truck' }]"
+                            @click="changeViewMode('truck')"
+                        >
+                            <i class="fas fa-truck"></i>
+                            <span>รถ / คนขับ</span>
+                        </button>
+                        <button
+                            :class="['toggle-btn', { active: viewMode === 'customer' }]"
+                            @click="changeViewMode('customer')"
+                        >
+                            <i class="fas fa-users"></i>
+                            <span>ลูกค้า</span>
+                        </button>
+                    </div>
+
+                    <button class="btn btn-secondary" @click="fetchCreditSummary" title="รีเฟรชข้อมูล">
+                        <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+                        <span>รีเฟรช</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -492,40 +496,60 @@ onMounted(fetchCreditSummary);
     margin: 0.2rem 0 0 0;
 }
 
-/* Modern segmented toggle */
-.toggle-pill-container {
-    display: inline-flex;
-    background: var(--bg-main);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
-    padding: 3px;
-    gap: 4px;
+/* Header Right Actions */
+.header-right-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-.toggle-pill-btn {
+/* Modern segmented toggle */
+.toggle-container {
+    display: inline-flex;
+    background: #f1f5f9;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-full, 9999px);
+    padding: 4px;
+    gap: 4px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.toggle-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 1rem;
-    border-radius: var(--radius-full);
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-secondary);
+    gap: 0.6rem;
+    padding: 0.55rem 1.25rem;
+    border-radius: var(--radius-full, 9999px);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #64748b;
     border: none;
     background: transparent;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
 }
 
-.toggle-pill-btn.active {
-    background: var(--surface);
-    color: var(--primary);
-    font-weight: 600;
-    box-shadow: var(--shadow-sm);
+.toggle-btn i {
+    font-size: 0.95rem;
+    transition: transform 0.2s ease;
 }
 
-.toggle-pill-btn:hover:not(.active) {
-    color: var(--text-primary);
+.toggle-btn.active {
+    background: #ffffff;
+    color: var(--primary, #2563eb);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.toggle-btn.active i {
+    transform: scale(1.1);
+}
+
+.toggle-btn:hover:not(.active) {
+    color: #1e293b;
+    background: rgba(255, 255, 255, 0.6);
 }
 
 /* Table interactions */
@@ -569,12 +593,22 @@ onMounted(fetchCreditSummary);
     z-index: 1060 !important;
 }
 
+.modal-table-wrap {
+    overflow-x: auto;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
 .detail-summary-card {
     background: var(--bg-main);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 1rem 1.25rem;
     margin-bottom: 1rem;
+    word-break: break-word;
 }
 
 .summary-line {
@@ -592,6 +626,7 @@ onMounted(fetchCreditSummary);
     border-radius: var(--radius-lg);
     padding: 0.85rem 1rem;
     margin-bottom: 1rem;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .items-header {
@@ -605,6 +640,9 @@ onMounted(fetchCreditSummary);
     list-style: none;
     padding: 0;
     margin: 0;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 6px;
 }
 
 .item-row {
@@ -614,6 +652,7 @@ onMounted(fetchCreditSummary);
     padding: 0.45rem 0;
     border-bottom: 1px dashed var(--border);
     font-size: 0.85rem;
+    gap: 8px;
 }
 
 .item-row:last-child {
@@ -625,6 +664,8 @@ onMounted(fetchCreditSummary);
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+    flex: 1;
+    word-break: break-all;
 }
 
 .qty-badge {

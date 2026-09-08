@@ -767,11 +767,13 @@ onMounted(() => {
 
 /* Top Controls */
 .pos-top-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
 }
 
 .control-label {
@@ -783,11 +785,91 @@ onMounted(() => {
 }
 
 .customer-picker-box {
+    flex: 1 1 360px;
+    max-width: 520px;
     position: relative;
 }
 
+.search-input-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon-inside {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--primary, #2563eb);
+    font-size: 0.95rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
 .customer-search-input {
-    padding-left: 2.25rem;
+    width: 100%;
+    padding: 11px 16px 11px 42px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg, 12px);
+    background: var(--bg-main, #f8fafc);
+    color: var(--text-main);
+    font-size: 0.92rem;
+    text-align: left;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.customer-search-input::placeholder {
+    text-align: left !important;
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.customer-search-input:focus {
+    outline: none;
+    border-color: var(--primary, #2563eb);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.modal-search-box .search-input-wrapper input {
+    width: 100%;
+    padding: 11px 16px 11px 42px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg, 12px);
+    background: var(--bg-main, #f8fafc);
+    color: var(--text-main);
+    font-size: 0.92rem;
+    text-align: left;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.modal-search-box .search-input-wrapper input::placeholder {
+    text-align: left !important;
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.modal-search-box .search-input-wrapper input:focus {
+    outline: none;
+    border-color: var(--primary, #2563eb);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.credit-management-box {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.credit-management-box .control-label {
+    text-align: right;
+    width: 100%;
 }
 
 .dropdown-menu-list {
