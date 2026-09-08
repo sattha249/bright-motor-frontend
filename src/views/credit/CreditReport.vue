@@ -1,201 +1,280 @@
 <template>
-    <div class="main-content-container">
-        <h2 class="section-title"><i class="fas fa-chart-pie"></i> รายงานสรุปเครดิต</h2>
-
-        <div class="card">
-            <div class="card-header">
-                <div class="header-left">
-                    <h3 class="card-title">สถานะเครดิต: {{ viewMode === 'truck' ? 'รายรถ/คนขับ' : 'รายลูกค้า' }}</h3>
-
-                    <div class="toggle-container">
-                        <button :class="['toggle-btn', viewMode === 'truck' ? 'active' : '']"
-                            @click="changeViewMode('truck')">
-                            <i class="fas fa-truck"></i> รถ/คนขับ
-                        </button>
-                        <button :class="['toggle-btn', viewMode === 'customer' ? 'active' : '']"
-                            @click="changeViewMode('customer')">
-                            <i class="fas fa-users"></i> ลูกค้า
-                        </button>
-                    </div>
+    <div class="credit-view-container">
+        <!-- Header Banner -->
+        <div class="credit-header">
+            <div class="header-title-box">
+                <div class="header-icon-badge">
+                    <i class="fas fa-coins"></i>
                 </div>
-
-                <button class="primary-btn" @click="fetchCreditSummary">
-                    <i class="fas fa-sync-alt"></i> รีเฟรช
-                </button>
+                <div>
+                    <h2 class="section-title">รายงานสรุปเครดิต (Credit Summary)</h2>
+                    <p class="section-subtitle">ตรวจสอบสถานะยอดค้างชำระ บิลเครดิต ดอกเบี้ย และบันทึกการชำระเงิน</p>
+                </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="data-table hover-table">
+            <div class="credit-header-actions">
+                <div class="toggle-container">
+                    <button
+                        :class="['toggle-btn', { active: viewMode === 'truck' }]"
+                        @click="changeViewMode('truck')"
+                    >
+                        <i class="fas fa-truck"></i> รถ/คนขับ
+                    </button>
+                    <button
+                        :class="['toggle-btn', { active: viewMode === 'customer' }]"
+                        @click="changeViewMode('customer')"
+                    >
+                        <i class="fas fa-users"></i> ลูกค้า
+                    </button>
+                </div>
+
+                <button class="btn btn-secondary" @click="fetchCreditSummary">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>รีเฟรช</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Summary Table Card -->
+        <div class="table-card">
+            <div class="table-card-header">
+                <div>
+                    <h3 class="card-title">
+                        สรุปยอดเครดิต: {{ viewMode === 'truck' ? 'แยกตามรถ / คนขับ' : 'แยกตามลูกค้า' }}
+                    </h3>
+                    <p class="card-subtitle">คลิกที่แถวรายการเพื่อดูบิลค้างชำระและจัดการรับชำระเงิน</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="product-table hover-table">
                     <thead>
                         <tr>
                             <th>{{ viewMode === 'truck' ? 'ชื่อ (รถ/คนขับ)' : 'ชื่อลูกค้า' }}</th>
-                            <th class="text-right text-red pr-custom">ยอดค้างชำระ</th>
-                            <th class="text-right text-red pr-custom">จำนวนบิลค้าง</th>
-                            <th class="text-right text-orange pr-custom">ดอกเบี้ยค้าง</th>
-                            <th class="text-right text-green pr-custom">เก็บเงินแล้ว</th>
-                            <th class="text-right text-green pr-custom">บิลที่จบแล้ว</th>
+                            <th class="text-right">ยอดค้างชำระ</th>
+                            <th class="text-right">จำนวนบิลค้าง</th>
+                            <th class="text-right">ดอกเบี้ยค้าง</th>
+                            <th class="text-right">เก็บเงินแล้ว</th>
+                            <th class="text-right">บิลที่จบแล้ว</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(item, index) in summaryData" :key="index" @click="openCreditListModal(item)"
-                            class="cursor-pointer">
+                        <tr
+                            v-for="(item, index) in summaryData"
+                            :key="index"
+                            @click="openCreditListModal(item)"
+                            class="cursor-pointer row-hover-effect"
+                        >
                             <td class="font-bold">
-                                <span class="click-indicator">{{ item.group_name }} <i
-                                        class="fas fa-search-plus"></i></span>
+                                <span class="group-name-link">
+                                    {{ item.group_name }}
+                                    <i class="fas fa-arrow-up-right-from-square open-icon"></i>
+                                </span>
                             </td>
-                            <td class="text-right font-bold text-red pr-custom">{{
-                                formatCurrency(item.total_unpaid_amount) }}</td>
-                            <td class="text-right pr-custom">{{ item.count_unpaid_bills }} บิล</td>
-                            <td class="text-right pr-custom">{{ formatCurrency(item.total_unpaid_interest) }}</td>
-                            <td class="text-right text-green pr-custom">{{ formatCurrency(item.total_paid_amount) }}
+                            <td class="text-right font-bold text-danger tabular-nums" style="font-size: 1rem;">
+                                ฿{{ formatCurrency(item.total_unpaid_amount) }}
                             </td>
-                            <td class="text-right pr-custom">{{ item.count_paid_bills }} บิล</td>
+                            <td class="text-right tabular-nums">
+                                <span class="stock-pill pill-low">{{ item.count_unpaid_bills }} บิล</span>
+                            </td>
+                            <td class="text-right tabular-nums text-warning font-semibold">
+                                ฿{{ formatCurrency(item.total_unpaid_interest) }}
+                            </td>
+                            <td class="text-right font-bold text-success tabular-nums">
+                                ฿{{ formatCurrency(item.total_paid_amount) }}
+                            </td>
+                            <td class="text-right tabular-nums">
+                                <span class="stock-pill pill-high">{{ item.count_paid_bills }} บิล</span>
+                            </td>
                         </tr>
                         <tr v-if="summaryData.length === 0 && !loading">
-                            <td colspan="6" class="text-center" style="padding: 2rem; color: #888;">ไม่พบข้อมูล</td>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div class="empty-state">
+                                    <i class="fas fa-wallet empty-icon"></i>
+                                    <p class="empty-title">ไม่พบข้อมูลสรุปเครดิต</p>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <div v-if="loading" class="loading-indicator">กำลังโหลดข้อมูล...</div>
+            <div v-if="loading" class="text-center py-4 text-muted">
+                <i class="fas fa-spinner fa-spin"></i> กำลังโหลดข้อมูล...
+            </div>
         </div>
 
+        <!-- List Modal (Bills in credit) -->
         <div v-if="showListModal" class="modal-overlay z-list" @click.self="closeListModal">
-            <div class="modal large-modal">
+            <div class="modal modal-lg">
                 <div class="modal-header">
-                    <h3>รายการบิลค้างชำระ: {{ selectedName }}</h3>
-                    <button class="close-icon-btn" @click="closeListModal">&times;</button>
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-list-check"></i>
+                        </div>
+                        <div>
+                            <h3>รายการบิลค้างชำระ: {{ selectedName }}</h3>
+                            <span class="modal-subtitle">รายการบิลที่ยังมียอดค้างชำระ</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closeListModal">&times;</button>
                 </div>
 
                 <div class="modal-body">
-                    <div v-if="listLoading" class="loading-indicator">กำลังโหลดรายการ...</div>
+                    <div v-if="listLoading" class="text-center py-4 text-muted">
+                        <i class="fas fa-spinner fa-spin"></i> กำลังโหลดรายการ...
+                    </div>
                     <div v-else>
-                        <div class="table-responsive">
-                            <table class="data-table detail-table">
+                        <div class="modal-table-wrap">
+                            <table class="product-table modal-inner-table">
                                 <thead>
                                     <tr>
-                                        <th>วันที่บิล</th>
-                                        <th>เลขที่เอกสาร</th>
+                                        <th width="120">วันที่บิล</th>
+                                        <th width="150">เลขที่เอกสาร</th>
                                         <th>ลูกค้า</th>
-                                        <th class="text-right pr-custom">ยอดคงเหลือ</th>
-                                        <th>สถานะ</th>
-                                        <th>จัดการ</th>
+                                        <th class="text-right" width="140">ยอดคงเหลือ</th>
+                                        <th class="text-center" width="110">สถานะ</th>
+                                        <th class="text-center" width="100">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="bill in creditList" :key="bill.id">
-                                        <td>{{ new Date(bill.created_at).toLocaleDateString('th-TH') }}</td>
-                                        <td>{{ bill.bill_no }}</td>
-                                        <td>{{ bill.customer?.name || '-' }}</td>
-                                        <td class="font-bold text-red pr-custom">{{ formatCurrency(bill.pending_amount)
-                                        }}</td>
+                                        <td class="tabular-nums text-muted">{{ new Date(bill.created_at).toLocaleDateString('th-TH') }}</td>
                                         <td>
-                                            <span :class="['status-badge', bill.is_paid ? 'paid' : 'unpaid']">
+                                            <span class="bill-badge tabular-nums">{{ bill.bill_no }}</span>
+                                        </td>
+                                        <td class="font-medium text-main">{{ bill.customer?.name || '-' }}</td>
+                                        <td class="font-bold text-danger text-right tabular-nums">
+                                            ฿{{ formatCurrency(bill.pending_amount) }}
+                                        </td>
+                                        <td class="text-center">
+                                            <span :class="['stock-pill', bill.is_paid ? 'pill-high' : 'pill-empty']">
                                                 {{ bill.is_paid ? 'ชำระแล้ว' : 'ค้างชำระ' }}
                                             </span>
                                         </td>
-                                        <td>
-                                            <button class="action-btn pay-btn" @click="openPaymentSummaryModal(bill.id)"
-                                                :disabled="bill.is_paid">
-                                                <i class="fas fa-money-bill-wave"></i> ชำระ
+                                        <td class="text-center">
+                                            <button
+                                                class="btn btn-primary btn-sm"
+                                                @click="openPaymentSummaryModal(bill.id)"
+                                                :disabled="bill.is_paid"
+                                            >
+                                                <i class="fas fa-hand-holding-dollar"></i> ชำระ
                                             </button>
                                         </td>
                                     </tr>
                                     <tr v-if="creditList.length === 0">
-                                        <td colspan="6" class="text-center" style="padding: 1rem;">
-                                            ไม่พบรายการบิลค้างชำระ</td>
+                                        <td colspan="6" class="text-center py-4 text-muted">
+                                            ไม่พบรายการบิลค้างชำระ
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-                        <div class="pagination" v-if="listMeta && listMeta.last_page > 1">
-                            <button @click="fetchCreditList(listMeta.current_page - 1)"
-                                :disabled="listMeta.current_page === 1">ก่อนหน้า</button>
-                            <span>หน้า {{ listMeta.current_page }} / {{ listMeta.last_page }}</span>
-                            <button @click="fetchCreditList(listMeta.current_page + 1)"
-                                :disabled="listMeta.current_page === listMeta.last_page">ถัดไป</button>
+                        <div class="pagination-container" v-if="listMeta && listMeta.last_page > 1" style="margin-top: 16px;">
+                            <button
+                                class="pagination-btn"
+                                @click="fetchCreditList(listMeta.current_page - 1)"
+                                :disabled="listMeta.current_page === 1"
+                            >
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span class="page-indicator">หน้า {{ listMeta.current_page }} / {{ listMeta.last_page }}</span>
+                            <button
+                                class="pagination-btn"
+                                @click="fetchCreditList(listMeta.current_page + 1)"
+                                :disabled="listMeta.current_page === listMeta.last_page"
+                            >
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="cancel-btn" @click="closeListModal">ปิดหน้าต่าง</button>
+                    <button class="btn btn-secondary" @click="closeListModal">ปิดหน้าต่าง</button>
                 </div>
             </div>
         </div>
 
+        <!-- Payment Confirmation Modal -->
         <div v-if="showPaymentModal" class="modal-overlay z-payment" @click.self="closePaymentModal">
-            <div class="modal small-modal">
+            <div class="modal modal-md">
                 <div class="modal-header">
-                    <h3><i class="fas fa-cash-register"></i> สรุปยอดชำระ</h3>
-                    <button class="close-icon-btn" @click="closePaymentModal">&times;</button>
+                    <div class="modal-title-box">
+                        <div class="modal-icon-badge">
+                            <i class="fas fa-cash-register"></i>
+                        </div>
+                        <div>
+                            <h3>สรุปยอดชำระเงิน</h3>
+                            <span class="modal-subtitle">ยืนยันการรับชำระเงินปิดบิลเครดิต</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-x" @click="closePaymentModal">&times;</button>
                 </div>
 
                 <div class="modal-body">
-                    <div v-if="paymentLoading" class="loading-indicator">
-                        กำลังดึงข้อมูลล่าสุด...
+                    <div v-if="paymentLoading" class="text-center py-4 text-muted">
+                        <i class="fas fa-spinner fa-spin"></i> กำลังดึงข้อมูลล่าสุด...
                     </div>
                     <div v-else-if="selectedBillDetail" class="payment-summary-content">
-
-                        <div class="summary-row">
-                            <span class="label">เลขที่เอกสาร:</span>
-                            <span class="value">{{ selectedBillDetail.bill_no }}</span>
+                        <div class="detail-summary-card">
+                            <div class="summary-line">
+                                <span>เลขที่เอกสาร:</span>
+                                <span class="font-bold tabular-nums">{{ selectedBillDetail.bill_no }}</span>
+                            </div>
+                            <div class="summary-line">
+                                <span>ลูกค้า:</span>
+                                <span class="font-bold">{{ selectedBillDetail.customer?.name }}</span>
+                            </div>
                         </div>
-                        <div class="summary-row">
-                            <span class="label">ลูกค้า:</span>
-                            <span class="value">{{ selectedBillDetail.customer?.name }}</span>
-                        </div>
 
-                        <div class="items-summary-box"
-                            v-if="selectedBillDetail.items && selectedBillDetail.items.length > 0">
-                            <p class="items-header">รายการสินค้า:</p>
-                            <ul>
+                        <div class="items-summary-box" v-if="selectedBillDetail.items && selectedBillDetail.items.length > 0">
+                            <p class="items-header font-semibold text-sm">รายการสินค้าในบิล:</p>
+                            <ul class="items-list">
                                 <li v-for="item in selectedBillDetail.items" :key="item.id" class="item-row">
                                     <div class="item-left">
-                                        <span class="dash">-</span>
-                                        <span>SKU: {{ item.product_id }}</span>
-                                        <span class="qty-badge">x{{ item.quantity }}</span>
-                                        <span class="item-price-tag">
-                                            ({{ formatCurrency(item.quantity * item.sold_price) }})
+                                        <span class="font-medium">SKU: {{ item.product_id }}</span>
+                                        <span class="qty-badge tabular-nums">x{{ item.quantity }}</span>
+                                        <span class="item-price-tag tabular-nums">
+                                            (฿{{ formatCurrency(item.quantity * item.sold_price) }})
                                         </span>
                                     </div>
                                     <div class="item-right">
-                                        <i v-if="checkIsPaid(item.is_paid)" class="fas fa-check-circle text-green"></i>
-                                        <i v-else class="fas fa-times-circle text-red"></i>
+                                        <i v-if="checkIsPaid(item.is_paid)" class="fas fa-check-circle text-success"></i>
+                                        <i v-else class="fas fa-times-circle text-danger"></i>
                                     </div>
                                 </li>
                             </ul>
                         </div>
 
-                        <hr class="divider">
+                        <div class="payment-calc-card">
+                            <div class="summary-line">
+                                <span>ยอดเงินต้นคงเหลือ:</span>
+                                <span class="font-bold tabular-nums">฿{{ formatCurrency(selectedBillDetail.pending_amount) }}</span>
+                            </div>
 
-                        <div class="summary-row">
-                            <span class="label">ยอดเงินต้นคงเหลือ:</span>
-                            <span class="value">{{ formatCurrency(selectedBillDetail.pending_amount) }}</span>
+                            <div class="summary-line text-warning">
+                                <span>ดอกเบี้ย (Interest):</span>
+                                <span class="font-bold tabular-nums">+ ฿{{ formatCurrency(selectedBillDetail.interest) }}</span>
+                            </div>
+
+                            <div class="summary-line grand-total-line">
+                                <span>ยอดชำระสุทธิทั้งสิ้น:</span>
+                                <span class="grand-total-price tabular-nums">
+                                    ฿{{ formatCurrency(Number(selectedBillDetail.pending_amount) + Number(selectedBillDetail.interest)) }}
+                                </span>
+                            </div>
                         </div>
-
-                        <div class="summary-row highlight-row">
-                            <span class="label">ดอกเบี้ย (Interest):</span>
-                            <span class="value text-orange">+ {{ formatCurrency(selectedBillDetail.interest) }}</span>
-                        </div>
-
-                        <hr class="divider">
-
-                        <div class="summary-row total-row">
-                            <span class="label">ยอดชำระสุทธิ:</span>
-                            <span class="value text-green">
-                                {{ formatCurrency(Number(selectedBillDetail.pending_amount) +
-                                    Number(selectedBillDetail.interest)) }}
-                            </span>
-                        </div>
-
                     </div>
                 </div>
 
-                <div class="modal-footer space-between">
-                    <button class="cancel-btn" @click="closePaymentModal">ปิด (ยกเลิก)</button>
-                    <button class="confirm-pay-btn" @click="processPayment"
-                        :disabled="paymentLoading || checkIsPaid(selectedBillDetail?.is_paid)">
-                        <i class="fas fa-check-circle"></i> ยืนยันชำระเงิน
+                <div class="modal-footer" style="justify-content: space-between;">
+                    <button class="btn btn-secondary" @click="closePaymentModal">ยกเลิก</button>
+                    <button
+                        class="btn btn-primary"
+                        @click="processPayment"
+                        :disabled="paymentLoading || checkIsPaid(selectedBillDetail?.is_paid)"
+                    >
+                        <i class="fas fa-check-circle"></i>
+                        <span>ยืนยันชำระเงิน</span>
                     </button>
                 </div>
             </div>
@@ -359,158 +438,129 @@ onMounted(fetchCreditSummary);
 </script>
 
 <style scoped>
-/* Header Layout */
-.header-left {
+.credit-view-container {
     display: flex;
-    align-items: center;
-    gap: 20px;
-    flex-wrap: wrap;
-    /* เผื่อจอเล็ก */
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
-/* Toggle Switch Styles */
-.toggle-container {
-    display: flex;
-    background-color: #f1f5f9;
-    border-radius: 8px;
-    padding: 4px;
-    border: 1px solid #e2e8f0;
+.page-header-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
 }
 
-.toggle-btn {
-    padding: 6px 14px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: #64748b;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.toggle-btn.active {
-    background-color: white;
-    color: var(--primary-color);
-    /* ใช้ตัวแปรสีหลัก */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    font-weight: 600;
-}
-
-.toggle-btn:hover:not(.active) {
-    color: #334155;
-    background-color: #e2e8f0;
-}
-
-/* ... Styles เดิม ... */
-.main-content-container {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: auto;
-}
-
-.section-title {
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-bottom: 2rem;
-    text-align: center;
-}
-
-.card {
-    background-color: var(--card-bg);
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-}
-
-.card-header {
+.header-content-wrap {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
-.card-title {
-    font-size: 1.4rem;
-    font-weight: 600;
+.header-left-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.page-icon-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(99, 102, 241, 0.15));
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.page-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
     margin: 0;
 }
 
-.primary-btn {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
+.page-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0.2rem 0 0 0;
+}
+
+/* Modern segmented toggle */
+.toggle-pill-container {
+    display: inline-flex;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    padding: 3px;
+    gap: 4px;
+}
+
+.toggle-pill-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-}
-
-.table-responsive {
-    overflow-x: auto;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.data-table th,
-.data-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
-}
-
-.data-table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-    text-align: left;
-}
-
-.hover-table tbody tr:hover {
-    background-color: #f1f5f9;
-}
-
-.cursor-pointer {
+    gap: 0.5rem;
+    padding: 0.45rem 1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border: none;
+    background: transparent;
     cursor: pointer;
+    transition: all var(--transition-fast);
 }
 
-.text-right {
-    text-align: right;
+.toggle-pill-btn.active {
+    background: var(--surface);
+    color: var(--primary);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
 }
 
-.text-center {
+.toggle-pill-btn:hover:not(.active) {
+    color: var(--text-primary);
+}
+
+/* Table interactions */
+.group-name-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary);
+    font-weight: 600;
+    transition: color var(--transition-fast);
+}
+
+.group-name-link:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+.group-name-link i {
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+.empty-table-state {
+    padding: 3rem 1rem;
     text-align: center;
+    color: var(--text-muted);
 }
 
-.text-red {
-    color: #e53e3e;
+.empty-table-state i {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
 }
 
-.text-green {
-    color: #28a745;
-}
-
-.text-orange {
-    color: #dd6b20;
-}
-
-.font-bold {
-    font-weight: bold;
-}
-
-.pr-custom {
-    padding-right: 2.5rem !important;
-}
-
-
-
-/* [แก้ Z-Index ให้สูงกว่าทุกอย่าง] */
+/* Modals */
 .z-list {
     z-index: 1050 !important;
 }
@@ -519,75 +569,39 @@ onMounted(fetchCreditSummary);
     z-index: 1060 !important;
 }
 
-.modal {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    max-height: 90vh;
+.detail-summary-card {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
 }
 
-.large-modal {
-    width: 95%;
-    max-width: 1000px;
-}
-
-.small-modal {
-    width: 90%;
-    max-width: 500px;
-}
-
-.modal-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid #eee;
+.summary-line {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    padding: 0.35rem 0;
 }
 
-.modal-body {
-    padding: 1.5rem;
-    overflow-y: auto;
-}
-
-.modal-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #eee;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.modal-footer.space-between {
-    justify-content: space-between;
-}
-
-.close-icon-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #666;
-}
-
-/* Summary List in Payment Modal */
 .items-summary-box {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 10px 15px;
-    margin: 15px 0;
-    border: 1px solid #eee;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0.85rem 1rem;
+    margin-bottom: 1rem;
 }
 
 .items-header {
+    font-size: 0.85rem;
     font-weight: 600;
-    margin-bottom: 8px;
-    font-size: 0.95rem;
-    color: #555;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
 }
 
-.items-summary-box ul {
+.items-list {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -597,9 +611,9 @@ onMounted(fetchCreditSummary);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px dashed #e0e0e0;
-    font-size: 0.9rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 0.85rem;
 }
 
 .item-row:last-child {
@@ -609,152 +623,57 @@ onMounted(fetchCreditSummary);
 .item-left {
     display: flex;
     align-items: center;
-    padding-left: 15px;
+    gap: 0.5rem;
     flex-wrap: wrap;
-    gap: 2px;
-}
-
-.dash {
-    margin-right: 8px;
-    color: #888;
-    font-weight: bold;
-}
-
-.item-right {
-    text-align: right;
-    min-width: 30px;
-    display: flex;
-    justify-content: flex-end;
-}
-
-/* Buttons & Badges */
-.action-btn {
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    color: white;
-    font-size: 13px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.pay-btn {
-    background-color: #3182ce;
-}
-
-.pay-btn:disabled {
-    background-color: #a0aec0;
-    cursor: not-allowed;
-}
-
-.pay-btn:hover:not(:disabled) {
-    background-color: #2b6cb0;
-}
-
-
-
-.confirm-pay-btn {
-    background-color: #38a169;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: bold;
-}
-
-.status-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    color: white;
-}
-
-.status-badge.paid {
-    background-color: #48bb78;
-}
-
-.status-badge.unpaid {
-    background-color: #e53e3e;
-}
-
-.click-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--primary-color);
-}
-
-.loading-indicator {
-    text-align: center;
-    padding: 2rem;
-    color: #666;
-}
-
-
-
-.summary-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-.summary-row .label {
-    color: #666;
-    font-weight: 500;
-}
-
-.summary-row .value {
-    font-weight: 600;
-    font-size: 1.1rem;
-}
-
-.highlight-row {
-    background-color: #fffaf0;
-    padding: 5px;
-    border-radius: 4px;
-    border: 1px solid #feeebb;
-}
-
-.divider {
-    border: 0;
-    border-top: 1px dashed #ccc;
-    margin: 15px 0;
-}
-
-.total-row .label {
-    font-size: 1.2rem;
-    font-weight: bold;
-}
-
-.total-row .value {
-    font-size: 1.5rem;
-    font-weight: bold;
 }
 
 .qty-badge {
-    background-color: #e2e8f0;
-    color: #4a5568;
-    padding: 2px 6px;
-    border-radius: 4px;
+    background: var(--bg-main);
+    color: var(--text-secondary);
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius-sm);
     font-size: 0.8rem;
-    margin: 0 5px;
     font-weight: 600;
+    border: 1px solid var(--border);
 }
 
 .item-price-tag {
-    color: #2d3748;
-    font-weight: 500;
-    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
 }
 
-.swal2-container {
-    z-index: 9999 !important;
+.payment-calc-card {
+    background: linear-gradient(145deg, rgba(37, 99, 235, 0.03), rgba(99, 102, 241, 0.06));
+    border: 1px solid rgba(37, 99, 235, 0.15);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+}
+
+.grand-total-line {
+    border-top: 1px dashed rgba(37, 99, 235, 0.2);
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+}
+
+.grand-total-price {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--success);
+}
+
+@media (max-width: 768px) {
+    .header-content-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .toggle-pill-container {
+        width: 100%;
+    }
+    
+    .toggle-pill-btn {
+        flex: 1;
+        justify-content: center;
+    }
 }
 </style>

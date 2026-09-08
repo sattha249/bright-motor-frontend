@@ -1,102 +1,148 @@
 <template>
-    <div class="sell-history-container">
-        <h2 class="section-title">
-            <i class="fas fa-history"></i> ประวัติการขาย & รับคืนสินค้า
-        </h2>
+    <div class="claim-view-container">
+        <!-- Header Banner -->
+        <div class="claim-header">
+            <div class="header-title-box">
+                <div class="header-icon-badge">
+                    <i class="fas fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <h2 class="section-title">ประวัติการขาย & รับคืนสินค้า</h2>
+                    <p class="section-subtitle">ตรวจสอบประวัติการเปิดบิลขายหน้าร้านและรถขนส่ง พร้อมจัดการรับคืนสินค้า / Refund</p>
+                </div>
+            </div>
+        </div>
 
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">รายการขายล่าสุด</h3>
+        <!-- Table Card -->
+        <div class="table-card">
+            <div class="table-card-header">
+                <div>
+                    <h3 class="card-title">รายการบิลขายล่าสุด</h3>
+                    <p class="card-subtitle">ค้นหาและกรองรายการขายตามวันที่ รถขนส่ง หรือเลขที่บิล</p>
+                </div>
 
-                <div class="filter-group">
-                    <div class="date-input-group">
-                        <input type="date" v-model="filterDate" class="status-select" @change="fetchSellLogs(1)">
+                <div class="filter-controls-row">
+                    <div class="date-picker-wrapper">
+                        <input type="date" v-model="filterDate" class="filter-select date-input" @change="fetchSellLogs(1)" />
                     </div>
 
-                    <select v-model="filterTruckId" @change="fetchSellLogs(1)" class="status-select">
+                    <select v-model="filterTruckId" @change="fetchSellLogs(1)" class="filter-select">
                         <option value="">รถทั้งหมด</option>
                         <option v-for="truck in trucks" :key="truck.id" :value="truck.id">
                             {{ truck.plate_number }}
                         </option>
                     </select>
 
-                    <div class="search-input-wrapper small-search">
-                        <input type="text" v-model="searchTerm" @input="debouncedFetch" placeholder="เลขบิล / ลูกค้า..."
-                            class="search-input" />
-                        <i class="fas fa-search search-icon-inside"></i>
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon-main"></i>
+                        <input
+                            type="text"
+                            v-model="searchTerm"
+                            @input="debouncedFetch"
+                            placeholder="เลขบิล / ลูกค้า..."
+                            class="filter-search-input"
+                        />
                     </div>
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="data-table">
+            <div class="table-container">
+                <table class="product-table">
                     <thead>
                         <tr>
-                            <th>เวลา</th>
-                            <th>เลขที่บิล</th>
+                            <th width="140">วัน-เวลา</th>
+                            <th width="150">เลขที่บิล</th>
                             <th>ลูกค้า</th>
                             <th>รถขนส่ง</th>
-                            <th class="text-right">ยอดรวม</th>
-                            <th class="text-center">ประเภท</th>
-                            <th class="text-center">สถานะ</th>
-                            <th class="text-center">จัดการ</th>
+                            <th class="text-right" width="140">ยอดรวมสุทธิ</th>
+                            <th class="text-center" width="110">การชำระ</th>
+                            <th class="text-center" width="130">สถานะ</th>
+                            <th class="text-center" width="100">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="log in sellLogs" :key="log.id">
                             <td>
-                                {{ new Date(log.created_at).toLocaleDateString('th-TH') }} <br>
-                                <small class="text-muted">{{ new Date(log.created_at).toLocaleTimeString('th-TH', {
-                                    hour:
-                                        '2-digit', minute: '2-digit'
-                                }) }}</small>
+                                <div class="font-bold text-main tabular-nums">
+                                    {{ new Date(log.created_at).toLocaleDateString('th-TH') }}
+                                </div>
+                                <small class="text-muted tabular-nums">
+                                    {{ new Date(log.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) }}
+                                </small>
                             </td>
-                            <td class="bold">{{ log.bill_no }}</td>
-                            <td>{{ log.customer?.name || 'ลูกค้าทั่วไป' }}</td>
-                            <td>{{ log.truck?.plate_number || '-' }}</td>
-                            <td class="text-right price-text">
+                            <td>
+                                <span class="bill-badge tabular-nums">{{ log.bill_no }}</span>
+                            </td>
+                            <td class="font-medium text-main">{{ log.customer?.name || 'ลูกค้าทั่วไป' }}</td>
+                            <td>
+                                <span v-if="log.truck" class="truck-chip">
+                                    <i class="fas fa-truck"></i> {{ log.truck.plate_number }}
+                                </span>
+                                <span v-else class="text-muted">-</span>
+                            </td>
+                            <td class="text-right tabular-nums font-bold text-success" style="font-size: 1rem;">
                                 ฿{{ Number(log.total_sold_price).toLocaleString() }}
                             </td>
                             <td class="text-center">
-                                <span class="badge" :class="log.is_credit ? 'badge-warning' : 'badge-success'">
+                                <span :class="['stock-pill', log.is_credit ? 'pill-low' : 'pill-high']">
                                     {{ log.is_credit ? 'Credit' : 'Cash' }}
                                 </span>
                             </td>
                             <td class="text-center">
-                                <span v-if="hasReturn(log)" class="status-badge returned" @click.stop="openReprintModal(log)" style="cursor: pointer;" title="คลิกเพื่อพิมพ์ใบรับคืนสินค้าอีกครั้ง">
-                                    มีการรับคืน <i class="fas fa-print" style="margin-left: 3px; font-size: 0.85em;"></i>
+                                <span
+                                    v-if="hasReturn(log)"
+                                    class="stock-pill pill-empty returned-pill-clickable"
+                                    @click.stop="openReprintModal(log)"
+                                    title="คลิกเพื่อพิมพ์ใบรับคืนสินค้าอีกครั้ง"
+                                >
+                                    <i class="fas fa-rotate-left"></i> มีการรับคืน
+                                    <i class="fas fa-print" style="margin-left: 4px;"></i>
                                 </span>
-                                <span v-else class="status-badge completed">
-                                    ปกติ
+                                <span v-else class="stock-pill pill-high">
+                                    <i class="fas fa-check-circle"></i> ปกติ
                                 </span>
                             </td>
-                            <td class="action-buttons center">
-                                <button class="action-btn delete-btn" @click="openReturnModal(log)"
-                                    title="รับคืนสินค้า / Refund">
-                                    <i class="fas fa-undo-alt"></i> คืน
+                            <td class="text-center">
+                                <button
+                                    class="btn-return"
+                                    @click="openReturnModal(log)"
+                                    title="รับคืนสินค้า / Refund"
+                                >
+                                    <i class="fas fa-arrow-rotate-left"></i>
+                                    <span>คืนของ</span>
                                 </button>
                             </td>
                         </tr>
                         <tr v-if="sellLogs.length === 0">
-                            <td colspan="8" class="text-center py-4 text-muted">ไม่พบประวัติการขาย</td>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <div class="empty-state">
+                                    <i class="fas fa-clock-rotate-left empty-icon"></i>
+                                    <p class="empty-title">ไม่พบประวัติการขายในช่วงเวลานี้</p>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div class="modal-pagination" v-if="totalPages > 1" style="margin-top: 20px">
-                <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">
+            <div class="pagination-container" v-if="totalPages > 1" style="margin-top: 20px">
+                <button class="pagination-btn" @click="changePage(currentPage - 1)" :disabled="currentPage === 1">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-                <span class="page-info">หน้า {{ currentPage }} / {{ totalPages }}</span>
-                <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">
+                <span class="page-indicator">หน้า {{ currentPage }} / {{ totalPages }}</span>
+                <button class="pagination-btn" @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">
                     <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
         </div>
 
-        <ReturnModal :show="showReturnModal" :sell-log="selectedSellLog" :is-reprint="isReprintMode" @close="showReturnModal = false"
-            @refresh="fetchSellLogs(currentPage)" />
+        <ReturnModal
+            :show="showReturnModal"
+            :sell-log="selectedSellLog"
+            :is-reprint="isReprintMode"
+            @close="showReturnModal = false"
+            @refresh="fetchSellLogs(currentPage)"
+        />
     </div>
 </template>
 
@@ -201,131 +247,181 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Reuse Styles from ManagePreOrder */
-.sell-history-container {
-    max-width: 1240px;
-    margin: 2rem auto;
-    padding: 0 1.5rem;
+.claim-view-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
-.section-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 2rem;
-    color: #2d3748;
-}
-
-.card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem;
-}
-
-.card-header {
+.claim-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    gap: 15px;
 }
 
-.filter-group {
+.header-title-box {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-icon-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.section-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0.2rem 0 0 0;
+}
+
+.table-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.filter-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.filter-select {
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    font-size: 0.875rem;
+    color: var(--text-main);
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.filter-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.search-wrapper {
+    position: relative;
+    display: flex;
     align-items: center;
 }
 
-.status-select,
-.search-input {
-    padding: 8px 12px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: white;
+.search-icon-main {
+    position: absolute;
+    left: 12px;
+    color: #94a3b8;
+    font-size: 0.875rem;
 }
 
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
+.filter-search-input {
+    padding: 0.6rem 1rem 0.6rem 2.25rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    font-size: 0.875rem;
+    color: var(--text-main);
+    width: 240px;
+    outline: none;
+    transition: all 0.2s ease;
 }
 
-.data-table th,
-.data-table td {
-    padding: 12px;
-    border-bottom: 1px solid #edf2f7;
+.filter-search-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-.text-right {
-    text-align: right;
-}
-
-.text-center {
-    text-align: center;
-}
-
-.price-text {
-    font-weight: bold;
-    color: var(--primary-color, #2b6cb0);
-}
-
-/* Badges */
-.badge {
+.bill-badge {
+    display: inline-block;
     padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-main);
+}
+
+.truck-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #eff6ff;
+    color: var(--primary-color);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
     font-weight: 600;
 }
 
-.badge-success {
-    background: #c6f6d5;
-    color: #22543d;
-}
-
-.badge-warning {
-    background: #feebc8;
-    color: #92400e;
-}
-
-.status-badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-}
-
-.status-badge.completed {
-    color: green;
-}
-
-.status-badge.returned {
-    background: #fed7d7;
-    color: #822727;
-    font-weight: bold;
-}
-
-.action-buttons.center {
-    display: flex;
-    justify-content: center;
-}
-
-.action-btn {
-    width: auto;
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: none;
+.returned-pill-clickable {
     cursor: pointer;
-    color: white;
-    display: flex;
+    transition: all 0.2s ease;
+}
+
+.returned-pill-clickable:hover {
+    transform: scale(1.04);
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.2);
+}
+
+.btn-return {
+    display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 0.9rem;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #fee2e2;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 0.825rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.delete-btn {
-    background: #e53e3e;
+.btn-return:hover {
+    background: #fee2e2;
+    transform: translateY(-1px);
 }
 
-.delete-btn:hover {
-    background: #c53030;
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.empty-icon {
+    font-size: 2.5rem;
+    color: #cbd5e1;
+}
+
+.empty-title {
+    font-size: 0.95rem;
+    color: #64748b;
+    margin: 0;
 }
 </style>
